@@ -1,21 +1,11 @@
 package com.example.myapplication.ui.screen
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.* // 使用 * 导入
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button // (新) 导入
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-// (删除) FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.* // 使用 * 导入
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,8 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
-import com.example.myapplication.ui.navigation.IconMapper // (新) 导入
+import com.example.myapplication.ui.navigation.IconMapper
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
+// --- (修复) 添加 Import ---
+import com.example.myapplication.ui.screen.Routes
+// --- 修复结束 ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,14 +26,12 @@ fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostC
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
 
     Scaffold(
-        // (修改) 移除 FAB
-        /*
+        // 将 FAB 移到这里，因为 AssetsScreen 现在是账户列表的主要入口
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate(Routes.ADD_ACCOUNT) }) {
+            FloatingActionButton(onClick = { navController.navigate(Routes.ADD_ACCOUNT) }) { // 使用 Routes
                 Icon(Icons.Default.Add, contentDescription = "添加账户")
             }
         }
-        */
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -49,19 +40,10 @@ fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostC
         ) {
             Text("账户管理", style = MaterialTheme.typography.headlineLarge)
 
-            // (新) 添加矩形按钮
-            Button(
-                onClick = { navController.navigate(Routes.ADD_ACCOUNT) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp) // 增加一些垂直间距
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "添加账户", modifier = Modifier.padding(end = 8.dp))
-                Text("添加账户")
-            }
-
-            LazyColumn(modifier = Modifier.padding(top = 8.dp)) { // 调整内边距
+            // 这里的列表可以用于编辑/删除操作
+            LazyColumn(modifier = Modifier.padding(top = 8.dp)) {
                 items(accounts) { account ->
+                    // 可以添加编辑/删除按钮或使条目可点击以进行编辑
                     AccountItem(account = account)
                 }
             }
@@ -69,16 +51,17 @@ fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostC
     }
 }
 
+// AccountItem 显示账户信息，可以添加编辑/删除交互
 @Composable
 fun AccountItem(account: Account) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
+        // 可以添加 .clickable {} 来导航到编辑页面
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val icon = IconMapper.getIcon(account.iconName)
@@ -88,10 +71,12 @@ fun AccountItem(account: Account) {
                 Text(text = account.name, style = MaterialTheme.typography.titleMedium)
                 Text(text = "${account.currency} - ${account.type}", style = MaterialTheme.typography.bodyMedium)
             }
+            // 显示初始余额，因为这个页面可能主要用于管理，而不是看实时余额
             Text(
-                text = "¥${account.initialBalance}",
+                text = "${account.currency} ${String.format("%.2f", account.initialBalance)}",
                 style = MaterialTheme.typography.titleMedium
             )
+            // 可以在这里添加编辑/删除图标按钮
         }
     }
 }

@@ -2,8 +2,8 @@ package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable // (新) Import
-import androidx.compose.foundation.layout.* // Use * import
+import androidx.compose.foundation.clickable // 确保导入
+import androidx.compose.foundation.layout.* // 使用 * 导入
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -13,16 +13,16 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.* // Use * import
+import androidx.compose.material3.* // 使用 * 导入
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextAlign // 确保导入
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController // (新) Import
+import androidx.navigation.NavHostController // 确保导入
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Expense
 import com.example.myapplication.ui.navigation.expenseCategories
@@ -32,6 +32,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.example.myapplication.ui.screen.YearMonthPicker // 确保导入
 import kotlin.math.abs
 
 // (保持 private)
@@ -45,7 +46,6 @@ private data class DisplayTransferItem(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-// (新) 接收 NavController
 fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
     // --- 日期状态 ---
     val calendar = Calendar.getInstance()
@@ -133,6 +133,7 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
 
     // --- 5. 月份选择器 ---
     if (showMonthPicker) {
+        // 调用外部定义的 YearMonthPicker
         YearMonthPicker(
             year = selectedYear,
             month = selectedMonth,
@@ -149,10 +150,9 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
     Scaffold(
         topBar = {
             DetailsTopAppBar(
-                onMenuClick = { /* TODO */ },
-                // (新) Navigate to Search screen
-                onSearchClick = { navController.navigate(Routes.SEARCH) },
-                onCalendarClick = { /* TODO */ }
+                onMenuClick = { /* TODO: 实现菜单点击逻辑 */ },
+                onSearchClick = { navController.navigate(Routes.SEARCH) }, // 跳转到搜索页
+                onCalendarClick = { /* TODO: 实现日历点击逻辑 */ }
             )
         }
     ) { innerPadding ->
@@ -170,7 +170,7 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
                 @OptIn(ExperimentalFoundationApi::class)
                 groupedItems.forEach { (dateStr, itemsOnDate) ->
                     stickyHeader {
-                        // (新) Add daily summary
+                        // 添加日总收支
                         val dailyTotalExpense = itemsOnDate.filterIsInstance<Expense>().filter { it.amount < 0 && !it.category.startsWith("转账") }.sumOf { abs(it.amount) }
                         val dailyTotalIncome = itemsOnDate.filterIsInstance<Expense>().filter { it.amount > 0 && !it.category.startsWith("转账") }.sumOf { it.amount }
                         DateHeader(dateStr = dateStr, dailyExpense = dailyTotalExpense, dailyIncome = dailyTotalIncome)
@@ -184,13 +184,12 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
                                     expense = item,
                                     icon = categoryIconMap[item.category],
                                     account = account,
-                                    // (新) Add onClick navigation
-                                    onClick = { navController.navigate(Routes.transactionDetailRoute(item.id)) }
+                                    onClick = { navController.navigate(Routes.transactionDetailRoute(item.id)) } // 跳转到详情页
                                 )
                             }
                             is DisplayTransferItem -> TransferItem(
                                 item = item,
-                                onClick = { /* TODO: Decide how to handle transfer details */ }
+                                onClick = { /* TODO: 决定转账记录的点击行为 */ }
                             )
                         }
                     }
@@ -201,14 +200,78 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
 }
 
 
-// --- (修改) DateHeader to include daily summary ---
+// --- 顶部应用栏 ---
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DetailsTopAppBar(
+    onMenuClick: () -> Unit,
+    onSearchClick: () -> Unit,
+    onCalendarClick: () -> Unit
+) {
+    CenterAlignedTopAppBar(
+        title = { Text("魔法记账", fontWeight = FontWeight.Bold) },
+        navigationIcon = {
+            IconButton(onClick = onMenuClick) { Icon(Icons.Default.Menu, "菜单") }
+        },
+        actions = {
+            IconButton(onClick = onSearchClick) { Icon(Icons.Default.Search, "搜索") }
+            IconButton(onClick = onCalendarClick) { Icon(Icons.Default.DateRange, "日历") }
+        },
+        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    )
+}
+
+// --- 黄色摘要卡片 ---
+@Composable
+private fun SummaryHeader(
+    year: Int, month: Int, expense: Double, income: Double, balance: Double, onMonthClick: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(text = "${year}年", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                Text(text = "支出", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Start)
+                Text(text = "收入", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Start)
+                Text(text = "结余", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Start)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onMonthClick, modifier = Modifier.weight(1f).padding(start = 0.dp)) {
+                    Text(
+                        text = "${month}月",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = "选择月份",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Text(text = String.format("%.2f", abs(expense)), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Start)
+                Text(text = String.format("%.2f", income), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Start)
+                Text(text = String.format("%.2f", balance), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Start)
+            }
+        }
+    }
+}
+
+
+// --- 日期和日汇总 Header ---
 @Composable
 fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
     val displayFormat = remember { SimpleDateFormat("MM月dd日 EEEE", Locale.getDefault()) }
     val originalFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val displayDate = originalFormat.parse(dateStr)?.let { displayFormat.format(it) } ?: dateStr
 
-    Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)) { // Slightly different background
+    Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -226,7 +289,7 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
                 Text(
                     text = "收入: ${String.format("%.2f", dailyIncome)}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.Green.copy(alpha= 0.7f), // Or your income color
+                    color = Color.Green.copy(alpha= 0.7f), // 或者用你的收入颜色
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
@@ -234,12 +297,9 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
     }
 }
 
-// --- (修改) TransferItem signature and make clickable ---
+// --- 转账列表项 ---
 @Composable
-private fun TransferItem(
-    item: DisplayTransferItem,
-    onClick: () -> Unit
-) {
+private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -251,54 +311,54 @@ private fun TransferItem(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.CompareArrows,
             contentDescription = "转账",
-            tint = MaterialTheme.colorScheme.primary
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+                .padding(8.dp),
+            tint = MaterialTheme.colorScheme.onSecondaryContainer
         )
-
-        // 左侧文案
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "${item.fromAccount.name} → ${item.toAccount.name}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(item.date),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        // 右侧金额
+        Text(
+            text = "${item.fromAccount.name} → ${item.toAccount.name}",
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge
+        )
         Column(horizontalAlignment = Alignment.End) {
+            val fromText = "${item.fromAccount.currency} ${String.format("%.2f", abs(item.fromAmount))}"
+            val toText = "→ ${item.toAccount.currency} ${String.format("%.2f", item.toAmount)}"
             Text(
-                text = "-${String.format("%.2f", kotlin.math.abs(item.fromAmount))}",
-                color = MaterialTheme.colorScheme.error
+                text = fromText,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "+${String.format("%.2f", item.toAmount)}",
-                color = MaterialTheme.colorScheme.primary
+                text = toText,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
-// --- (修改) ExpenseItem signature, make clickable, show remark ---
+
+
+// --- 支出/收入列表项 ---
 @Composable
 private fun ExpenseItem(
     expense: Expense,
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
     account: Account?,
-    onClick: () -> Unit // (新) Add onClick
+    onClick: () -> Unit
 ) {
     val amountColor = if (expense.amount < 0) MaterialTheme.colorScheme.error else Color.Unspecified
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 16.dp) // Add horizontal padding
-            .clickable(onClick = onClick), // (新) Make clickable
+            .padding(vertical = 8.dp, horizontal = 16.dp)
+            .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp) // Increase spacing
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (icon != null) {
-            // (新) Add background circle to icon
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -316,15 +376,12 @@ private fun ExpenseItem(
             Spacer(Modifier.size(40.dp))
         }
 
-        // (修改) Show Remark or Category
-        val displayText = if (!expense.remark.isNullOrBlank()) {
-            expense.remark
-        } else {
-            expense.category
-        }
-        Text(text = displayText, modifier = Modifier.weight(1f)) // Use displayText
+        // 显示备注或类别
+        val displayText = if (!expense.remark.isNullOrBlank()) expense.remark else expense.category
+        Text(text = displayText ?: expense.category, modifier = Modifier.weight(1f)) // Fallback
 
-        val amountText = "${account?.currency ?: ""} ${abs(expense.amount)}"
+        // 显示金额和货币
+        val amountText = "${account?.currency ?: ""} ${String.format("%.2f", abs(expense.amount))}"
         Text(
             text = amountText,
             color = amountColor,
@@ -333,6 +390,4 @@ private fun ExpenseItem(
     }
 }
 
-// --- TopAppBar, SummaryHeader, YearMonthPicker remain unchanged ---
-@OptIn(ExperimentalMaterial3Api::class) @Composable private fun DetailsTopAppBar(onMenuClick: () -> Unit, onSearchClick: () -> Unit, onCalendarClick: () -> Unit) { /* ... */ }
-@Composable private fun SummaryHeader(year: Int, month: Int, expense: Double, income: Double, balance: Double, onMonthClick: () -> Unit) { /* ... */ }
+// --- YearMonthPicker 已移至 YearMonthPicker.kt ---

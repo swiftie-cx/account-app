@@ -7,7 +7,6 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
-// import androidx.compose.material3.FloatingActionButtonDefaults // Not strictly needed now
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarItem // 确保导入
 import androidx.compose.material3.Scaffold
@@ -29,7 +28,7 @@ import com.example.myapplication.ui.navigation.BottomNavItem
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 
 
-// --- 定义 1: Routes 对象 ---
+// --- 定义 1: Routes 对象 (移到顶层) ---
 object Routes {
     const val ADD_TRANSACTION = "add_transaction"
     const val BUDGET_SETTINGS = "budget_settings/{year}/{month}"
@@ -45,6 +44,7 @@ object Routes {
     const val TRANSACTION_DETAIL = "transaction_detail/{expenseId}"
     fun transactionDetailRoute(expenseId: Long) = "transaction_detail/$expenseId"
 }
+
 // --- 定义 2: MainScreen 可组合函数 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +116,9 @@ fun NavigationGraph(
         }
         composable(BottomNavItem.Budget.route) { // 使用 "budget" 路由
             // 仍然指向 ReportScreen 的内容，可以稍后重命名 ReportScreen.kt
-            ReportScreen(viewModel = expenseViewModel, navController = navController)
+            // 或者如果你已经有了 BudgetScreen.kt，则指向 BudgetScreen
+            BudgetScreen(viewModel = expenseViewModel, navController = navController)
+            // ReportScreen(viewModel = expenseViewModel, navController = navController) // 如果预算页内容在 ReportScreen
         }
         composable(BottomNavItem.Assets.route) { // 使用 "assets" 路由
             // 指向新的 AssetsScreen
@@ -150,10 +152,7 @@ fun NavigationGraph(
             AddAccountScreen(viewModel = expenseViewModel, navController = navController)
         }
 
-        // 添加搜索页面的目标
-        composable(Routes.SEARCH) {
-            SearchScreen(viewModel = expenseViewModel, navController = navController)
-        }
+
 
         // 添加交易详情页面的目标
         composable(
@@ -178,4 +177,4 @@ fun PlaceholderScreen(screenName: String) {
     }
 }
 
-// --- 文件结束 --- 确保这之后没有任何其他代码 ---
+// --- 文件结束 ---
