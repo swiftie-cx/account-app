@@ -35,15 +35,6 @@ import java.util.Locale
 import com.example.myapplication.ui.screen.YearMonthPicker // 确保导入
 import kotlin.math.abs
 
-// (保持 private)
-private data class DisplayTransferItem(
-    val date: Date,
-    val fromAccount: Account,
-    val toAccount: Account,
-    val fromAmount: Double, // 负数
-    val toAmount: Double   // 正数
-)
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController) {

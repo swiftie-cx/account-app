@@ -168,7 +168,7 @@ fun NavigationGraph(
         }
         // 添加搜索页面的目标
         composable(Routes.SEARCH) {
-            SearchScreen(navController = navController) // <-- 新的
+            SearchScreen(viewModel = expenseViewModel, navController = navController)
         }
     }
 }
