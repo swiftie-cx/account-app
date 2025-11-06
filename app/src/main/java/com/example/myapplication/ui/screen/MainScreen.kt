@@ -48,6 +48,10 @@ object Routes {
     const val DAILY_DETAILS = "daily_details/{dateMillis}"
     fun dailyDetailsRoute(dateMillis: Long) = "daily_details/$dateMillis"
 
+    // (新) 设置页面路由
+    const val SETTINGS = "settings"
+    const val CURRENCY_SELECTION = "currency_selection"
+
     // 交易详情页面路由
     const val TRANSACTION_DETAIL = "transaction_detail/{expenseId}"
     fun transactionDetailRoute(expenseId: Long) = "transaction_detail/$expenseId"
@@ -62,6 +66,7 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     val calendar = Calendar.getInstance()
     var budgetScreenYear by rememberSaveable { mutableStateOf(calendar.get(Calendar.YEAR)) }
     var budgetScreenMonth by rememberSaveable { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
+    var defaultCurrency by rememberSaveable { mutableStateOf("CNY") } // 初始默认货币
 
     Scaffold(
         bottomBar = {
@@ -86,6 +91,10 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
             onBudgetScreenDateChange = { year, month ->
                 budgetScreenYear = year
                 budgetScreenMonth = month
+            },
+            defaultCurrency = defaultCurrency,
+            onDefaultCurrencyChange = { currency ->
+                defaultCurrency = currency
             }
         )
     }
@@ -133,7 +142,9 @@ fun NavigationGraph(
     expenseViewModel: ExpenseViewModel,
     budgetScreenYear: Int,
     budgetScreenMonth: Int,
-    onBudgetScreenDateChange: (Int, Int) -> Unit
+    onBudgetScreenDateChange: (Int, Int) -> Unit,
+    defaultCurrency: String,
+    onDefaultCurrencyChange: (String) -> Unit
 ) {
     NavHost(navController, startDestination = BottomNavItem.Details.route, modifier = modifier) {
         composable(BottomNavItem.Details.route) {
@@ -154,7 +165,7 @@ fun NavigationGraph(
         }
         composable(BottomNavItem.Assets.route) { // 使用 "assets" 路由
             // 指向新的 AssetsScreen
-            AssetsScreen(viewModel = expenseViewModel, navController = navController)
+            AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
         composable(Routes.ADD_TRANSACTION) {
             AddTransactionScreen(navController = navController, viewModel = expenseViewModel)
@@ -202,6 +213,14 @@ fun NavigationGraph(
                     dateMillis = dateMillis
                 )
             }
+        }
+
+        // (新) 添加设置和货币选择页面的路由
+        composable(Routes.SETTINGS) {
+            SettingsScreen(navController = navController, defaultCurrency = defaultCurrency)
+        }
+        composable(Routes.CURRENCY_SELECTION) {
+            CurrencySelectionScreen(navController = navController, onCurrencySelected = onDefaultCurrencyChange)
         }
 
         // 添加交易详情页面的目标
