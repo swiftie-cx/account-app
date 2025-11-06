@@ -33,6 +33,7 @@ import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import java.util.Date
 import kotlin.math.abs
 import androidx.compose.material3.MaterialTheme
+import java.util.Calendar
 
 /**
  * 搜索页面 (已连接基础搜索逻辑)
@@ -60,6 +61,10 @@ fun SearchScreen(
     val timeFilters = listOf("全部", "本周", "本月", "本年", "自定义")
     var selectedTimeIndex by remember { mutableStateOf(0) }
 
+    // (新) 自定义时间范围的状态
+    var showDateRangePicker by remember { mutableStateOf(false) }
+    var customDateRangeMillis by remember { mutableStateOf<Pair<Long?, Long?>>(null to null) }
+
     val focusRequester = remember { FocusRequester() }
 
     // --- (新) 复制 DetailsScreen 的数据处理逻辑 ---
@@ -72,9 +77,60 @@ fun SearchScreen(
     }
 
     // (新) 预处理过滤后的列表，合并转账
-    val displayItems = remember(searchResults, accountMap) {
-        val transferExpenses = searchResults.filter { it.category.startsWith("转账") }
-        val regularExpenses = searchResults.filter { !it.category.startsWith("转账") }
+    val displayItems = remember(searchResults, accountMap, selectedTypeIndex, selectedTimeIndex, customDateRangeMillis) {
+        // 1. 根据时间筛选
+        val timeFilteredResults = when (selectedTimeIndex) {
+            1 -> { // 本周
+                val calendar = Calendar.getInstance()
+                calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val weekStart = calendar.time
+                searchResults.filter { !it.date.before(weekStart) }
+            }
+            2 -> { // 本月
+                val calendar = Calendar.getInstance()
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val monthStart = calendar.time
+                searchResults.filter { !it.date.before(monthStart) }
+            }
+            3 -> { // 本年
+                val calendar = Calendar.getInstance()
+                calendar.set(Calendar.DAY_OF_YEAR, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val yearStart = calendar.time
+                searchResults.filter { !it.date.before(yearStart) }
+            }
+            4 -> { // 自定义
+                val (startMillis, endMillis) = customDateRangeMillis
+                if (startMillis != null && endMillis != null) {
+                    val endOfDayCalendar = Calendar.getInstance().apply {
+                        timeInMillis = endMillis
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                        set(Calendar.SECOND, 59)
+                    }
+                    val endOfDayMillis = endOfDayCalendar.timeInMillis
+                    searchResults.filter { it.date.time in startMillis..endOfDayMillis }
+                } else {
+                    searchResults
+                }
+            }
+            else -> searchResults // "全部"
+        }
+
+        // 2. 用筛选后的结果继续处理
+        val transferExpenses = timeFilteredResults.filter { it.category.startsWith("转账") }
+        val regularExpenses = timeFilteredResults.filter { !it.category.startsWith("转账") }
 
         val processedTransfers = transferExpenses
             .groupBy { it.date }
@@ -93,8 +149,17 @@ fun SearchScreen(
                     toAmount = inTx.amount
                 )
             }
-        val allItems: List<Any> = regularExpenses + processedTransfers
-        allItems.sortedByDescending {
+
+        // 3. 根据类型筛选
+        val finalItems: List<Any> = when (selectedTypeIndex) {
+            1 -> regularExpenses.filter { it.amount < 0 } // 支出
+            2 -> regularExpenses.filter { it.amount > 0 } // 收入
+            3 -> processedTransfers // 转账
+            else -> regularExpenses + processedTransfers // 全部
+        }
+
+        // 4. 排序
+        finalItems.sortedByDescending {
             when (it) {
                 is Expense -> it.date.time
                 is DisplayTransferItem -> it.date.time
@@ -104,6 +169,38 @@ fun SearchScreen(
     }
     // --- 数据处理结束 ---
 
+
+    // (新) 日期范围选择器
+    if (showDateRangePicker) {
+        val dateRangePickerState = rememberDateRangePickerState()
+
+        DatePickerDialog(
+            onDismissRequest = { showDateRangePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDateRangePicker = false
+                        val startMillis = dateRangePickerState.selectedStartDateMillis
+                        val endMillis = dateRangePickerState.selectedEndDateMillis
+                        if (startMillis != null && endMillis != null) {
+                            customDateRangeMillis = startMillis to endMillis
+                            selectedTimeIndex = 4 // 确认后，正式选择“自定义”
+                        }
+                    },
+                    enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
+                ) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDateRangePicker = false }) {
+                    Text("取消")
+                }
+            }
+        ) {
+            DateRangePicker(state = dateRangePickerState)
+        }
+    }
 
     // 页面打开时，自动激活搜索框
     LaunchedEffect(Unit) {
@@ -150,6 +247,7 @@ fun SearchScreen(
                             selectedTypeIndex = 0
                             selectedCategory = "全部"
                             selectedTimeIndex = 0
+                            customDateRangeMillis = null to null // (新) 重置自定义日期
                             // (新) 重置 ViewModel
                             viewModel.updateSearchText("")
                         },
@@ -216,7 +314,14 @@ fun SearchScreen(
                         title = "时间",
                         labels = timeFilters,
                         selectedIndex = selectedTimeIndex,
-                        onChipSelected = { selectedTimeIndex = it }
+                        onChipSelected = { index ->
+                            if (index == 4) { // "自定义"
+                                showDateRangePicker = true
+                            } else {
+                                selectedTimeIndex = index
+                                customDateRangeMillis = null to null
+                            }
+                        }
                     )
                 }
                 // --- 搜索和过滤条件 结束 ---
