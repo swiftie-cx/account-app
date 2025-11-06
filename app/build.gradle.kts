@@ -39,7 +39,6 @@ android {
     }
 }
 
-
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -70,4 +69,7 @@ dependencies {
     // ViewModel / 在 Compose 中收集 Flow
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
+
+    // ---- Reorderable 列表（新增）----
+    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
 }

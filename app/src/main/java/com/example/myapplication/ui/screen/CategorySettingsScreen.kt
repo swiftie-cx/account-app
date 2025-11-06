@@ -1,7 +1,7 @@
 package com.example.myapplication.ui.screen
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,7 +32,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,15 +40,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.viewmodel.CategoryType
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
+import org.burnoutcrew.reorderable.ReorderableItem
+import org.burnoutcrew.reorderable.detectReorder     // ← 用这个
+import org.burnoutcrew.reorderable.rememberReorderableLazyListState
+import org.burnoutcrew.reorderable.reorderable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,9 +59,9 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
 
     val expenseCategories by viewModel.expenseCategoriesState.collectAsState()
     val incomeCategories by viewModel.incomeCategoriesState.collectAsState()
-    var categories by remember(expenseCategories, incomeCategories, selectedTab) {
-        mutableStateOf(if (selectedTab == 0) expenseCategories else incomeCategories)
-    }
+
+    val source = if (selectedTab == 0) expenseCategories else incomeCategories
+    var items by remember(source) { mutableStateOf(source.toMutableList()) }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<Pair<Category, CategoryType>?>(null) }
@@ -70,7 +70,11 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
         topBar = {
             TopAppBar(
                 title = { Text("类别设置") },
-                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } }
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -90,22 +94,46 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
                     )
                 }
             }
-            DragDropList(items = categories, onMove = { from, to ->
-                categories = categories.toMutableList().apply {
-                    add(to, removeAt(from))
+
+            val type = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
+
+            val reorderState = rememberReorderableLazyListState(
+                onMove = { from, to ->
+                    items = items.toMutableList().apply { move(from.index, to.index) }
+                    viewModel.reorderCategories(items, type)
                 }
-                val type = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
-                viewModel.reorderCategories(categories, type)
-            }) { category, modifier ->
-                CategorySettingItem(
-                    modifier = modifier,
-                    category = category,
-                    onDelete = {
-                        val type = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
-                        categoryToDelete = category to type
-                        showDeleteDialog = true
+            )
+
+            LazyColumn(
+                state = reorderState.listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .reorderable(reorderState)
+            ) {
+                items(
+                    items = items,
+                    key = { it.title } // 有 id 的话改为 it.id
+                ) { category ->
+                    ReorderableItem(reorderState, key = category.title) { _ ->
+                        CategorySettingItem(
+                            category = category,
+                            onDelete = {
+                                categoryToDelete = category to type
+                                showDeleteDialog = true
+                            },
+                            modifier = Modifier.animateContentSize()
+                        ) { handleModifier ->
+                            IconButton(
+                                onClick = {},
+                                modifier = handleModifier
+                                    .size(24.dp)
+                                    .detectReorder(reorderState) // ← 把手在这里
+                            ) {
+                                Icon(Icons.Default.DragHandle, contentDescription = "排序")
+                            }
+                        }
                     }
-                )
+                }
             }
         }
     }
@@ -121,67 +149,22 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
                         viewModel.deleteCategory(categoryToDelete!!.first, categoryToDelete!!.second)
                         showDeleteDialog = false
                     }
-                ) {
-                    Text("确定")
-                }
+                ) { Text("确定") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("取消")
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("取消") }
             }
         )
     }
 }
 
 @Composable
-fun <T> DragDropList(
-    items: List<T>,
-    onMove: (Int, Int) -> Unit,
-    itemContent: @Composable (T, Modifier) -> Unit
+fun CategorySettingItem(
+    category: Category,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+    handle: @Composable (Modifier) -> Unit
 ) {
-    var overscroll by remember { mutableFloatStateOf(0f) }
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress(
-                    onDrag = { change, offset ->
-                        change.consume()
-                        overscroll = offset.y
-                    },
-                    onDragStart = { overscroll = 0f },
-                    onDragEnd = {
-                        val fromIndex = 0 // Simplified: always assumes the first item is dragged
-                        val toIndex = (overscroll / 60.dp.value).toInt().coerceIn(0, items.size - 1)
-                        if (fromIndex != toIndex) {
-                            onMove(fromIndex, toIndex)
-                        }
-                        overscroll = 0f
-                    },
-                    onDragCancel = { overscroll = 0f }
-                )
-            }
-    ) {
-        itemsIndexed(items) { index, item ->
-            // This logic is still simplified and only allows dragging the first item
-            val offset = if (index == 0) overscroll else 0f
-            val isDragged = offset != 0f
-            itemContent(
-                item,
-                Modifier
-                    .graphicsLayer {
-                        translationY = offset
-                        shadowElevation = if (isDragged) 8f else 0f
-                    }
-                    .zIndex(if (isDragged) 1f else 0f)
-            )
-        }
-    }
-}
-
-@Composable
-fun CategorySettingItem(category: Category, onDelete: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -202,8 +185,14 @@ fun CategorySettingItem(category: Category, onDelete: () -> Unit, modifier: Modi
             Icon(category.icon, contentDescription = category.title)
         }
         Text(category.title, modifier = Modifier.weight(1f))
-        IconButton(onClick = { }, modifier = Modifier.size(24.dp)) {
-            Icon(Icons.Default.DragHandle, contentDescription = "排序")
-        }
+        handle(Modifier)
     }
+}
+
+private fun <T> MutableList<T>.move(from: Int, to: Int) {
+    if (from == to) return
+    // 取出元素
+    val item = removeAt(from)
+    // 直接插入到目标位置，不需要额外计算
+    add(to, item)
 }
