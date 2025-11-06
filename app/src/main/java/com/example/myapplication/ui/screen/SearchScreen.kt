@@ -23,6 +23,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Expense
@@ -57,7 +59,8 @@ fun SearchScreen(
     // (保持本地) 其他过滤器暂时保持本地状态，不影响搜索
     val typeFilters = listOf("全部", "支出", "收入", "转账")
     var selectedTypeIndex by remember { mutableStateOf(0) }
-    var selectedCategory by remember { mutableStateOf("全部") }
+    var selectedCategories by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showCategoryPicker by remember { mutableStateOf(false) }
     val timeFilters = listOf("全部", "本周", "本月", "本年", "自定义")
     var selectedTimeIndex by remember { mutableStateOf(0) }
 
@@ -77,7 +80,7 @@ fun SearchScreen(
     }
 
     // (新) 预处理过滤后的列表，合并转账
-    val displayItems = remember(searchResults, accountMap, selectedTypeIndex, selectedTimeIndex, customDateRangeMillis) {
+    val displayItems = remember(searchResults, accountMap, selectedTypeIndex, selectedTimeIndex, customDateRangeMillis, selectedCategories) {
         // 1. 根据时间筛选
         val timeFilteredResults = when (selectedTimeIndex) {
             1 -> { // 本周
@@ -128,9 +131,16 @@ fun SearchScreen(
             else -> searchResults // "全部"
         }
 
+        // 1.5. 根据类别筛选
+        val categoryFilteredResults = if (selectedCategories.isNotEmpty()) {
+            timeFilteredResults.filter { it.category in selectedCategories }
+        } else {
+            timeFilteredResults
+        }
+
         // 2. 用筛选后的结果继续处理
-        val transferExpenses = timeFilteredResults.filter { it.category.startsWith("转账") }
-        val regularExpenses = timeFilteredResults.filter { !it.category.startsWith("转账") }
+        val transferExpenses = categoryFilteredResults.filter { it.category.startsWith("转账") }
+        val regularExpenses = categoryFilteredResults.filter { !it.category.startsWith("转账") }
 
         val processedTransfers = transferExpenses
             .groupBy { it.date }
@@ -169,6 +179,20 @@ fun SearchScreen(
     }
     // --- 数据处理结束 ---
 
+    if (showCategoryPicker) {
+        Dialog(
+            onDismissRequest = { showCategoryPicker = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            CategorySelectionScreen(
+                onDismiss = { showCategoryPicker = false },
+                onConfirm = { categories ->
+                    showCategoryPicker = false
+                    selectedCategories = categories
+                }
+            )
+        }
+    }
 
     // (新) 日期范围选择器
     if (showDateRangePicker) {
@@ -245,7 +269,7 @@ fun SearchScreen(
                             // 重置本地状态
                             localSearchText = ""
                             selectedTypeIndex = 0
-                            selectedCategory = "全部"
+                            selectedCategories = emptyList()
                             selectedTimeIndex = 0
                             customDateRangeMillis = null to null // (新) 重置自定义日期
                             // (新) 重置 ViewModel
@@ -301,10 +325,9 @@ fun SearchScreen(
 
                     // (保持本地) 行 2: 类别
                     CategoryFilterRow(
-                        selectedCategory = selectedCategory,
-                        isAllSelected = (selectedCategory == "全部"),
-                        onCategoryChipClick = { selectedCategory = "全部" },
-                        onAddClick = { /* TODO: 跳转类别选择 */ }
+                        selectedCategories = selectedCategories,
+                        onClearCategories = { selectedCategories = emptyList() },
+                        onAddClick = { showCategoryPicker = true }
                     )
 
                     Divider(modifier = Modifier.padding(vertical = 4.dp))
@@ -397,9 +420,8 @@ private fun FilterChipRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryFilterRow(
-    selectedCategory: String,
-    isAllSelected: Boolean,
-    onCategoryChipClick: () -> Unit,
+    selectedCategories: List<String>,
+    onClearCategories: () -> Unit,
     onAddClick: () -> Unit
 ) {
     Row(
@@ -414,10 +436,22 @@ private fun CategoryFilterRow(
             modifier = Modifier.width(50.dp)
         )
         FilterChip(
-            selected = isAllSelected,
-            onClick = onCategoryChipClick,
-            label = { Text(selectedCategory) }
+            selected = selectedCategories.isEmpty(),
+            onClick = onClearCategories,
+            label = { Text("全部") }
         )
+        if (selectedCategories.isNotEmpty()) {
+            Spacer(Modifier.width(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(selectedCategories) { category ->
+                    InputChip(
+                        selected = true,
+                        onClick = { /* Future: remove single category */ },
+                        label = { Text(category) }
+                    )
+                }
+            }
+        }
         Spacer(Modifier.weight(1f))
         FilledIconButton(
             onClick = onAddClick,
