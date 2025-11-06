@@ -143,7 +143,7 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
             DetailsTopAppBar(
                 onMenuClick = { /* TODO: 实现菜单点击逻辑 */ },
                 onSearchClick = { navController.navigate(Routes.SEARCH) }, // 跳转到搜索页
-                onCalendarClick = { /* TODO: 实现日历点击逻辑 */ }
+                onCalendarClick = { navController.navigate(Routes.CALENDAR) } // (修改) 跳转到日历页
             )
         }
     ) { innerPadding ->

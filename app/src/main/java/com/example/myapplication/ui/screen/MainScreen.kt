@@ -40,6 +40,9 @@ object Routes {
     // 搜索页面路由
     const val SEARCH = "search"
 
+    // (新) 日历页面路由
+    const val CALENDAR = "calendar"
+
     // 交易详情页面路由
     const val TRANSACTION_DETAIL = "transaction_detail/{expenseId}"
     fun transactionDetailRoute(expenseId: Long) = "transaction_detail/$expenseId"
@@ -152,7 +155,10 @@ fun NavigationGraph(
             AddAccountScreen(viewModel = expenseViewModel, navController = navController)
         }
 
-
+        // (新) 添加日历屏幕的路由
+        composable(Routes.CALENDAR) {
+            CalendarScreen(viewModel = expenseViewModel, navController = navController)
+        }
 
         // 添加交易详情页面的目标
         composable(
