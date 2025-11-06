@@ -3,6 +3,7 @@ package com.example.myapplication.ui.screen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -98,13 +99,13 @@ fun CalendarScreen(viewModel: ExpenseViewModel, navController: NavHostController
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { /* TODO: Navigate to Add Expense */ }) {
+            FloatingActionButton(onClick = { navController.navigate(Routes.ADD_TRANSACTION) }) {
                 Icon(Icons.Default.Add, contentDescription = "添加")
             }
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            CalendarGrid(currentMonth, dailySummaries, monthlyBudget)
+            CalendarGrid(currentMonth, dailySummaries, monthlyBudget, navController)
             BudgetSummary(monthlyBudget, currentMonth.getActualMaximum(Calendar.DAY_OF_MONTH))
         }
     }
@@ -129,7 +130,12 @@ private fun CalendarTopAppBar(calendar: Calendar, onPrevMonth: () -> Unit, onNex
 }
 
 @Composable
-private fun CalendarGrid(calendar: Calendar, summaries: Map<Int, DailySummary>, monthlyBudget: Double) {
+private fun CalendarGrid(
+    calendar: Calendar,
+    summaries: Map<Int, DailySummary>,
+    monthlyBudget: Double,
+    navController: NavHostController
+) {
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     val firstDayOfMonth = (calendar.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, 1) }.get(Calendar.DAY_OF_WEEK)
     val emptyDays = (firstDayOfMonth - calendar.firstDayOfWeek + 7) % 7
@@ -151,19 +157,36 @@ private fun CalendarGrid(calendar: Calendar, summaries: Map<Int, DailySummary>, 
 
             items(daysInMonth) { day ->
                 val summary = summaries[day + 1]
-                DayCell(day = day + 1, summary = summary, dailyBudget = dailyBudget)
+                DayCell(
+                    day = day + 1,
+                    summary = summary,
+                    dailyBudget = dailyBudget,
+                    calendar = calendar,
+                    navController = navController
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DayCell(day: Int, summary: DailySummary?, dailyBudget: Double) {
+private fun DayCell(
+    day: Int,
+    summary: DailySummary?,
+    dailyBudget: Double,
+    calendar: Calendar,
+    navController: NavHostController
+) {
     val isOverBudget = summary?.expense ?: 0.0 > dailyBudget
     val backgroundColor = if (isOverBudget) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
 
+    val dayCalendar = (calendar.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, day) }
+
     Surface(
-        modifier = Modifier.aspectRatio(1f).padding(2.dp),
+        modifier = Modifier
+            .aspectRatio(1f)
+            .padding(2.dp)
+            .clickable { navController.navigate(Routes.dailyDetailsRoute(dayCalendar.timeInMillis)) },
         shape = RoundedCornerShape(8.dp),
         color = backgroundColor,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
