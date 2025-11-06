@@ -2,7 +2,6 @@ package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,7 +37,7 @@ fun SettingsScreen(navController: NavController, defaultCurrency: String) {
     val settingsItems = listOf(
         SettingItem("个人信息", Icons.Default.AccountCircle),
         SettingItem("数据共享", Icons.Default.Public), // Placeholder icon
-        SettingItem("类别设置", Icons.Default.Category),
+        SettingItem("类别设置", Icons.Default.Category, route = Routes.CATEGORY_SETTINGS),
         SettingItem("默认货币", Icons.Default.Public, route = Routes.CURRENCY_SELECTION, summary = defaultCurrency),
         SettingItem("主题", Icons.Default.Palette),
     )

@@ -51,6 +51,8 @@ object Routes {
     // (新) 设置页面路由
     const val SETTINGS = "settings"
     const val CURRENCY_SELECTION = "currency_selection"
+    const val CATEGORY_SETTINGS = "category_settings"
+    const val ADD_CATEGORY = "add_category"
 
     // 交易详情页面路由
     const val TRANSACTION_DETAIL = "transaction_detail/{expenseId}"
@@ -222,6 +224,12 @@ fun NavigationGraph(
         }
         composable(Routes.CURRENCY_SELECTION) {
             CurrencySelectionScreen(navController = navController, onCurrencySelected = onDefaultCurrencyChange)
+        }
+        composable(Routes.CATEGORY_SETTINGS) {
+            CategorySettingsScreen(navController = navController, viewModel = expenseViewModel)
+        }
+        composable(Routes.ADD_CATEGORY) {
+            AddCategoryScreen(navController = navController, viewModel = expenseViewModel)
         }
 
         // 添加交易详情页面的目标

@@ -1,17 +1,22 @@
 package com.example.myapplication.ui.viewmodel
 
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Budget
 import com.example.myapplication.data.Expense
 import com.example.myapplication.data.ExpenseRepository
+import com.example.myapplication.ui.navigation.Category
+import com.example.myapplication.ui.navigation.expenseCategories
+import com.example.myapplication.ui.navigation.incomeCategories
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow // (新) Import
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow // (新) Import
-import kotlinx.coroutines.flow.combine // (新) Import
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -22,6 +27,7 @@ import kotlin.math.abs
 
 // (新) 定义搜索过滤器类型
 enum class ExpenseTypeFilter { ALL, EXPENSE, INCOME, TRANSFER }
+enum class CategoryType { EXPENSE, INCOME }
 
 class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() {
 
@@ -32,6 +38,40 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     val allAccounts: StateFlow<List<Account>> = repository.allAccounts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // --- Category Management ---
+    private val _expenseCategories = MutableStateFlow(expenseCategories)
+    val expenseCategoriesState: StateFlow<List<Category>> = _expenseCategories.asStateFlow()
+
+    private val _incomeCategories = MutableStateFlow(incomeCategories)
+    val incomeCategoriesState: StateFlow<List<Category>> = _incomeCategories.asStateFlow()
+
+    fun addCategory(name: String, icon: ImageVector, type: CategoryType) {
+        val newCategory = Category(name, icon)
+        if (type == CategoryType.EXPENSE) {
+            _expenseCategories.value = _expenseCategories.value + newCategory
+        } else {
+            _incomeCategories.value = _incomeCategories.value + newCategory
+        }
+    }
+
+    fun deleteCategory(category: Category, type: CategoryType) {
+        if (type == CategoryType.EXPENSE) {
+            _expenseCategories.value = _expenseCategories.value.filter { it.title != category.title }
+        } else {
+            _incomeCategories.value = _incomeCategories.value.filter { it.title != category.title }
+        }
+    }
+
+    fun reorderCategories(categories: List<Category>, type: CategoryType) {
+        if (type == CategoryType.EXPENSE) {
+            _expenseCategories.value = categories
+        } else {
+            _incomeCategories.value = categories
+        }
+    }
+    // --- End of Category Management ---
+
 
     fun insert(expense: Expense) {
         viewModelScope.launch(Dispatchers.IO) {
