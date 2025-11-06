@@ -160,7 +160,8 @@ fun NavigationGraph(
                 navController = navController,
                 year = budgetScreenYear,
                 month = budgetScreenMonth,
-                onDateChange = onBudgetScreenDateChange
+                onDateChange = onBudgetScreenDateChange,
+                defaultCurrency = defaultCurrency
             )
         }
         composable(BottomNavItem.Assets.route) { // 使用 "assets" 路由
@@ -197,7 +198,7 @@ fun NavigationGraph(
 
         // (新) 添加日历屏幕的路由
         composable(Routes.CALENDAR) {
-            CalendarScreen(viewModel = expenseViewModel, navController = navController)
+            CalendarScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
         // (新) 添加每日详情页面的路由

@@ -17,6 +17,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Budget
+import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 // --- (修复) 添加 Imports ---
 import com.example.myapplication.ui.screen.Routes // 导入 Routes
@@ -33,7 +34,8 @@ fun BudgetScreen(
     navController: NavHostController,
     year: Int,
     month: Int,
-    onDateChange: (Int, Int) -> Unit
+    onDateChange: (Int, Int) -> Unit,
+    defaultCurrency: String
 ) {
     var showMonthPicker by remember { mutableStateOf(false) }
 
@@ -53,6 +55,9 @@ fun BudgetScreen(
 
     val budgets by viewModel.getBudgetsForMonth(year, month).collectAsState(initial = emptyList())
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
+    val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+    val accountMap = remember(accounts) { accounts.associateBy { it.id } }
+
     val monthlyExpenses = remember(expenses, year, month) {
         expenses.filter {
             val expenseCalendar = Calendar.getInstance().apply { time = it.date }
@@ -61,11 +66,27 @@ fun BudgetScreen(
                     it.amount < 0)
         }
     }
-    val expenseMap = remember(monthlyExpenses) {
-        monthlyExpenses.groupBy { it.category }.mapValues { it.value.sumOf { exp -> abs(exp.amount) } }
+    val expenseMap = remember(monthlyExpenses, defaultCurrency, accountMap) {
+        monthlyExpenses.groupBy { it.category }.mapValues { (_, expenses) ->
+            expenses.sumOf { exp ->
+                val account = accountMap[exp.accountId]
+                if (account != null) {
+                    ExchangeRates.convert(abs(exp.amount), account.currency, defaultCurrency)
+                } else {
+                    0.0
+                }
+            }
+        }
     }
-    val totalSpent = remember(monthlyExpenses) {
-        monthlyExpenses.sumOf { abs(it.amount) }
+    val totalSpent = remember(monthlyExpenses, defaultCurrency, accountMap) {
+        monthlyExpenses.sumOf { exp ->
+            val account = accountMap[exp.accountId]
+            if (account != null) {
+                ExchangeRates.convert(abs(exp.amount), account.currency, defaultCurrency)
+            } else {
+                0.0
+            }
+        }
     }
     val (totalBudgetList, categoryBudgets) = remember(budgets) {
         budgets.partition { it.category == "总预算" }
@@ -96,13 +117,15 @@ fun BudgetScreen(
             }
 
             if (totalBudget != null) {
-                BudgetCard(budget = totalBudget, spent = totalSpent)
+                val convertedBudgetAmount = ExchangeRates.convert(totalBudget.amount, "CNY", defaultCurrency)
+                BudgetCard(budget = totalBudget.copy(amount = convertedBudgetAmount), spent = totalSpent, currency = defaultCurrency)
             }
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(categoryBudgets) { budget ->
                     val spent = expenseMap[budget.category] ?: 0.0
-                    BudgetCard(budget = budget, spent = spent)
+                    val convertedBudgetAmount = ExchangeRates.convert(budget.amount, "CNY", defaultCurrency)
+                    BudgetCard(budget = budget.copy(amount = convertedBudgetAmount), spent = spent, currency = defaultCurrency)
                 }
             }
         }
@@ -122,7 +145,7 @@ fun BudgetScreen(
 }
 
 @Composable
-fun BudgetCard(budget: Budget, spent: Double) {
+fun BudgetCard(budget: Budget, spent: Double, currency: String) {
     val percentage = if (budget.amount > 0) (spent / budget.amount).toFloat() else 0f
 
     Card {
@@ -141,8 +164,8 @@ fun BudgetCard(budget: Budget, spent: Double) {
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(String.format(Locale.US, "已用: %.2f", spent), style = MaterialTheme.typography.bodySmall)
-                    Text(String.format(Locale.US, "预算: %.2f", budget.amount), style = MaterialTheme.typography.bodySmall)
+                    Text(String.format(Locale.US, "已用: %s %.2f", currency, spent), style = MaterialTheme.typography.bodySmall)
+                    Text(String.format(Locale.US, "预算: %s %.2f", currency, budget.amount), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

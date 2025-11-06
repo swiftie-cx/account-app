@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.data.Expense
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
@@ -54,18 +55,21 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.math.abs
 
-data class DailySummary(val income: Double, val expense: Double)
+data class DailySummary(val income: Double, val expense: Double, val currency: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalendarScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
+fun CalendarScreen(viewModel: ExpenseViewModel, navController: NavHostController, defaultCurrency: String) {
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
     var currentMonth by remember { mutableStateOf(Calendar.getInstance()) }
 
-    val monthlyBudget = 10000.0 // 假设的月度总预算
+    val budgets by viewModel.getBudgetsForMonth(currentMonth.get(Calendar.YEAR), currentMonth.get(Calendar.MONTH) + 1).collectAsState(initial = emptyList())
+    val totalBudget = budgets.find { it.category == "总预算" }
+    val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+    val accountMap = remember(accounts) { accounts.associateBy { it.id } }
 
-    val dailySummaries = remember(allExpenses, currentMonth) {
+    val dailySummaries = remember(allExpenses, currentMonth, defaultCurrency, accountMap) {
         val month = currentMonth.get(Calendar.MONTH)
         val year = currentMonth.get(Calendar.YEAR)
 
@@ -79,9 +83,19 @@ fun CalendarScreen(viewModel: ExpenseViewModel, navController: NavHostController
                 cal.get(Calendar.DAY_OF_MONTH)
             }
             .mapValues { (_, expenses) ->
-                val income = expenses.filter { it.amount > 0 }.sumOf { it.amount }
-                val expense = expenses.filter { it.amount < 0 }.sumOf { abs(it.amount) }
-                DailySummary(income, expense)
+                val income = expenses.filter { it.amount > 0 }.sumOf { 
+                    val account = accountMap[it.accountId]
+                    if (account != null) {
+                        ExchangeRates.convert(it.amount, account.currency, defaultCurrency)
+                    } else { 0.0 }
+                }
+                val expense = expenses.filter { it.amount < 0 }.sumOf { 
+                    val account = accountMap[it.accountId]
+                    if (account != null) {
+                        ExchangeRates.convert(abs(it.amount), account.currency, defaultCurrency)
+                    } else { 0.0 }
+                 }
+                DailySummary(income, expense, defaultCurrency)
             }
     }
 
@@ -105,8 +119,11 @@ fun CalendarScreen(viewModel: ExpenseViewModel, navController: NavHostController
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            CalendarGrid(currentMonth, dailySummaries, monthlyBudget, navController)
-            BudgetSummary(monthlyBudget, currentMonth.getActualMaximum(Calendar.DAY_OF_MONTH))
+            val convertedTotalBudget = totalBudget?.let { 
+                ExchangeRates.convert(it.amount, "CNY", defaultCurrency)
+            } ?: 0.0
+            CalendarGrid(currentMonth, dailySummaries, convertedTotalBudget, navController)
+            BudgetSummary(convertedTotalBudget, currentMonth.getActualMaximum(Calendar.DAY_OF_MONTH), defaultCurrency)
         }
     }
 }
@@ -139,7 +156,7 @@ private fun CalendarGrid(
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     val firstDayOfMonth = (calendar.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, 1) }.get(Calendar.DAY_OF_WEEK)
     val emptyDays = (firstDayOfMonth - calendar.firstDayOfWeek + 7) % 7
-    val dailyBudget = monthlyBudget / daysInMonth
+    val dailyBudget = if (daysInMonth > 0) monthlyBudget / daysInMonth else 0.0
 
     Column {
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp)) {
@@ -157,13 +174,7 @@ private fun CalendarGrid(
 
             items(daysInMonth) { day ->
                 val summary = summaries[day + 1]
-                DayCell(
-                    day = day + 1,
-                    summary = summary,
-                    dailyBudget = dailyBudget,
-                    calendar = calendar,
-                    navController = navController
-                )
+                DayCell(day = day + 1, summary = summary, dailyBudget = dailyBudget, calendar = calendar, navController = navController)
             }
         }
     }
@@ -177,7 +188,7 @@ private fun DayCell(
     calendar: Calendar,
     navController: NavHostController
 ) {
-    val isOverBudget = summary?.expense ?: 0.0 > dailyBudget
+    val isOverBudget = summary?.expense ?: 0.0 > dailyBudget && dailyBudget > 0
     val backgroundColor = if (isOverBudget) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
 
     val dayCalendar = (calendar.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, day) }
@@ -220,8 +231,8 @@ private fun DayCell(
 }
 
 @Composable
-private fun BudgetSummary(monthlyBudget: Double, daysInMonth: Int) {
-    val dailyBudget = monthlyBudget / daysInMonth
+private fun BudgetSummary(monthlyBudget: Double, daysInMonth: Int, currency: String) {
+    val dailyBudget = if (daysInMonth > 0) monthlyBudget / daysInMonth else 0.0
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -229,7 +240,7 @@ private fun BudgetSummary(monthlyBudget: Double, daysInMonth: Int) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        Text(text = "日均预算: ${String.format("%.2f", dailyBudget)}", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "日均预算: $currency ${String.format("%.2f", dailyBudget)}", style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.width(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f), CircleShape))
