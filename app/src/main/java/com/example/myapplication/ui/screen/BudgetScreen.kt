@@ -11,7 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Budget
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
@@ -25,23 +28,36 @@ import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BudgetScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
-    val calendar = Calendar.getInstance()
-    var selectedYear by remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
-    var selectedMonth by remember { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
+fun BudgetScreen(
+    viewModel: ExpenseViewModel,
+    navController: NavHostController,
+    year: Int,
+    month: Int,
+    onDateChange: (Int, Int) -> Unit
+) {
     var showMonthPicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(selectedYear, selectedMonth) {
-        viewModel.syncBudgetsFor(selectedYear, selectedMonth)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, year, month) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.syncBudgetsFor(year, month)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
-    val budgets by viewModel.getBudgetsForMonth(selectedYear, selectedMonth).collectAsState(initial = emptyList())
+    val budgets by viewModel.getBudgetsForMonth(year, month).collectAsState(initial = emptyList())
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
-    val monthlyExpenses = remember(expenses, selectedYear, selectedMonth) {
+    val monthlyExpenses = remember(expenses, year, month) {
         expenses.filter {
             val expenseCalendar = Calendar.getInstance().apply { time = it.date }
-            (expenseCalendar.get(Calendar.YEAR) == selectedYear &&
-                    expenseCalendar.get(Calendar.MONTH) + 1 == selectedMonth &&
+            (expenseCalendar.get(Calendar.YEAR) == year &&
+                    expenseCalendar.get(Calendar.MONTH) + 1 == month &&
                     it.amount < 0)
         }
     }
@@ -59,8 +75,7 @@ fun BudgetScreen(viewModel: ExpenseViewModel, navController: NavHostController) 
     Scaffold(
         floatingActionButton = {
             Button(onClick = {
-                // 现在 Routes.budgetSettingsRoute 可以被正确解析
-                navController.navigate(Routes.budgetSettingsRoute(selectedYear, selectedMonth))
+                navController.navigate(Routes.budgetSettingsRoute(year, month))
             }) {
                 Text("+ 预算设置")
             }
@@ -75,7 +90,7 @@ fun BudgetScreen(viewModel: ExpenseViewModel, navController: NavHostController) 
 
             TextButton(onClick = { showMonthPicker = true }) {
                 Text(
-                    "${selectedYear}年${selectedMonth}月",
+                    "${year}年${month}月",
                     style = MaterialTheme.typography.titleLarge
                 )
             }
@@ -94,13 +109,11 @@ fun BudgetScreen(viewModel: ExpenseViewModel, navController: NavHostController) 
     }
 
     if (showMonthPicker) {
-        // 现在 YearMonthPicker 可以被正确解析
         YearMonthPicker(
-            year = selectedYear,
-            month = selectedMonth,
-            onConfirm = { year, month ->
-                selectedYear = year
-                selectedMonth = month
+            year = year,
+            month = month,
+            onConfirm = { newYear, newMonth ->
+                onDateChange(newYear, newMonth)
                 showMonthPicker = false
             },
             onDismiss = { showMonthPicker = false }
@@ -108,11 +121,53 @@ fun BudgetScreen(viewModel: ExpenseViewModel, navController: NavHostController) 
     }
 }
 
-// ... (BudgetCard 和 CircularProgress 保持不变) ...
 @Composable
-fun BudgetCard(budget: Budget, spent: Double) { /* ... */ }
+fun BudgetCard(budget: Budget, spent: Double) {
+    val percentage = if (budget.amount > 0) (spent / budget.amount).toFloat() else 0f
+
+    Card {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgress(percentage = percentage)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(budget.category, style = MaterialTheme.typography.titleMedium)
+                LinearProgressIndicator(
+                    progress = percentage,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(String.format(Locale.US, "已用: %.2f", spent), style = MaterialTheme.typography.bodySmall)
+                    Text(String.format(Locale.US, "预算: %.2f", budget.amount), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
 
 @Composable
-fun CircularProgress(percentage: Float) { /* ... */ }
-
-// --- YearMonthPicker 函数定义已移到 YearMonthPicker.kt ---
+fun CircularProgress(percentage: Float) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(50.dp)) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawArc(
+                color = Color.LightGray,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = 8f, cap = StrokeCap.Round)
+            )
+            drawArc(
+                color = if (percentage > 1) Color.Red else Color.Blue,
+                startAngle = -90f,
+                sweepAngle = 360 * percentage,
+                useCenter = false,
+                style = Stroke(width = 8f, cap = StrokeCap.Round)
+            )
+        }
+        Text(text = "${(percentage * 100).toInt()}%")
+    }
+}

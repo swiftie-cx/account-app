@@ -11,8 +11,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarItem // 确保导入
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.Icons
@@ -26,6 +26,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument // 确保导入
 import com.example.myapplication.ui.navigation.BottomNavItem
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
+import java.util.Calendar
 
 
 // --- 定义 1: Routes 对象 (移到顶层) ---
@@ -58,8 +59,17 @@ object Routes {
 fun MainScreen(expenseViewModel: ExpenseViewModel) {
     val navController = rememberNavController()
 
+    val calendar = Calendar.getInstance()
+    var budgetScreenYear by rememberSaveable { mutableStateOf(calendar.get(Calendar.YEAR)) }
+    var budgetScreenMonth by rememberSaveable { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
+
     Scaffold(
-        bottomBar = { AppBottomBar(navController = navController) },
+        bottomBar = {
+            AppBottomBar(navController = navController) {
+                budgetScreenYear = calendar.get(Calendar.YEAR)
+                budgetScreenMonth = calendar.get(Calendar.MONTH) + 1
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { navController.navigate(Routes.ADD_TRANSACTION) }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Transaction")
@@ -70,14 +80,20 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
         NavigationGraph(
             navController = navController,
             modifier = Modifier.padding(innerPadding),
-            expenseViewModel = expenseViewModel
+            expenseViewModel = expenseViewModel,
+            budgetScreenYear = budgetScreenYear,
+            budgetScreenMonth = budgetScreenMonth,
+            onBudgetScreenDateChange = { year, month ->
+                budgetScreenYear = year
+                budgetScreenMonth = month
+            }
         )
     }
 }
 
 // --- 定义 3: AppBottomBar 可组合函数 ---
 @Composable
-fun AppBottomBar(navController: NavHostController) {
+fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit) {
     // 使用来自 BottomNavItem.kt 的更新后的项目
     val items = listOf(
         BottomNavItem.Details,
@@ -89,13 +105,16 @@ fun AppBottomBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    BottomAppBar() {
+    BottomAppBar {
         items.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.title) },
                 label = { Text(item.title) },
                 selected = currentRoute == item.route,
                 onClick = {
+                    if (item.route == BottomNavItem.Budget.route) {
+                        onBudgetTabClick()
+                    }
                     navController.navigate(item.route) {
                         launchSingleTop = true
                         restoreState = true
@@ -111,7 +130,10 @@ fun AppBottomBar(navController: NavHostController) {
 fun NavigationGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    expenseViewModel: ExpenseViewModel
+    expenseViewModel: ExpenseViewModel,
+    budgetScreenYear: Int,
+    budgetScreenMonth: Int,
+    onBudgetScreenDateChange: (Int, Int) -> Unit
 ) {
     NavHost(navController, startDestination = BottomNavItem.Details.route, modifier = modifier) {
         composable(BottomNavItem.Details.route) {
@@ -122,10 +144,13 @@ fun NavigationGraph(
             ChartScreen(viewModel = expenseViewModel)
         }
         composable(BottomNavItem.Budget.route) { // 使用 "budget" 路由
-            // 仍然指向 ReportScreen 的内容，可以稍后重命名 ReportScreen.kt
-            // 或者如果你已经有了 BudgetScreen.kt，则指向 BudgetScreen
-            BudgetScreen(viewModel = expenseViewModel, navController = navController)
-            // ReportScreen(viewModel = expenseViewModel, navController = navController) // 如果预算页内容在 ReportScreen
+            BudgetScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                year = budgetScreenYear,
+                month = budgetScreenMonth,
+                onDateChange = onBudgetScreenDateChange
+            )
         }
         composable(BottomNavItem.Assets.route) { // 使用 "assets" 路由
             // 指向新的 AssetsScreen
