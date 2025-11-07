@@ -70,6 +70,9 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     var budgetScreenMonth by rememberSaveable { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
     var defaultCurrency by rememberSaveable { mutableStateOf("CNY") } // 初始默认货币
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     Scaffold(
         bottomBar = {
             AppBottomBar(navController = navController) {
@@ -78,8 +81,10 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate(Routes.ADD_TRANSACTION) }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+            if (currentRoute == BottomNavItem.Details.route) {
+                FloatingActionButton(onClick = { navController.navigate(Routes.ADD_TRANSACTION) }) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+                }
             }
         },
         floatingActionButtonPosition = FabPosition.Center

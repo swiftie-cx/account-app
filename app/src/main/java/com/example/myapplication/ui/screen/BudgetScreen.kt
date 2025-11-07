@@ -94,12 +94,26 @@ fun BudgetScreen(
     val totalBudget = totalBudgetList.firstOrNull()
 
     Scaffold(
-        floatingActionButton = {
-            Button(onClick = {
-                navController.navigate(Routes.budgetSettingsRoute(year, month))
-            }) {
-                Text("+ 预算设置")
-            }
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { showMonthPicker = true }) {
+                            Text(
+                                "${year}年${month}月",
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    TextButton(onClick = {
+                        navController.navigate(Routes.budgetSettingsRoute(year, month))
+                    }) {
+                        Text("预算设置")
+                    }
+                }
+            )
         }
     ) { innerPadding ->
         Column(
@@ -108,14 +122,6 @@ fun BudgetScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
-            TextButton(onClick = { showMonthPicker = true }) {
-                Text(
-                    "${year}年${month}月",
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-
             if (totalBudget != null) {
                 val convertedBudgetAmount = ExchangeRates.convert(totalBudget.amount, "CNY", defaultCurrency)
                 BudgetCard(budget = totalBudget.copy(amount = convertedBudgetAmount), spent = totalSpent, currency = defaultCurrency)
