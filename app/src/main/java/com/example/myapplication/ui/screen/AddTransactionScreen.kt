@@ -43,6 +43,7 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
     // --- 支出/收入 状态 ---
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var amount by remember { mutableStateOf("0") }
+    var isCalculation by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf(System.currentTimeMillis()) }
     var selectedAccount by remember { mutableStateOf<Account?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -192,8 +193,20 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                         if (selectedCategory != null) {
                             NumericKeyboard(
                                 onNumberClick = { if (amount == "0") amount = it else amount += it },
-                                onBackspaceClick = { amount = if (amount.length > 1) amount.dropLast(1) else "0" },
-                                onDateClick = { showDatePicker = true }, onDoneClick = onExpenseDoneClick
+                                onOperatorClick = { operator -> amount += " $operator "; isCalculation = true },
+                                onBackspaceClick = { amount = if (amount.length > 1) amount.dropLast(1) else "0"; isCalculation = amount.contains("+") || amount.contains("-") },
+                                onDateClick = { showDatePicker = true },
+                                onDoneClick = onExpenseDoneClick,
+                                onEqualsClick = {
+                                    try {
+                                        val result = evaluateExpression(amount)
+                                        amount = result.toString()
+                                    } catch (e: Exception) {
+                                        amount = "Error"
+                                    }
+                                    isCalculation = false
+                                },
+                                isCalculation = isCalculation
                             )
                         }
                     }
@@ -218,12 +231,31 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                                     else if (focusedAmountField == "fromAmount") fromAmount = if (fromAmount == "0") num else fromAmount + num
                                     else toAmount = if (toAmount == "0") num else toAmount + num
                                 },
+                                onOperatorClick = { operator ->
+                                    if (isSameCurrency) { fromAmount += " $operator "; isCalculation = true }
+                                    else if (focusedAmountField == "fromAmount") { fromAmount += " $operator "; isCalculation = true }
+                                    else { toAmount += " $operator "; isCalculation = true }
+                                },
                                 onBackspaceClick = {
                                     if (isSameCurrency) fromAmount = if (fromAmount.length > 1) fromAmount.dropLast(1) else "0"
                                     else if (focusedAmountField == "fromAmount") fromAmount = if (fromAmount.length > 1) fromAmount.dropLast(1) else "0"
                                     else toAmount = if (toAmount.length > 1) toAmount.dropLast(1) else "0"
+                                    isCalculation = fromAmount.contains("+") || fromAmount.contains("-") || toAmount.contains("+") || toAmount.contains("-")
                                 },
-                                onDateClick = { /* No date picker for transfer */ }, onDoneClick = onTransferDoneClick
+                                onDateClick = { /* No date picker for transfer */ }, onDoneClick = onTransferDoneClick,
+                                onEqualsClick = {
+                                    try {
+                                        if (isSameCurrency) fromAmount = evaluateExpression(fromAmount).toString()
+                                        else if (focusedAmountField == "fromAmount") fromAmount = evaluateExpression(fromAmount).toString()
+                                        else toAmount = evaluateExpression(toAmount).toString()
+                                    } catch (e: Exception) {
+                                        if (isSameCurrency) fromAmount = "Error"
+                                        else if (focusedAmountField == "fromAmount") fromAmount = "Error"
+                                        else toAmount = "Error"
+                                    }
+                                    isCalculation = false
+                                },
+                                isCalculation = isCalculation
                             )
                         }
                     }
@@ -231,6 +263,21 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
             }
         }
     }
+}
+
+fun evaluateExpression(expression: String): Double {
+    val tokens = expression.split(" ")
+    var result = tokens[0].toDouble()
+    for (i in 1 until tokens.size step 2) {
+        val operator = tokens[i]
+        val nextOperand = tokens[i + 1].toDouble()
+        if (operator == "+") {
+            result += nextOperand
+        } else if (operator == "-") {
+            result -= nextOperand
+        }
+    }
+    return result
 }
 
 

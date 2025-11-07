@@ -66,6 +66,8 @@ fun BudgetSettingsScreen(
             dragHandle = { BottomSheetDefaults.DragHandle() },
         ) {
             var amount by remember { mutableStateOf(budgetMap[editingCategory]?.amount?.toString() ?: "0") }
+            var isCalculation by remember { mutableStateOf(false) }
+
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     "设置 ${editingCategory} 的预算",
@@ -78,7 +80,14 @@ fun BudgetSettingsScreen(
                 )
                 NumericKeyboard(
                     onNumberClick = { if (amount == "0") amount = it else amount += it },
-                    onBackspaceClick = { amount = if (amount.length > 1) amount.dropLast(1) else "0" },
+                    onOperatorClick = { operator ->
+                        amount += " $operator "
+                        isCalculation = true
+                    },
+                    onBackspaceClick = {
+                        amount = if (amount.length > 1) amount.dropLast(1) else "0"
+                        isCalculation = amount.contains("+") || amount.contains("-")
+                    },
                     onDateClick = { /* Not used */ },
                     onDoneClick = {
                         val newAmount = amount.toDoubleOrNull() ?: 0.0
@@ -94,7 +103,17 @@ fun BudgetSettingsScreen(
                         scope.launch { sheetState.hide() }.invokeOnCompletion {
                             if (!sheetState.isVisible) showBottomSheet = false
                         }
-                    }
+                    },
+                    onEqualsClick = {
+                        try {
+                            val result = evaluateExpression(amount)
+                            amount = result.toBigDecimal().toPlainString()
+                        } catch (e: Exception) {
+                            amount = "Error"
+                        }
+                        isCalculation = false
+                    },
+                    isCalculation = isCalculation
                 )
             }
         }

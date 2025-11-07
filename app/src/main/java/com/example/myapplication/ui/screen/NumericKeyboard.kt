@@ -14,16 +14,20 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun NumericKeyboard(
     onNumberClick: (String) -> Unit,
+    onOperatorClick: (String) -> Unit, // New
     onBackspaceClick: () -> Unit,
     onDateClick: () -> Unit,
-    onDoneClick: () -> Unit
+    onDoneClick: () -> Unit,
+    onEqualsClick: () -> Unit, // New
+    isCalculation: Boolean      // New
 ) {
     val buttons = listOf(
         "7", "8", "9", "日期",
         "4", "5", "6", "+",
         "1", "2", "3", "-",
-        ".", "0", "<", "完成"
+        ".", "0", "<", if (isCalculation) "=" else "完成"
     )
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
         modifier = Modifier.padding(8.dp)
@@ -35,8 +39,9 @@ fun NumericKeyboard(
                     when (button) {
                         "日期" -> onDateClick()
                         "完成" -> onDoneClick()
+                        "=" -> onEqualsClick()
                         "<" -> onBackspaceClick()
-                        "+", "-" -> { /* TODO: Handle operators */ }
+                        "+", "-" -> onOperatorClick(button)
                         else -> onNumberClick(button)
                     }
                 },
