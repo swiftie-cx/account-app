@@ -191,6 +191,7 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                             modifier = Modifier.weight(1f)
                         )
                         if (selectedCategory != null) {
+                            // (修改) 传递 selectedDate
                             NumericKeyboard(
                                 onNumberClick = { if (amount == "0") amount = it else amount += it },
                                 onOperatorClick = { operator -> amount += " $operator "; isCalculation = true },
@@ -206,7 +207,8 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                                     }
                                     isCalculation = false
                                 },
-                                isCalculation = isCalculation
+                                isCalculation = isCalculation,
+                                selectedDate = selectedDate // <--- 传递当前选中的日期
                             )
                         }
                     }
@@ -225,6 +227,7 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                         )
                         Spacer(Modifier.weight(1f))
                         if (fromAccount != null && toAccount != null) {
+                            // (修改) 传递 selectedDate (虽然转账界面暂时不处理日期点击，但需要满足参数要求)
                             NumericKeyboard(
                                 onNumberClick = { num ->
                                     if (isSameCurrency) fromAmount = if (fromAmount == "0") num else fromAmount + num
@@ -242,7 +245,8 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                                     else toAmount = if (toAmount.length > 1) toAmount.dropLast(1) else "0"
                                     isCalculation = fromAmount.contains("+") || fromAmount.contains("-") || toAmount.contains("+") || toAmount.contains("-")
                                 },
-                                onDateClick = { /* No date picker for transfer */ }, onDoneClick = onTransferDoneClick,
+                                onDateClick = { /* No date picker for transfer */ },
+                                onDoneClick = onTransferDoneClick,
                                 onEqualsClick = {
                                     try {
                                         if (isSameCurrency) fromAmount = evaluateExpression(fromAmount).toString()
@@ -255,7 +259,8 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                                     }
                                     isCalculation = false
                                 },
-                                isCalculation = isCalculation
+                                isCalculation = isCalculation,
+                                selectedDate = selectedDate // <--- 传递当前选中的日期
                             )
                         }
                     }
