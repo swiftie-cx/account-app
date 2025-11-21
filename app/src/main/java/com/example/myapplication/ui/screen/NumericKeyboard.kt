@@ -5,7 +5,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -30,10 +35,9 @@ fun NumericKeyboard(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
-        modifier = Modifier.padding(8.dp)
+        modifier = Modifier.padding(2.dp)
     ) {
-        items(buttons) {
-            button ->
+        items(buttons) { button ->
             Button(
                 onClick = {
                     when (button) {
@@ -45,11 +49,16 @@ fun NumericKeyboard(
                         else -> onNumberClick(button)
                     }
                 },
+                shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
-                    .padding(4.dp)
+                    .padding(2.dp)
                     .height(60.dp)
             ) {
-                Text(text = button, style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+                when (button) {
+                    "完成" -> Icon(Icons.Filled.Check, contentDescription = "Done")
+                    "日期" -> Icon(Icons.Filled.DateRange, contentDescription = "Date")
+                    else -> Text(text = button, style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+                }
             }
         }
     }
