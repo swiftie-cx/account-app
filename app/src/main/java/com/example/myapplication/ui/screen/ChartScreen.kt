@@ -1,17 +1,15 @@
 package com.example.myapplication.ui.screen
 
 import android.app.DatePickerDialog
+import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,34 +25,40 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.myapplication.data.Expense
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 
 enum class ChartMode { WEEK, MONTH, YEAR }
 enum class TransactionType { INCOME, EXPENSE }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChartScreen(viewModel: ExpenseViewModel) {
     val allTransactions by viewModel.allExpenses.collectAsState(initial = emptyList())
@@ -81,7 +85,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         allTransactions.filter { expense ->
             val matchType = when (transactionType) {
                 TransactionType.EXPENSE -> expense.amount < 0
-                TransactionType.INCOME  -> expense.amount > 0
+                TransactionType.INCOME -> expense.amount > 0
             }
             val time = expense.date.time
             val inRange =
@@ -99,12 +103,14 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
                 ChartMode.WEEK -> {
                     val year = calendar.get(Calendar.YEAR)
                     val weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR)
-                    "${year}-W$weekOfYear"
+                    "%04d-W%02d".format(year, weekOfYear)
                 }
+
                 ChartMode.MONTH -> {
                     val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
                     monthFormat.format(calendar.time)
                 }
+
                 ChartMode.YEAR -> {
                     val yearFormat = SimpleDateFormat("yyyy", Locale.getDefault())
                     yearFormat.format(calendar.time)
@@ -117,19 +123,16 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         groupedData.keys.sorted()
     }
 
-    val pagerState = rememberPagerState(pageCount = { sortedGroupKeys.size })
-    val coroutineScope = rememberCoroutineScope()
-
-    // 进入 / 切换模式时默认停在当前周 / 月 / 年
-    LaunchedEffect(chartMode, sortedGroupKeys, isCustomRange) {
-        if (!isCustomRange && sortedGroupKeys.isNotEmpty()) {
+    // 当前显示的页索引
+    var currentIndex by remember(chartMode, sortedGroupKeys, isCustomRange) {
+        val initialIndex = if (isCustomRange || sortedGroupKeys.isEmpty()) {
+            0
+        } else {
             val currentKey = getCurrentGroupKey(chartMode)
             val idx = sortedGroupKeys.indexOf(currentKey)
-            val targetIndex = if (idx >= 0) idx else sortedGroupKeys.lastIndex.coerceAtLeast(0)
-            if (targetIndex in 0 until pagerState.pageCount) {
-                pagerState.scrollToPage(targetIndex)
-            }
+            (if (idx >= 0) idx else sortedGroupKeys.lastIndex).coerceAtLeast(0)
         }
+        mutableStateOf(initialIndex)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -140,25 +143,22 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
             startDateMillis = startDateMillis,
             endDateMillis = endDateMillis,
             isCustomRange = isCustomRange,
+            currentIndex = currentIndex,
+            sortedGroupKeys = sortedGroupKeys,
             onBackClick = {
-                // 退出自定义模式
                 startDateMillis = null
                 endDateMillis = null
             },
             onTypeToggle = {
                 transactionType = when (transactionType) {
                     TransactionType.EXPENSE -> TransactionType.INCOME
-                    TransactionType.INCOME  -> TransactionType.EXPENSE
+                    TransactionType.INCOME -> TransactionType.EXPENSE
                 }
             },
             onChartModeChange = { chartMode = it },
             onCalendarClick = { showDateRangeDialog = true },
-            pagerState = pagerState,
-            sortedGroupKeys = sortedGroupKeys,
             onTabClick = { index ->
-                coroutineScope.launch {
-                    pagerState.animateScrollToPage(index)
-                }
+                currentIndex = index
             }
         )
 
@@ -175,16 +175,11 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
                 }
             }
         } else {
-            // 普通模式：按周 / 月 / 年分页
+            // 普通模式：按当前索引显示一页
             if (sortedGroupKeys.isNotEmpty()) {
-                HorizontalPager(
-                    modifier = Modifier.fillMaxSize(),
-                    state = pagerState
-                ) { page ->
-                    val key = sortedGroupKeys[page]
-                    val dataForPage = groupedData[key] ?: emptyList()
-                    ChartPage(dataForPage)
-                }
+                val key = sortedGroupKeys[currentIndex.coerceIn(sortedGroupKeys.indices)]
+                val pageData = groupedData[key] ?: emptyList()
+                ChartPage(pageData)
             } else {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -210,7 +205,6 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FilterBar(
     transactionType: TransactionType,
@@ -218,12 +212,12 @@ fun FilterBar(
     startDateMillis: Long?,
     endDateMillis: Long?,
     isCustomRange: Boolean,
+    currentIndex: Int,
+    sortedGroupKeys: List<String>,
     onBackClick: () -> Unit,
     onTypeToggle: () -> Unit,
     onChartModeChange: (ChartMode) -> Unit,
     onCalendarClick: () -> Unit,
-    pagerState: PagerState,
-    sortedGroupKeys: List<String>,
     onTabClick: (Int) -> Unit
 ) {
     val yellow = MaterialTheme.colorScheme.primaryContainer
@@ -315,9 +309,9 @@ fun FilterBar(
                     ) {
                         Text(
                             text = when (mode) {
-                                ChartMode.WEEK  -> "周"
+                                ChartMode.WEEK -> "周"
                                 ChartMode.MONTH -> "月"
-                                ChartMode.YEAR  -> "年"
+                                ChartMode.YEAR -> "年"
                             },
                             color = if (selected) Color.White else Color.Black,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
@@ -329,52 +323,64 @@ fun FilterBar(
             Spacer(modifier = Modifier.height(6.dp))
         }
 
-        // 第四行：TabRow（自定义模式隐藏）
+        // 第四行：周 / 月 / 年 下方的 TabRow
         if (!isCustomRange && sortedGroupKeys.isNotEmpty()) {
-            ScrollableTabRow(
-                selectedTabIndex = pagerState.currentPage,
-                containerColor = Color.White,
-                edgePadding = 16.dp,
-                indicator = { tabPositions ->
-                    val currentTab = pagerState.currentPage.coerceIn(tabPositions.indices)
-                    TabRowDefaults.Indicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[currentTab]),
-                        color = yellow
-                    )
-                },
-                divider = {}
-            ) {
-                sortedGroupKeys.forEachIndexed { index, key ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = { onTabClick(index) },
-                        text = {
-                            when (chartMode) {
-                                ChartMode.WEEK -> {
-                                    val (yearStr, weekStr) = key.split("-W")
-                                    val yearInt = yearStr.toInt()
-                                    val (start, end) = getWeekDateRange(yearInt, weekStr.toInt())
-                                    val title =
-                                        if (yearInt == currentYear) "${weekStr}周"
-                                        else "${yearStr}年 - ${weekStr}周"
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(title)
-                                        Text(
-                                            "$start - $end",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
+            key(chartMode) {
+                ScrollableTabRow(
+                    selectedTabIndex = currentIndex.coerceIn(sortedGroupKeys.indices),
+                    containerColor = Color.White,
+                    edgePadding = 16.dp,
+                    indicator = { tabPositions ->
+                        if (tabPositions.isEmpty()) return@ScrollableTabRow
+                        val idx = currentIndex.coerceIn(tabPositions.indices)
+                        val pos = tabPositions[idx]
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .wrapContentSize(Alignment.BottomStart)
+                                .padding(start = pos.left)
+                                .width(pos.width)
+                                .height(3.dp)
+                                .background(yellow)
+                        )
+                    },
+                    divider = {}
+                ) {
+                    sortedGroupKeys.forEachIndexed { index, key ->
+                        Tab(
+                            selected = currentIndex == index,
+                            onClick = { onTabClick(index) },
+                            text = {
+                                when (chartMode) {
+                                    ChartMode.WEEK -> {
+                                        val (yearStr, weekStr) = key.split("-W")
+                                        val yearInt = yearStr.toInt()
+                                        val weekInt = weekStr.toInt()
+                                        val (start, end) = getWeekDateRange(yearInt, weekInt)
+                                        val title =
+                                            if (yearInt == currentYear) "${weekInt}周"
+                                            else "${yearStr}年 - ${weekInt}周"
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(title)
+                                            Text(
+                                                "$start - $end",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
+
+                                    ChartMode.MONTH -> {
+                                        val (y, m) = key.split("-")
+                                        Text("${y}年${m}月")
+                                    }
+
+                                    ChartMode.YEAR -> {
+                                        Text("${key}年")
                                     }
                                 }
-                                ChartMode.MONTH -> {
-                                    val (y, m) = key.split("-")
-                                    Text("${y}年${m}月")
-                                }
-                                ChartMode.YEAR -> {
-                                    Text("${key}年")
-                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -394,7 +400,7 @@ fun DateRangeDialog(
     val today = remember { System.currentTimeMillis() }
 
     var tempStart by remember { mutableStateOf(startDate ?: today) }
-    var tempEnd   by remember { mutableStateOf(endDate ?: today) }
+    var tempEnd by remember { mutableStateOf(endDate ?: today) }
 
     fun openPicker(isStart: Boolean) {
         val millis = if (isStart) tempStart else tempEnd
@@ -468,19 +474,17 @@ fun ChartPage(data: List<Expense>) {
         categorySums.entries.sortedByDescending { it.value }
     }
 
-    val total     = sortedEntries.sumOf { it.value }.toFloat()
+    val total = sortedEntries.sumOf { it.value }.toFloat()
     val maxAmount = sortedEntries.maxOfOrNull { it.value }?.toFloat() ?: 0f
 
-    // 直接复用“添加记录 / 类别设置”里的分类列表
     val categoryIconMap = remember {
         (expenseCategories + incomeCategories).associate { it.title to it.icon }
     }
 
-    val colors     = getChartColors()
-    val barColor   = Color(0xFFF4B400)
+    val colors = getChartColors()
+    val barColor = Color(0xFFF4B400)
     val barBgColor = Color(0xFFFFF7CC)
-
-    val iconBoxSize = 36.dp   // 图标背景圆的尺寸
+    val iconBoxSize = 36.dp
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(text = "合计: $total", style = MaterialTheme.typography.titleMedium)
@@ -493,6 +497,7 @@ fun ChartPage(data: List<Expense>) {
                     .height(220.dp),
                 contentAlignment = Alignment.Center
             ) {
+                // 调用修改后的 PieChart
                 PieChart(categorySums)
             }
         } else {
@@ -510,17 +515,16 @@ fun ChartPage(data: List<Expense>) {
 
         LazyColumn {
             itemsIndexed(sortedEntries) { index, entry ->
-                val amount     = entry.value.toFloat()
+                val amount = entry.value.toFloat()
                 val percentage = if (total > 0) amount / total * 100f else 0f
-                val color      = colors[index % colors.size]
-                val barRatio   = if (maxAmount > 0) amount / maxAmount else 0f
+                val color = colors[index % colors.size]
+                val barRatio = if (maxAmount > 0) amount / maxAmount else 0f
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp)
                 ) {
-                    // 第一行：图标 + 名称 + 百分比 + 金额
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -581,11 +585,9 @@ fun ChartPage(data: List<Expense>) {
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // 第二行：条形图，从图标右边开始
                     Row(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        // 左侧空出图标宽度，使条形从图标右侧开始
                         Spacer(modifier = Modifier.width(iconBoxSize + 8.dp))
 
                         Box(
@@ -610,49 +612,137 @@ fun ChartPage(data: List<Expense>) {
     }
 }
 
-// 环形图（加粗）
+// 数据类，用于图表内部使用
+private data class ChartData(val name: String, val value: Long, val color: Color)
+
+// 修改后的环形图：Top 8 (7 + Other) & 颜色同步
 @Composable
 fun PieChart(data: Map<String, Long>) {
     if (data.isEmpty()) return
 
-    val total = data.values.sum().toFloat()
+    // 1. 数据处理：Top 8 (如果 >8 则显示 Top 7 + 其他)
+    val chartData = remember(data) {
+        val sorted = data.entries.sortedByDescending { it.value }
+        val allColors = getChartColors()
+
+        // (修改) 上限改为 8
+        if (sorted.size <= 8) {
+            sorted.mapIndexed { index, entry ->
+                ChartData(entry.key, entry.value, allColors[index % allColors.size])
+            }
+        } else {
+            // (修改) 取 Top 7
+            val top7 = sorted.take(7).mapIndexed { index, entry ->
+                ChartData(entry.key, entry.value, allColors[index % allColors.size])
+            }
+            // 剩下的归为 "其他"
+            val otherSum = sorted.drop(7).sumOf { it.value }
+            top7 + ChartData("其他", otherSum, Color(0xFF9E9E9E))
+        }
+    }
+
+    val total = chartData.sumOf { it.value }.toFloat()
     if (total <= 0f) return
 
-    val sweepAngles = data.values.map { value ->
-        360f * (value / total)
+    // 准备文字画笔 (初始颜色不重要，后面会动态改)
+    val density = LocalDensity.current.density
+    val textPaint = remember {
+        Paint().apply {
+            textSize = 12f * density
+            typeface = Typeface.DEFAULT
+        }
     }
-    val colors = getChartColors()
 
-    Canvas(modifier = Modifier.size(220.dp)) {
-        val strokeWidth = size.minDimension * 0.2f
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val center = Offset(size.width / 2, size.height / 2)
+        // 缩小半径以容纳外部标注
+        val radius = size.minDimension / 2 * 0.5f
+        val strokeWidth = radius * 0.6f
+
         var startAngle = -90f
 
-        sweepAngles.forEachIndexed { index, sweepAngle ->
+        chartData.forEach { slice ->
+            val sweepAngle = 360f * (slice.value / total)
+
+            // 绘制圆环
             drawArc(
-                color = colors[index % colors.size],
+                color = slice.color,
                 startAngle = startAngle,
                 sweepAngle = sweepAngle,
                 useCenter = false,
+                topLeft = Offset(center.x - radius, center.y - radius),
+                size = Size(radius * 2, radius * 2),
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
             )
+
+            // 绘制标注
+            if (sweepAngle > 5f) {
+                val midAngle = startAngle + sweepAngle / 2
+                val midRad = Math.toRadians(midAngle.toDouble())
+
+                val outerDonutRadius = radius + strokeWidth / 2
+                val lineStart = Offset(
+                    (center.x + outerDonutRadius * cos(midRad)).toFloat(),
+                    (center.y + outerDonutRadius * sin(midRad)).toFloat()
+                )
+
+                val lineOffset = 15.dp.toPx()
+                val elbow = Offset(
+                    (center.x + (outerDonutRadius + lineOffset) * cos(midRad)).toFloat(),
+                    (center.y + (outerDonutRadius + lineOffset) * sin(midRad)).toFloat()
+                )
+
+                val isRightSide = cos(midRad) > 0
+                val endX = if (isRightSide) elbow.x + 20.dp.toPx() else elbow.x - 20.dp.toPx()
+                val lineEnd = Offset(endX, elbow.y)
+
+                val path = Path().apply {
+                    moveTo(lineStart.x, lineStart.y)
+                    lineTo(elbow.x, elbow.y)
+                    lineTo(lineEnd.x, lineEnd.y)
+                }
+
+                // (修改) 线条颜色跟随色块
+                drawPath(
+                    path = path,
+                    color = slice.color, // 使用当前色块颜色
+                    style = Stroke(width = 1.dp.toPx())
+                )
+
+                val percent = (slice.value / total * 100).toInt()
+                val label = "${slice.name} $percent%"
+
+                // (修改) 文字颜色跟随色块
+                textPaint.color = slice.color.toArgb() // 设置为当前色块颜色
+                textPaint.textAlign = if (isRightSide) Paint.Align.LEFT else Paint.Align.RIGHT
+
+                val textX = if (isRightSide) lineEnd.x + 4.dp.toPx() else lineEnd.x - 4.dp.toPx()
+                val textY = lineEnd.y + textPaint.textSize / 3
+
+                drawIntoCanvas { canvas ->
+                    canvas.nativeCanvas.drawText(label, textX, textY, textPaint)
+                }
+            }
+
             startAngle += sweepAngle
         }
     }
 }
 
-// 当前周 / 月 / 年的 key
 private fun getCurrentGroupKey(mode: ChartMode): String {
     val calendar = Calendar.getInstance()
     return when (mode) {
         ChartMode.WEEK -> {
             val year = calendar.get(Calendar.YEAR)
             val week = calendar.get(Calendar.WEEK_OF_YEAR)
-            "${year}-W$week"
+            "%04d-W%02d".format(year, week)
         }
+
         ChartMode.MONTH -> {
             val fmt = SimpleDateFormat("yyyy-MM", Locale.getDefault())
             fmt.format(calendar.time)
         }
+
         ChartMode.YEAR -> {
             val fmt = SimpleDateFormat("yyyy", Locale.getDefault())
             fmt.format(calendar.time)
@@ -660,7 +750,6 @@ private fun getCurrentGroupKey(mode: ChartMode): String {
     }
 }
 
-// 某年某周的起止日期
 private fun getWeekDateRange(year: Int, week: Int): Pair<String, String> {
     val calendar = Calendar.getInstance()
     calendar.clear()
@@ -675,7 +764,6 @@ private fun getWeekDateRange(year: Int, week: Int): Pair<String, String> {
     return start to end
 }
 
-// 颜色表
 private fun getChartColors(): List<Color> {
     return listOf(
         Color(0xFFF4B400),
