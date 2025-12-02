@@ -15,8 +15,20 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Lens
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.Text
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,11 +37,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Expense
+import com.example.myapplication.ui.navigation.expenseCategories
+import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -68,7 +81,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         allTransactions.filter { expense ->
             val matchType = when (transactionType) {
                 TransactionType.EXPENSE -> expense.amount < 0
-                TransactionType.INCOME -> expense.amount > 0
+                TransactionType.INCOME  -> expense.amount > 0
             }
             val time = expense.date.time
             val inRange =
@@ -78,7 +91,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         }
     }
 
-    // 普通模式下按周/月/年分组
+    // 普通模式下按周 / 月 / 年分组
     val groupedData = remember(filteredTransactions, chartMode) {
         filteredTransactions.groupBy { expense ->
             val calendar = Calendar.getInstance().apply { time = expense.date }
@@ -88,12 +101,10 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
                     val weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR)
                     "${year}-W$weekOfYear"
                 }
-
                 ChartMode.MONTH -> {
                     val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
                     monthFormat.format(calendar.time)
                 }
-
                 ChartMode.YEAR -> {
                     val yearFormat = SimpleDateFormat("yyyy", Locale.getDefault())
                     yearFormat.format(calendar.time)
@@ -109,7 +120,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
     val pagerState = rememberPagerState(pageCount = { sortedGroupKeys.size })
     val coroutineScope = rememberCoroutineScope()
 
-    // 进入/切换模式时默认停在当前周/月/年
+    // 进入 / 切换模式时默认停在当前周 / 月 / 年
     LaunchedEffect(chartMode, sortedGroupKeys, isCustomRange) {
         if (!isCustomRange && sortedGroupKeys.isNotEmpty()) {
             val currentKey = getCurrentGroupKey(chartMode)
@@ -137,7 +148,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
             onTypeToggle = {
                 transactionType = when (transactionType) {
                     TransactionType.EXPENSE -> TransactionType.INCOME
-                    TransactionType.INCOME -> TransactionType.EXPENSE
+                    TransactionType.INCOME  -> TransactionType.EXPENSE
                 }
             },
             onChartModeChange = { chartMode = it },
@@ -164,7 +175,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
                 }
             }
         } else {
-            // 普通模式：按周/月/年分页
+            // 普通模式：按周 / 月 / 年分页
             if (sortedGroupKeys.isNotEmpty()) {
                 HorizontalPager(
                     modifier = Modifier.fillMaxSize(),
@@ -199,7 +210,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FilterBar(
     transactionType: TransactionType,
@@ -304,9 +315,9 @@ fun FilterBar(
                     ) {
                         Text(
                             text = when (mode) {
-                                ChartMode.WEEK -> "周"
+                                ChartMode.WEEK  -> "周"
                                 ChartMode.MONTH -> "月"
-                                ChartMode.YEAR -> "年"
+                                ChartMode.YEAR  -> "年"
                             },
                             color = if (selected) Color.White else Color.Black,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
@@ -354,12 +365,10 @@ fun FilterBar(
                                         )
                                     }
                                 }
-
                                 ChartMode.MONTH -> {
                                     val (y, m) = key.split("-")
                                     Text("${y}年${m}月")
                                 }
-
                                 ChartMode.YEAR -> {
                                     Text("${key}年")
                                 }
@@ -385,7 +394,7 @@ fun DateRangeDialog(
     val today = remember { System.currentTimeMillis() }
 
     var tempStart by remember { mutableStateOf(startDate ?: today) }
-    var tempEnd by remember { mutableStateOf(endDate ?: today) }
+    var tempEnd   by remember { mutableStateOf(endDate ?: today) }
 
     fun openPicker(isStart: Boolean) {
         val millis = if (isStart) tempStart else tempEnd
@@ -459,12 +468,19 @@ fun ChartPage(data: List<Expense>) {
         categorySums.entries.sortedByDescending { it.value }
     }
 
-    val total = sortedEntries.sumOf { it.value }.toFloat()
+    val total     = sortedEntries.sumOf { it.value }.toFloat()
     val maxAmount = sortedEntries.maxOfOrNull { it.value }?.toFloat() ?: 0f
 
-    val colors = getChartColors()
-    val barColor = Color(0xFFF4B400)
+    // 直接复用“添加记录 / 类别设置”里的分类列表
+    val categoryIconMap = remember {
+        (expenseCategories + incomeCategories).associate { it.title to it.icon }
+    }
+
+    val colors     = getChartColors()
+    val barColor   = Color(0xFFF4B400)
     val barBgColor = Color(0xFFFFF7CC)
+
+    val iconBoxSize = 36.dp   // 图标背景圆的尺寸
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(text = "合计: $total", style = MaterialTheme.typography.titleMedium)
@@ -494,40 +510,56 @@ fun ChartPage(data: List<Expense>) {
 
         LazyColumn {
             itemsIndexed(sortedEntries) { index, entry ->
-                val amount = entry.value.toFloat()
+                val amount     = entry.value.toFloat()
                 val percentage = if (total > 0) amount / total * 100f else 0f
-                val color = colors[index % colors.size]
-                val barRatio = if (maxAmount > 0) amount / maxAmount else 0f
+                val color      = colors[index % colors.size]
+                val barRatio   = if (maxAmount > 0) amount / maxAmount else 0f
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp)
                 ) {
+                    // 第一行：图标 + 名称 + 百分比 + 金额
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 1. 左侧分类图标
-                        val icon = getCategoryIcon(entry.key)
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(color.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = entry.key,
-                                tint = color,
-                                modifier = Modifier.size(18.dp)
-                            )
+                        val icon = categoryIconMap[entry.key]
+                        if (icon != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(iconBoxSize)
+                                    .clip(CircleShape)
+                                    .background(color.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = entry.key,
+                                    tint = color,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(iconBoxSize)
+                                    .clip(CircleShape)
+                                    .background(color.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Lens,
+                                    contentDescription = entry.key,
+                                    tint = color,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // 2. 名称 + 百分比
                         Text(
                             text = entry.key,
                             style = MaterialTheme.typography.bodyMedium
@@ -541,7 +573,6 @@ fun ChartPage(data: List<Expense>) {
                             modifier = Modifier.weight(1f)
                         )
 
-                        // 3. 右侧金额
                         Text(
                             text = entry.value.toString(),
                             style = MaterialTheme.typography.bodyMedium
@@ -550,21 +581,28 @@ fun ChartPage(data: List<Expense>) {
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // 4. 条形：第一名全长，其余按比例缩短
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(barBgColor)
+                    // 第二行：条形图，从图标右边开始
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
+                        // 左侧空出图标宽度，使条形从图标右侧开始
+                        Spacer(modifier = Modifier.width(iconBoxSize + 8.dp))
+
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(barRatio.coerceIn(0f, 1f))
+                                .weight(1f)
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(barColor)
-                        )
+                                .background(barBgColor)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(barRatio.coerceIn(0f, 1f))
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(barColor)
+                            )
+                        }
                     }
                 }
             }
@@ -602,7 +640,7 @@ fun PieChart(data: Map<String, Long>) {
     }
 }
 
-// 当前周/月/年的 key
+// 当前周 / 月 / 年的 key
 private fun getCurrentGroupKey(mode: ChartMode): String {
     val calendar = Calendar.getInstance()
     return when (mode) {
@@ -611,12 +649,10 @@ private fun getCurrentGroupKey(mode: ChartMode): String {
             val week = calendar.get(Calendar.WEEK_OF_YEAR)
             "${year}-W$week"
         }
-
         ChartMode.MONTH -> {
             val fmt = SimpleDateFormat("yyyy-MM", Locale.getDefault())
             fmt.format(calendar.time)
         }
-
         ChartMode.YEAR -> {
             val fmt = SimpleDateFormat("yyyy", Locale.getDefault())
             fmt.format(calendar.time)
@@ -638,18 +674,6 @@ private fun getWeekDateRange(year: Int, week: Int): Pair<String, String> {
     val end = format.format(calendar.time)
     return start to end
 }
-
-// 分类名 -> 图标（可以根据你自己的分类名称改这个映射）
-private fun getCategoryIcon(category: String): ImageVector =
-    when {
-        category.contains("食") || category.contains("餐") -> Icons.Filled.Fastfood
-        category.contains("购") || category.contains("买") -> Icons.Filled.ShoppingCart
-        category.contains("娱") || category.contains("玩") -> Icons.Filled.SportsEsports
-        category.contains("车") || category.contains("交通") -> Icons.Filled.DirectionsCar
-        category.contains("旅") -> Icons.Filled.Flight
-        category.contains("教") || category.contains("学") -> Icons.Filled.School
-        else -> Icons.Filled.Lens
-    }
 
 // 颜色表
 private fun getChartColors(): List<Color> {
