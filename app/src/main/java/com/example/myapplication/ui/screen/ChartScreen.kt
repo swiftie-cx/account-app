@@ -12,10 +12,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,20 +46,19 @@ enum class TransactionType { INCOME, EXPENSE }
 fun ChartScreen(viewModel: ExpenseViewModel) {
     val allTransactions by viewModel.allExpenses.collectAsState(initial = emptyList())
 
-    var transactionType by remember { mutableStateOf(TransactionType.EXPENSE) } // 默认支出
-    var chartMode by remember { mutableStateOf(ChartMode.WEEK) }               // 默认周
+    var transactionType by remember { mutableStateOf(TransactionType.EXPENSE) }
+    var chartMode by remember { mutableStateOf(ChartMode.WEEK) }
 
-    // 自定义时间范围（毫秒）
     var startDateMillis by remember { mutableStateOf<Long?>(null) }
     var endDateMillis by remember { mutableStateOf<Long?>(null) }
     var showDateRangeDialog by remember { mutableStateOf(false) }
 
-    // 是否启用“自定义区间整体统计”模式（开始+结束都选了才算）
+    // 是否为自定义日期整体统计模式
     val isCustomRange by remember(startDateMillis, endDateMillis) {
         mutableStateOf(startDateMillis != null && endDateMillis != null)
     }
 
-    // 收入 / 支出 + 时间范围过滤
+    // 类型 + 日期过滤
     val filteredTransactions = remember(
         allTransactions,
         transactionType,
@@ -78,7 +78,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         }
     }
 
-    // 按周 / 月 / 年分组（只在非自定义整体模式时使用）
+    // 普通模式下按周/月/年分组
     val groupedData = remember(filteredTransactions, chartMode) {
         filteredTransactions.groupBy { expense ->
             val calendar = Calendar.getInstance().apply { time = expense.date }
@@ -109,6 +109,18 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
     val pagerState = rememberPagerState(pageCount = { sortedGroupKeys.size })
     val coroutineScope = rememberCoroutineScope()
 
+    // 进入/切换模式时默认停在当前周/月/年
+    LaunchedEffect(chartMode, sortedGroupKeys, isCustomRange) {
+        if (!isCustomRange && sortedGroupKeys.isNotEmpty()) {
+            val currentKey = getCurrentGroupKey(chartMode)
+            val idx = sortedGroupKeys.indexOf(currentKey)
+            val targetIndex = if (idx >= 0) idx else sortedGroupKeys.lastIndex.coerceAtLeast(0)
+            if (targetIndex in 0 until pagerState.pageCount) {
+                pagerState.scrollToPage(targetIndex)
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
 
         FilterBar(
@@ -117,6 +129,11 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
             startDateMillis = startDateMillis,
             endDateMillis = endDateMillis,
             isCustomRange = isCustomRange,
+            onBackClick = {
+                // 退出自定义模式
+                startDateMillis = null
+                endDateMillis = null
+            },
             onTypeToggle = {
                 transactionType = when (transactionType) {
                     TransactionType.EXPENSE -> TransactionType.INCOME
@@ -134,9 +151,8 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
             }
         )
 
-        // 内容区域：自定义整体模式 vs 按周/月/年分页模式
         if (isCustomRange) {
-            // 自定义时间段整体统计：只显示一张图
+            // 自定义日期：整段统计
             if (filteredTransactions.isNotEmpty()) {
                 ChartPage(filteredTransactions)
             } else {
@@ -148,7 +164,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
                 }
             }
         } else {
-            // 普通模式：按周 / 月 / 年分页显示
+            // 普通模式：按周/月/年分页
             if (sortedGroupKeys.isNotEmpty()) {
                 HorizontalPager(
                     modifier = Modifier.fillMaxSize(),
@@ -168,7 +184,6 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
             }
         }
 
-        // 日期范围选择对话框
         if (showDateRangeDialog) {
             DateRangeDialog(
                 startDate = startDateMillis,
@@ -192,6 +207,7 @@ fun FilterBar(
     startDateMillis: Long?,
     endDateMillis: Long?,
     isCustomRange: Boolean,
+    onBackClick: () -> Unit,
     onTypeToggle: () -> Unit,
     onChartModeChange: (ChartMode) -> Unit,
     onCalendarClick: () -> Unit,
@@ -200,7 +216,7 @@ fun FilterBar(
     onTabClick: (Int) -> Unit
 ) {
     val yellow = MaterialTheme.colorScheme.primaryContainer
-    val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
+    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
     val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.getDefault()) }
 
     Column(
@@ -209,38 +225,48 @@ fun FilterBar(
             .background(yellow)
             .padding(bottom = 4.dp)
     ) {
-        // 第一行：收入 / 支出 标题 + 日历图标
+        // 第一行：返回 / 标题 / 日历
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier.clickable { onTypeToggle() }
+            if (isCustomRange) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "返回",
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable { onBackClick() }
+                )
+            } else {
+                Spacer(modifier = Modifier.width(28.dp))
+            }
+
+            Row(
+                modifier = Modifier.clickable { onTypeToggle() },
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (transactionType == TransactionType.EXPENSE) "支出" else "收入",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = null
-                    )
-                }
+                Text(
+                    text = if (transactionType == TransactionType.EXPENSE) "支出" else "收入",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
             }
 
             Icon(
                 imageVector = Icons.Filled.DateRange,
                 contentDescription = "日期",
-                modifier = Modifier.clickable { onCalendarClick() }
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable { onCalendarClick() }
             )
         }
 
-        // 第二行：自定义时间范围显示（只要有任意一端被选中就显示）
+        // 第二行：日期区间显示
         if (startDateMillis != null || endDateMillis != null) {
             val startText = startDateMillis?.let { dateFormat.format(Date(it)) } ?: "开始时间"
             val endText = endDateMillis?.let { dateFormat.format(Date(it)) } ?: "结束时间"
@@ -248,9 +274,8 @@ fun FilterBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.Center
             ) {
                 Text(startText)
                 Text("  ~  ")
@@ -258,42 +283,42 @@ fun FilterBar(
             }
         }
 
-        // 第三行：周 / 月 / 年 三段式切换（自定义模式仍然显示，但仅作显示用）
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
-        ) {
-            ChartMode.values().forEach { mode ->
-                val selected = chartMode == mode
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(
-                            if (selected) Color.Black else yellow
+        // 第三行：周 / 月 / 年（自定义模式隐藏）
+        if (!isCustomRange) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, Color.Black, RoundedCornerShape(8.dp))
+            ) {
+                ChartMode.values().forEach { mode ->
+                    val selected = chartMode == mode
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(if (selected) Color.Black else yellow)
+                            .clickable { onChartModeChange(mode) }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = when (mode) {
+                                ChartMode.WEEK -> "周"
+                                ChartMode.MONTH -> "月"
+                                ChartMode.YEAR -> "年"
+                            },
+                            color = if (selected) Color.White else Color.Black,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                         )
-                        .clickable { onChartModeChange(mode) }
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = when (mode) {
-                            ChartMode.WEEK -> "周"
-                            ChartMode.MONTH -> "月"
-                            ChartMode.YEAR -> "年"
-                        },
-                        color = if (selected) Color.White else Color.Black,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                    )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.height(6.dp))
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 第四行：具体时间 Tab（只有在“非自定义整体模式”下才显示）
+        // 第四行：TabRow（自定义模式隐藏）
         if (!isCustomRange && sortedGroupKeys.isNotEmpty()) {
             ScrollableTabRow(
                 selectedTabIndex = pagerState.currentPage,
@@ -318,19 +343,13 @@ fun FilterBar(
                                     val (yearStr, weekStr) = key.split("-W")
                                     val yearInt = yearStr.toInt()
                                     val (start, end) = getWeekDateRange(yearInt, weekStr.toInt())
-
-                                    val weekTitle =
+                                    val title =
                                         if (yearInt == currentYear) "${weekStr}周"
                                         else "${yearStr}年 - ${weekStr}周"
-
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(title)
                                         Text(
-                                            text = weekTitle,
-                                            fontWeight = if (pagerState.currentPage == index)
-                                                FontWeight.Bold else FontWeight.Normal
-                                        )
-                                        Text(
-                                            text = "$start - $end",
+                                            "$start - $end",
                                             style = MaterialTheme.typography.bodySmall
                                         )
                                     }
@@ -338,19 +357,11 @@ fun FilterBar(
 
                                 ChartMode.MONTH -> {
                                     val (y, m) = key.split("-")
-                                    Text(
-                                        text = "${y}年${m.toInt()}月",
-                                        fontWeight = if (pagerState.currentPage == index)
-                                            FontWeight.Bold else FontWeight.Normal
-                                    )
+                                    Text("${y}年${m}月")
                                 }
 
                                 ChartMode.YEAR -> {
-                                    Text(
-                                        text = "${key}年",
-                                        fontWeight = if (pagerState.currentPage == index)
-                                            FontWeight.Bold else FontWeight.Normal
-                                    )
+                                    Text("${key}年")
                                 }
                             }
                         }
@@ -361,9 +372,7 @@ fun FilterBar(
     }
 }
 
-/**
- * 日期范围选择对话框
- */
+// 日期范围弹窗
 @Composable
 fun DateRangeDialog(
     startDate: Long?,
@@ -373,8 +382,8 @@ fun DateRangeDialog(
 ) {
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.getDefault()) }
-
     val today = remember { System.currentTimeMillis() }
+
     var tempStart by remember { mutableStateOf(startDate ?: today) }
     var tempEnd by remember { mutableStateOf(endDate ?: today) }
 
@@ -386,12 +395,7 @@ fun DateRangeDialog(
             context,
             { _, y, m, d ->
                 val c = Calendar.getInstance().apply {
-                    set(Calendar.YEAR, y)
-                    set(Calendar.MONTH, m)
-                    set(Calendar.DAY_OF_MONTH, d)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
+                    set(y, m, d, 0, 0, 0)
                     set(Calendar.MILLISECOND, 0)
                 }
                 if (isStart) tempStart = c.timeInMillis else tempEnd = c.timeInMillis
@@ -415,13 +419,7 @@ fun DateRangeDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("开始时间")
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(dateFormat.format(Date(tempStart)))
-                        Icon(
-                            imageVector = Icons.Filled.ArrowDropDown,
-                            contentDescription = null
-                        )
-                    }
+                    Text(dateFormat.format(Date(tempStart)))
                 }
 
                 Divider()
@@ -435,29 +433,20 @@ fun DateRangeDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("结束时间")
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(dateFormat.format(Date(tempEnd)))
-                        Icon(
-                            imageVector = Icons.Filled.ArrowDropDown,
-                            contentDescription = null
-                        )
-                    }
+                    Text(dateFormat.format(Date(tempEnd)))
                 }
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(tempStart, tempEnd) }) {
-                Text("确定")
-            }
+            Button(onClick = { onConfirm(tempStart, tempEnd) }) { Text("确定") }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("取消")
-            }
+            OutlinedButton(onClick = onDismiss) { Text("取消") }
         }
     )
 }
 
+// 图表 + 条形列表
 @Composable
 fun ChartPage(data: List<Expense>) {
     val categorySums = remember(data) {
@@ -466,17 +455,26 @@ fun ChartPage(data: List<Expense>) {
         }
     }
 
-    val total = categorySums.values.sum().toFloat()
+    val sortedEntries = remember(categorySums) {
+        categorySums.entries.sortedByDescending { it.value }
+    }
+
+    val total = sortedEntries.sumOf { it.value }.toFloat()
+    val maxAmount = sortedEntries.maxOfOrNull { it.value }?.toFloat() ?: 0f
+
+    val colors = getChartColors()
+    val barColor = Color(0xFFF4B400)
+    val barBgColor = Color(0xFFFFF7CC)
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text(text = "合计: $total", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (total > 0) {
+        if (total > 0f) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .height(220.dp),
                 contentAlignment = Alignment.Center
             ) {
                 PieChart(categorySums)
@@ -495,58 +493,138 @@ fun ChartPage(data: List<Expense>) {
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn {
-            itemsIndexed(categorySums.entries.toList()) { _, entry ->
-                val percentage = entry.value / total * 100
-                Row(
+            itemsIndexed(sortedEntries) { index, entry ->
+                val amount = entry.value.toFloat()
+                val percentage = if (total > 0) amount / total * 100f else 0f
+                val color = colors[index % colors.size]
+                val barRatio = if (maxAmount > 0) amount / maxAmount else 0f
+
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(vertical = 6.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 1. 左侧分类图标
+                        val icon = getCategoryIcon(entry.key)
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(color.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = entry.key,
+                                tint = color,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // 2. 名称 + 百分比
+                        Text(
+                            text = entry.key,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        Text(
+                            text = String.format("%.2f%%", percentage),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // 3. 右侧金额
+                        Text(
+                            text = entry.value.toString(),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // 4. 条形：第一名全长，其余按比例缩短
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
-                            .background(
-                                color = getChartColors()[entry.key.hashCode()
-                                    .mod(getChartColors().size)],
-                                shape = RoundedCornerShape(50)
-                            )
-                    )
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(
-                        text = "${entry.key}: ${entry.value} (${String.format("%.1f", percentage)}%)",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(barBgColor)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(barRatio.coerceIn(0f, 1f))
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(barColor)
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+// 环形图（加粗）
 @Composable
 fun PieChart(data: Map<String, Long>) {
+    if (data.isEmpty()) return
+
     val total = data.values.sum().toFloat()
+    if (total <= 0f) return
+
     val sweepAngles = data.values.map { value ->
         360f * (value / total)
     }
-
     val colors = getChartColors()
 
-    Canvas(modifier = Modifier.size(200.dp)) {
+    Canvas(modifier = Modifier.size(220.dp)) {
+        val strokeWidth = size.minDimension * 0.2f
         var startAngle = -90f
+
         sweepAngles.forEachIndexed { index, sweepAngle ->
             drawArc(
                 color = colors[index % colors.size],
                 startAngle = startAngle,
                 sweepAngle = sweepAngle,
                 useCenter = false,
-                style = Stroke(width = 40f, cap = StrokeCap.Butt)
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
             )
             startAngle += sweepAngle
         }
     }
 }
 
+// 当前周/月/年的 key
+private fun getCurrentGroupKey(mode: ChartMode): String {
+    val calendar = Calendar.getInstance()
+    return when (mode) {
+        ChartMode.WEEK -> {
+            val year = calendar.get(Calendar.YEAR)
+            val week = calendar.get(Calendar.WEEK_OF_YEAR)
+            "${year}-W$week"
+        }
+
+        ChartMode.MONTH -> {
+            val fmt = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+            fmt.format(calendar.time)
+        }
+
+        ChartMode.YEAR -> {
+            val fmt = SimpleDateFormat("yyyy", Locale.getDefault())
+            fmt.format(calendar.time)
+        }
+    }
+}
+
+// 某年某周的起止日期
 private fun getWeekDateRange(year: Int, week: Int): Pair<String, String> {
     val calendar = Calendar.getInstance()
     calendar.clear()
@@ -558,9 +636,22 @@ private fun getWeekDateRange(year: Int, week: Int): Pair<String, String> {
     val start = format.format(calendar.time)
     calendar.add(Calendar.DAY_OF_WEEK, 6)
     val end = format.format(calendar.time)
-    return Pair(start, end)
+    return start to end
 }
 
+// 分类名 -> 图标（可以根据你自己的分类名称改这个映射）
+private fun getCategoryIcon(category: String): ImageVector =
+    when {
+        category.contains("食") || category.contains("餐") -> Icons.Filled.Fastfood
+        category.contains("购") || category.contains("买") -> Icons.Filled.ShoppingCart
+        category.contains("娱") || category.contains("玩") -> Icons.Filled.SportsEsports
+        category.contains("车") || category.contains("交通") -> Icons.Filled.DirectionsCar
+        category.contains("旅") -> Icons.Filled.Flight
+        category.contains("教") || category.contains("学") -> Icons.Filled.School
+        else -> Icons.Filled.Lens
+    }
+
+// 颜色表
 private fun getChartColors(): List<Color> {
     return listOf(
         Color(0xFFF4B400),
