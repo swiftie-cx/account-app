@@ -36,7 +36,11 @@ import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
+fun AddTransactionScreen(
+    navController: NavHostController,
+    viewModel: ExpenseViewModel,
+    expenseId: Long? = null
+) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("支出", "收入", "转账")
 
@@ -64,6 +68,22 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
     }
 
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+    val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
+
+    LaunchedEffect(key1 = expenseId, key2 = expenses, key3 = accounts) {
+        if (expenseId != null) {
+            val expenseToEdit = expenses.find { it.id == expenseId }
+            if (expenseToEdit != null) {
+                selectedTab = if (expenseToEdit.amount < 0) 0 else 1
+                selectedCategory = (expenseCategories + incomeCategories).find { it.title == expenseToEdit.category }
+                amount = abs(expenseToEdit.amount).toString()
+                selectedDate = expenseToEdit.date.time
+                selectedAccount = accounts.find { it.id == expenseToEdit.accountId }
+                remark = expenseToEdit.remark ?: ""
+            }
+        }
+    }
+
 
     LaunchedEffect(accounts) {
         if (selectedAccount == null || selectedAccount?.id !in accounts.map { it.id }) {
@@ -72,16 +92,18 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
     }
 
     LaunchedEffect(selectedTab) {
-        selectedCategory = null
-        amount = "0"
-        remark = ""
-        selectedAccount = accounts.firstOrNull()
-        fromAccount = null
-        toAccount = null
-        fromAmount = "0"
-        toAmount = "0"
-        focusedAmountField = "fromAmount"
-        showAccountPickerFor = null
+        if (expenseId == null) { // Don't reset fields when editing
+            selectedCategory = null
+            amount = "0"
+            remark = ""
+            selectedAccount = accounts.firstOrNull()
+            fromAccount = null
+            toAccount = null
+            fromAmount = "0"
+            toAmount = "0"
+            focusedAmountField = "fromAmount"
+            showAccountPickerFor = null
+        }
     }
 
     // --- 完成按钮逻辑 ---
@@ -90,13 +112,18 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
             val rawAmount = amount.toDouble()
             val finalAmount = if (selectedTab == 0) -rawAmount else rawAmount
             val expense = Expense(
+                id = expenseId ?: 0, // Keep original ID if editing
                 category = selectedCategory!!.title,
                 amount = finalAmount,
-                date = Date(selectedDate), // 传递 Date 对象
+                date = Date(selectedDate),
                 accountId = selectedAccount!!.id,
                 remark = remark.takeIf { it.isNotBlank() }
             )
-            viewModel.insert(expense)
+            if (expenseId == null) {
+                viewModel.insert(expense)
+            } else {
+                viewModel.updateExpense(expense)
+            }
             navController.popBackStack()
         }
     }
@@ -111,7 +138,7 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                 toAccountId = toAccount!!.id,
                 fromAmount = fromAmountValue,
                 toAmount = toAmountValue,
-                date = Date() // 传递 Date 对象
+                date = Date(selectedDate) // Use selected date
             )
             navController.popBackStack()
         }
@@ -156,15 +183,17 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("添加") },
+                title = { Text(if (expenseId == null) "添加" else "编辑") },
                 navigationIcon = { TextButton(onClick = { navController.popBackStack() }) { Text("取消") } }
             )
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
+            if (expenseId == null) { // Hide tabs when editing
+                TabRow(selectedTabIndex = selectedTab) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
+                    }
                 }
             }
 
@@ -191,7 +220,6 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                             modifier = Modifier.weight(1f)
                         )
                         if (selectedCategory != null) {
-                            // (修改) 传递 selectedDate
                             NumericKeyboard(
                                 onNumberClick = { if (amount == "0") amount = it else amount += it },
                                 onOperatorClick = { operator -> amount += " $operator "; isCalculation = true },
@@ -208,7 +236,7 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                                     isCalculation = false
                                 },
                                 isCalculation = isCalculation,
-                                selectedDate = selectedDate // <--- 传递当前选中的日期
+                                selectedDate = selectedDate
                             )
                         }
                     }
@@ -227,7 +255,6 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                         )
                         Spacer(Modifier.weight(1f))
                         if (fromAccount != null && toAccount != null) {
-                            // (修改) 传递 selectedDate (虽然转账界面暂时不处理日期点击，但需要满足参数要求)
                             NumericKeyboard(
                                 onNumberClick = { num ->
                                     if (isSameCurrency) fromAmount = if (fromAmount == "0") num else fromAmount + num
@@ -245,7 +272,7 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                                     else toAmount = if (toAmount.length > 1) toAmount.dropLast(1) else "0"
                                     isCalculation = fromAmount.contains("+") || fromAmount.contains("-") || toAmount.contains("+") || toAmount.contains("-")
                                 },
-                                onDateClick = { /* No date picker for transfer */ },
+                                onDateClick = { showDatePicker = true },
                                 onDoneClick = onTransferDoneClick,
                                 onEqualsClick = {
                                     try {
@@ -260,7 +287,7 @@ fun AddTransactionScreen(navController: NavHostController, viewModel: ExpenseVie
                                     isCalculation = false
                                 },
                                 isCalculation = isCalculation,
-                                selectedDate = selectedDate // <--- 传递当前选中的日期
+                                selectedDate = selectedDate
                             )
                         }
                     }

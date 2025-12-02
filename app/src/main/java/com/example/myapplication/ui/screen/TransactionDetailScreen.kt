@@ -70,7 +70,11 @@ fun TransactionDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
-                    onClick = { /* TODO: Navigate to Edit Screen (e.g., AddTransactionScreen with ID) */ },
+                    onClick = {
+                        expense?.let {
+                            navController.navigate("add_transaction?expenseId=${it.id}")
+                        }
+                    },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("编辑")

@@ -175,8 +175,19 @@ fun NavigationGraph(
             // 指向新的 AssetsScreen
             AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
-        composable(Routes.ADD_TRANSACTION) {
-            AddTransactionScreen(navController = navController, viewModel = expenseViewModel)
+        composable(
+            route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}",
+            arguments = listOf(navArgument("expenseId") {
+                type = NavType.LongType
+                defaultValue = -1L
+            })
+        ) { backStackEntry ->
+            val expenseId = backStackEntry.arguments?.getLong("expenseId")
+            AddTransactionScreen(
+                navController = navController,
+                viewModel = expenseViewModel,
+                expenseId = if (expenseId == -1L) null else expenseId
+            )
         }
         composable(
             route = Routes.BUDGET_SETTINGS,
