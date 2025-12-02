@@ -39,7 +39,8 @@ import kotlin.math.abs
 fun AddTransactionScreen(
     navController: NavHostController,
     viewModel: ExpenseViewModel,
-    expenseId: Long? = null
+    expenseId: Long? = null,
+    dateMillis: Long? = null
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("支出", "收入", "转账")
@@ -48,7 +49,7 @@ fun AddTransactionScreen(
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var amount by remember { mutableStateOf("0") }
     var isCalculation by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf(System.currentTimeMillis()) }
+    var selectedDate by remember { mutableStateOf(dateMillis ?: System.currentTimeMillis()) } // Use passed date
     var selectedAccount by remember { mutableStateOf<Account?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
@@ -77,7 +78,7 @@ fun AddTransactionScreen(
                 selectedTab = if (expenseToEdit.amount < 0) 0 else 1
                 selectedCategory = (expenseCategories + incomeCategories).find { it.title == expenseToEdit.category }
                 amount = abs(expenseToEdit.amount).toString()
-                selectedDate = expenseToEdit.date.time
+                selectedDate = expenseToEdit.date.time // This will override the initial date, which is correct for editing
                 selectedAccount = accounts.find { it.id == expenseToEdit.accountId }
                 remark = expenseToEdit.remark ?: ""
             }
@@ -92,7 +93,8 @@ fun AddTransactionScreen(
     }
 
     LaunchedEffect(selectedTab) {
-        if (expenseId == null) { // Don't reset fields when editing
+        // Only reset if we are not editing
+        if (expenseId == null) {
             selectedCategory = null
             amount = "0"
             remark = ""
@@ -103,6 +105,7 @@ fun AddTransactionScreen(
             toAmount = "0"
             focusedAmountField = "fromAmount"
             showAccountPickerFor = null
+            // We don't reset selectedDate here, to keep the passed-in date
         }
     }
 

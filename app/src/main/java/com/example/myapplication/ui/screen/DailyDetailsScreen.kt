@@ -79,7 +79,7 @@ fun DailyDetailsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate(Routes.ADD_TRANSACTION) }) {
+            FloatingActionButton(onClick = { navController.navigate("${Routes.ADD_TRANSACTION}?dateMillis=$dateMillis") }) {
                 Icon(Icons.Default.Add, contentDescription = "添加")
             }
         }

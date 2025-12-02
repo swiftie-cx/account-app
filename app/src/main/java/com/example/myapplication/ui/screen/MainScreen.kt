@@ -176,17 +176,25 @@ fun NavigationGraph(
             AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
         composable(
-            route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}",
-            arguments = listOf(navArgument("expenseId") {
-                type = NavType.LongType
-                defaultValue = -1L
-            })
+            route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}",
+            arguments = listOf(
+                navArgument("expenseId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+                navArgument("dateMillis") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
         ) { backStackEntry ->
             val expenseId = backStackEntry.arguments?.getLong("expenseId")
+            val dateMillis = backStackEntry.arguments?.getLong("dateMillis")
             AddTransactionScreen(
                 navController = navController,
                 viewModel = expenseViewModel,
-                expenseId = if (expenseId == -1L) null else expenseId
+                expenseId = if (expenseId == -1L) null else expenseId,
+                dateMillis = if (dateMillis == -1L) null else dateMillis
             )
         }
         composable(
