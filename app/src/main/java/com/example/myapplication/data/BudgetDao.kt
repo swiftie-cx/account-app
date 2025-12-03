@@ -19,4 +19,7 @@ interface BudgetDao {
     // New query to find the most recent month that has any budget entries.
     @Query("SELECT * FROM budgets ORDER BY year DESC, month DESC LIMIT 1")
     suspend fun getMostRecentBudget(): Budget?
+
+    @Query("DELETE FROM budgets")
+    suspend fun deleteAll()
 }

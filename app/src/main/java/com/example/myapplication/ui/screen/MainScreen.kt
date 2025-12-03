@@ -202,7 +202,9 @@ fun NavigationGraph(
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen(navController = navController, defaultCurrency = defaultCurrency)
+            SettingsScreen(navController = navController,
+                defaultCurrency = defaultCurrency,
+                viewModel = expenseViewModel)
         }
 
         composable(Routes.CURRENCY_SELECTION) {

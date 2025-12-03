@@ -202,7 +202,7 @@ private fun DetailsTopAppBar(
     onCalendarClick: () -> Unit
 ) {
     CenterAlignedTopAppBar(
-        title = { Text("魔法记账", fontWeight = FontWeight.Bold) },
+        title = { Text("拾光账本", fontWeight = FontWeight.Bold) },
         navigationIcon = {
             IconButton(onClick = onSettingsClick) { Icon(Icons.Default.Settings, "设置") }
         },

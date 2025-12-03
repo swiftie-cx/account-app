@@ -79,4 +79,19 @@ class ExpenseRepository(
         prefs.edit().putString("account_order", json).apply()
         _accountOrder.value = ids
     }
+
+    // (新增) 清除所有数据逻辑
+    suspend fun clearAllData() {
+        // 1. 清空数据库表
+        expenseDao.deleteAll()
+        budgetDao.deleteAll()
+        accountDao.deleteAll()
+
+        // 2. 清空偏好设置 (重置默认账户、排序等)
+        prefs.edit().clear().apply()
+
+        // 3. 重置内存中的状态
+        _defaultAccountId.value = -1L
+        _accountOrder.value = emptyList()
+    }
 }

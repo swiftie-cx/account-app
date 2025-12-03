@@ -56,6 +56,13 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         repository.saveAccountOrder(newOrder)
     }
 
+    // --- (新增) 清除所有数据 ---
+    fun clearAllData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearAllData()
+        }
+    }
+
     // --- Category Management ---
     private val _expenseCategories = MutableStateFlow(expenseCategories)
     val expenseCategoriesState: StateFlow<List<Category>> = _expenseCategories.asStateFlow()
@@ -146,9 +153,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun updateCategoryFilter(category: String?) { _selectedCategoryFilter.value = category ?: "全部" }
 
     // --- Budget Methods ---
-
-    // (修复) 确保这与 Repository 中的方法签名匹配
-    // 如果 repository.getBudgetsForMonth 返回 Flow<List<Budget>>，则这里直接返回即可
     fun getBudgetsForMonth(year: Int, month: Int): Flow<List<Budget>> {
         return repository.getBudgetsForMonth(year, month)
     }
@@ -162,7 +166,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
                     val calculatedSum = allBudgets.filter { it.category in allCategoryTitles }.sumOf { it.amount }
                     val manualTotalBudget = allBudgets.find { it.category == "总预算" }
                     if (manualTotalBudget == null || manualTotalBudget.amount < calculatedSum) {
-                        // (修复) 确保调用的是 Repository 的 upsertBudget
                         repository.upsertBudget(
                             Budget(id = manualTotalBudget?.id ?: 0, category = "总预算", amount = calculatedSum, year = budget.year, month = budget.month)
                         )
@@ -174,28 +177,19 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     fun syncBudgetsFor(year: Int, month: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            // (修复) 这里使用了 first() 来获取 Flow 的第一个值，这是挂起操作，必须在协程中
             val targetMonthBudgets = getBudgetsForMonth(year, month).first()
-
             if (targetMonthBudgets.isNotEmpty()) {
                 return@launch
             }
-
-            // (修复) getMostRecentBudget 是挂起函数，直接调用
             val recentBudget = repository.getMostRecentBudget() ?: return@launch
-
             if (recentBudget.year == year && recentBudget.month == month) {
                 return@launch
             }
-
-            // (修复) 这里同样使用 first()
             val recentMonthBudgets = getBudgetsForMonth(recentBudget.year, recentBudget.month).first()
             val newBudgets = recentMonthBudgets.map {
                 it.copy(id = 0, year = year, month = month)
             }
-
             if (newBudgets.isNotEmpty()) {
-                // (修复) upsertBudgets 是挂起函数，直接调用
                 repository.upsertBudgets(newBudgets)
             }
         }
