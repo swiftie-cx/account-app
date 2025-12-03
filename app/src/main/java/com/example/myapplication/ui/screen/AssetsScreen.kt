@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Settings
+// import androidx.compose.material.icons.filled.Settings // (删除) 不再需要
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -59,12 +59,8 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("资产") },
-                actions = {
-                    IconButton(onClick = { navController.navigate(Routes.SETTINGS) }) {
-                        Icon(Icons.Default.Settings, contentDescription = "设置")
-                    }
-                }
+                title = { Text("资产") }
+                // (修改) 删除了 actions，移除了右上角设置按钮
             )
         }
     ) { padding ->
@@ -91,8 +87,7 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         account = account,
                         currentBalance = currentBalance,
                         onClick = {
-                            // (修改) 点击跳转到编辑账户页面
-                            navController.navigate(Routes.addAccountRoute(account.id))
+                            // 这里可以留空或导航到账户流水详情
                         }
                     )
                 }

@@ -11,7 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings // (修改) 导入设置图标
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -145,7 +145,8 @@ fun DetailsScreen(
     Scaffold(
         topBar = {
             DetailsTopAppBar(
-                onMenuClick = { /* TODO: 实现菜单点击逻辑 */ },
+                // (修改) 点击左上角设置图标 -> 跳转到设置页
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
                 onSearchClick = { navController.navigate(Routes.SEARCH) },
                 onCalendarClick = { navController.navigate(Routes.CALENDAR) }
             )
@@ -199,14 +200,15 @@ fun DetailsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DetailsTopAppBar(
-    onMenuClick: () -> Unit,
+    onSettingsClick: () -> Unit, // (修改) 参数名更明确
     onSearchClick: () -> Unit,
     onCalendarClick: () -> Unit
 ) {
     CenterAlignedTopAppBar(
         title = { Text("魔法记账", fontWeight = FontWeight.Bold) },
         navigationIcon = {
-            IconButton(onClick = onMenuClick) { Icon(Icons.Default.Menu, "菜单") }
+            // (修改) 图标改为 Settings
+            IconButton(onClick = onSettingsClick) { Icon(Icons.Default.Settings, "设置") }
         },
         actions = {
             IconButton(onClick = onSearchClick) { Icon(Icons.Default.Search, "搜索") }
@@ -218,7 +220,9 @@ private fun DetailsTopAppBar(
     )
 }
 
-// --- 黄色摘要卡片 ---
+// ... 下面的 SummaryHeader, DateHeader, TransferItem, ExpenseItem 保持不变 ...
+// (为了确保文件完整性，这里再次包含它们)
+
 @Composable
 private fun SummaryHeader(
     year: Int, month: Int, expense: Double, income: Double, balance: Double, onMonthClick: () -> Unit
@@ -258,8 +262,6 @@ private fun SummaryHeader(
     }
 }
 
-
-// --- 日期和日汇总 Header ---
 @Composable
 fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
     val displayFormat = remember { SimpleDateFormat("MM月dd日 EEEE", Locale.getDefault()) }
@@ -292,7 +294,6 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
     }
 }
 
-// --- 转账列表项 ---
 @Composable
 private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
     Row(
@@ -335,8 +336,6 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
     }
 }
 
-
-// --- 支出/收入列表项 ---
 @Composable
 private fun ExpenseItem(
     expense: Expense,
@@ -346,7 +345,6 @@ private fun ExpenseItem(
     onClick: () -> Unit
 ) {
     val amountColor = if (expense.amount < 0) MaterialTheme.colorScheme.error else Color.Unspecified
-
     val needsConversion = account != null && account.currency != defaultCurrency
 
     Row(
@@ -375,13 +373,10 @@ private fun ExpenseItem(
             Spacer(Modifier.size(40.dp))
         }
 
-        // 显示备注或类别
         val displayText = if (!expense.remark.isNullOrBlank()) expense.remark else expense.category
         Text(text = displayText ?: expense.category, modifier = Modifier.weight(1f))
 
-        // 右侧金额显示区域
         Column(horizontalAlignment = Alignment.End) {
-            // 原金额
             val amountText = "${account?.currency ?: ""} ${String.format("%.2f", abs(expense.amount))}"
             Text(
                 text = amountText,
@@ -389,7 +384,6 @@ private fun ExpenseItem(
                 style = MaterialTheme.typography.bodyLarge
             )
 
-            // 如果币种不同，显示折算金额
             if (needsConversion) {
                 val convertedAmount = ExchangeRates.convert(abs(expense.amount), account!!.currency, defaultCurrency)
                 Text(

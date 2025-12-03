@@ -25,11 +25,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.myapplication.ui.navigation.BottomNavItem
-import com.example.myapplication.ui.navigation.Routes // (关键) 导入统一管理的 Routes
+import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import java.util.Calendar
 
-// --- MainScreen 可组合函数 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(expenseViewModel: ExpenseViewModel) {
@@ -38,7 +37,7 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     val calendar = Calendar.getInstance()
     var budgetScreenYear by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
     var budgetScreenMonth by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.MONTH) + 1) }
-    var defaultCurrency by rememberSaveable { mutableStateOf("CNY") } // 初始默认货币
+    var defaultCurrency by rememberSaveable { mutableStateOf("CNY") }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -46,13 +45,11 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     Scaffold(
         bottomBar = {
             AppBottomBar(navController = navController) {
-                // 点击预算 Tab 时重置日期到当前月
                 budgetScreenYear = calendar.get(Calendar.YEAR)
                 budgetScreenMonth = calendar.get(Calendar.MONTH) + 1
             }
         },
         floatingActionButton = {
-            // 仅在明细页显示 FAB
             if (currentRoute == BottomNavItem.Details.route) {
                 FloatingActionButton(onClick = { navController.navigate(Routes.ADD_TRANSACTION) }) {
                     Icon(Icons.Default.Add, contentDescription = "Add Transaction")
@@ -79,7 +76,6 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     }
 }
 
-// --- AppBottomBar 可组合函数 ---
 @Composable
 fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit) {
     val items = listOf(
@@ -103,14 +99,16 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
                         onBudgetTabClick()
                     }
                     navController.navigate(item.route) {
-                        // 避免在返回栈中积累过多的副本
                         popUpTo(navController.graph.startDestinationId) {
                             saveState = true
                         }
-                        // 避免重复点击同一个 item 时重新加载
                         launchSingleTop = true
-                        // 恢复状态
-                        restoreState = true
+
+                        // (核心修改)
+                        // 如果点击的是"明细"(Details)标签，强制不恢复状态(restoreState=false)。
+                        // 这样每次点击"明细"都会重置到列表页，而不是回到上次打开的子页面(如设置页)。
+                        // 其他标签(如 Budget/Assets)保持 true，以便记住用户的浏览位置。
+                        restoreState = (item.route != BottomNavItem.Details.route)
                     }
                 }
             )
@@ -118,7 +116,7 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
     }
 }
 
-// --- NavigationGraph 可组合函数 ---
+// --- NavigationGraph 保持不变 ---
 @Composable
 fun NavigationGraph(
     navController: NavHostController,
@@ -132,173 +130,94 @@ fun NavigationGraph(
 ) {
     NavHost(navController, startDestination = BottomNavItem.Details.route, modifier = modifier) {
 
-        // 1. 明细页
         composable(BottomNavItem.Details.route) {
-            DetailsScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                defaultCurrency = defaultCurrency
-            )
+            DetailsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
-        // 2. 图表页
         composable(BottomNavItem.Chart.route) {
             ChartScreen(viewModel = expenseViewModel)
         }
 
-        // 3. 预算页
         composable(BottomNavItem.Budget.route) {
-            BudgetScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                year = budgetScreenYear,
-                month = budgetScreenMonth,
-                onDateChange = onBudgetScreenDateChange,
-                defaultCurrency = defaultCurrency
-            )
+            BudgetScreen(viewModel = expenseViewModel, navController = navController, year = budgetScreenYear, month = budgetScreenMonth, onDateChange = onBudgetScreenDateChange, defaultCurrency = defaultCurrency)
         }
 
-        // 4. 资产页
         composable(BottomNavItem.Assets.route) {
-            AssetsScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                defaultCurrency = defaultCurrency
-            )
+            AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
         // --- 功能页面 ---
-
-        // 添加/编辑交易
         composable(
             route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}",
             arguments = listOf(
-                navArgument("expenseId") {
-                    type = NavType.LongType
-                    defaultValue = -1L
-                },
-                navArgument("dateMillis") {
-                    type = NavType.LongType
-                    defaultValue = -1L
-                }
+                navArgument("expenseId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("dateMillis") { type = NavType.LongType; defaultValue = -1L }
             )
         ) { backStackEntry ->
             val expenseId = backStackEntry.arguments?.getLong("expenseId")
             val dateMillis = backStackEntry.arguments?.getLong("dateMillis")
-            AddTransactionScreen(
-                navController = navController,
-                viewModel = expenseViewModel,
-                expenseId = if (expenseId == -1L) null else expenseId,
-                dateMillis = if (dateMillis == -1L) null else dateMillis
-            )
+            AddTransactionScreen(navController = navController, viewModel = expenseViewModel, expenseId = if (expenseId == -1L) null else expenseId, dateMillis = if (dateMillis == -1L) null else dateMillis)
         }
 
-        // 预算设置
         composable(
             route = Routes.BUDGET_SETTINGS,
-            arguments = listOf(
-                navArgument("year") { type = NavType.IntType },
-                navArgument("month") { type = NavType.IntType }
-            )
+            arguments = listOf(navArgument("year") { type = NavType.IntType }, navArgument("month") { type = NavType.IntType })
         ) { backStackEntry ->
             val year = backStackEntry.arguments?.getInt("year") ?: 0
             val month = backStackEntry.arguments?.getInt("month") ?: 0
-            BudgetSettingsScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                year = year,
-                month = month
-            )
+            BudgetSettingsScreen(viewModel = expenseViewModel, navController = navController, year = year, month = month)
         }
 
-        // 账户管理
         composable(Routes.ACCOUNT_MANAGEMENT) {
             AccountManagementScreen(viewModel = expenseViewModel, navController = navController)
         }
 
-        // (修改) 添加账户 (支持编辑模式)
         composable(
             route = Routes.ADD_ACCOUNT,
-            arguments = listOf(
-                navArgument("accountId") {
-                    type = NavType.LongType
-                    defaultValue = -1L
-                }
-            )
+            arguments = listOf(navArgument("accountId") { type = NavType.LongType; defaultValue = -1L })
         ) { backStackEntry ->
             val accountId = backStackEntry.arguments?.getLong("accountId")
-            AddAccountScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                accountId = if (accountId == -1L) null else accountId
-            )
+            AddAccountScreen(viewModel = expenseViewModel, navController = navController, accountId = if (accountId == -1L) null else accountId)
         }
 
-        // 日历
         composable(Routes.CALENDAR) {
-            CalendarScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                defaultCurrency = defaultCurrency
-            )
+            CalendarScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
-        // 每日详情
         composable(
             route = Routes.DAILY_DETAILS,
             arguments = listOf(navArgument("dateMillis") { type = NavType.LongType })
         ) { backStackEntry ->
             val dateMillis = backStackEntry.arguments?.getLong("dateMillis")
             if (dateMillis != null) {
-                DailyDetailsScreen(
-                    viewModel = expenseViewModel,
-                    navController = navController,
-                    dateMillis = dateMillis
-                )
+                DailyDetailsScreen(viewModel = expenseViewModel, navController = navController, dateMillis = dateMillis)
             }
         }
 
-        // 设置
         composable(Routes.SETTINGS) {
-            SettingsScreen(
-                navController = navController,
-                defaultCurrency = defaultCurrency
-            )
+            SettingsScreen(navController = navController, defaultCurrency = defaultCurrency)
         }
 
-        // 货币选择
         composable(Routes.CURRENCY_SELECTION) {
-            CurrencySelectionScreen(
-                navController = navController,
-                onCurrencySelected = onDefaultCurrencyChange
-            )
+            CurrencySelectionScreen(navController = navController, onCurrencySelected = onDefaultCurrencyChange)
         }
 
-        // 类别设置
         composable(Routes.CATEGORY_SETTINGS) {
             CategorySettingsScreen(navController = navController, viewModel = expenseViewModel)
         }
 
-        // 添加类别
         composable(Routes.ADD_CATEGORY) {
             AddCategoryScreen(navController = navController, viewModel = expenseViewModel)
         }
 
-        // 交易详情
         composable(
             route = Routes.TRANSACTION_DETAIL,
             arguments = listOf(navArgument("expenseId") { type = NavType.LongType })
         ) { backStackEntry ->
             val expenseId = backStackEntry.arguments?.getLong("expenseId")
-            TransactionDetailScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                expenseId = expenseId,
-                defaultCurrency = defaultCurrency
-            )
+            TransactionDetailScreen(viewModel = expenseViewModel, navController = navController, expenseId = expenseId, defaultCurrency = defaultCurrency)
         }
 
-        // 搜索
         composable(Routes.SEARCH) {
             SearchScreen(viewModel = expenseViewModel, navController = navController)
         }
