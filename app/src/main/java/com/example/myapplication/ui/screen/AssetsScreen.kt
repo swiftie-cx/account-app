@@ -2,17 +2,18 @@ package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.* // 使用 * 导入
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.* // 使用 * 导入
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -20,24 +21,22 @@ import com.example.myapplication.data.Account
 import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.ui.navigation.IconMapper
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
+import com.example.myapplication.ui.navigation.Routes
 import java.util.Locale
 import kotlin.math.abs
-import com.example.myapplication.ui.navigation.Routes
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, defaultCurrency: String) {
-    // 获取账户和交易记录
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
-    // --- 计算当前余额和汇总 ---
-    // 1. 按 accountId 分组计算每个账户的交易总额
+    // --- 计算逻辑 ---
     val expenseSumsByAccount = remember(expenses) {
         expenses.groupBy { it.accountId }
             .mapValues { (_, transactions) -> transactions.sumOf { it.amount } }
     }
 
-    // 2. 计算每个账户的当前余额 (Account 和 Balance 的 Pair 列表)
     val accountsWithBalance = remember(accounts, expenseSumsByAccount) {
         accounts.map { account ->
             val currentBalance = account.initialBalance + (expenseSumsByAccount[account.id] ?: 0.0)
@@ -45,7 +44,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
         }
     }
 
-    // 3. 计算资产、负债、净资产汇总 (基于当前余额)
     val assets = remember(accountsWithBalance, defaultCurrency) {
         accountsWithBalance.filter { !it.first.isLiability }.sumOf { (account, balance) ->
             ExchangeRates.convert(balance, account.currency, defaultCurrency)
@@ -57,7 +55,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
         }
     }
     val netAssets = assets - liabilities
-    // --- 计算结束 ---
 
     Scaffold(
         topBar = {
@@ -72,8 +69,11 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
         }
     ) { padding ->
         Column(
-            modifier = Modifier.padding(padding).fillMaxSize()
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
         ) {
+            // 总览卡片
             SummaryCard(
                 netAssets = netAssets,
                 assets = assets,
@@ -91,13 +91,14 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         account = account,
                         currentBalance = currentBalance,
                         onClick = {
-                            // TODO: 导航到账户详情/编辑页面
-                            // navController.navigate("account_detail/${account.id}")
+                            // (修改) 点击跳转到编辑账户页面
+                            navController.navigate(Routes.addAccountRoute(account.id))
                         }
                     )
                 }
             }
 
+            // 底部按钮
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -105,22 +106,25 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
-                    onClick = { navController.navigate(Routes.ADD_ACCOUNT) }, // 使用 Routes
+                    onClick = { navController.navigate(Routes.addAccountRoute()) },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) { Text("添加账户", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                ) {
+                    Text("添加账户", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
 
                 Button(
-                    onClick = { navController.navigate(Routes.ACCOUNT_MANAGEMENT) }, // 使用 Routes
+                    onClick = { navController.navigate(Routes.ACCOUNT_MANAGEMENT) },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) { Text("管理账户", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                ) {
+                    Text("管理账户", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }
 }
 
-// 黄色摘要卡片 Composable
 @Composable
 private fun SummaryCard(netAssets: Double, assets: Double, liabilities: Double, currency: String) {
     Surface(
@@ -153,12 +157,10 @@ private fun SummaryCard(netAssets: Double, assets: Double, liabilities: Double, 
                     }
                 }
             }
-            // Icon(painterResource(id = R.drawable.your_money_bag_icon), ...)
         }
     }
 }
 
-// 资产屏幕的账户列表项 Composable
 @Composable
 fun AssetAccountItem(
     account: Account,

@@ -10,9 +10,12 @@ object Routes {
     const val BUDGET_SETTINGS = "budget_settings/{year}/{month}"
     fun budgetSettingsRoute(year: Int, month: Int) = "budget_settings/$year/$month"
 
-    // 账户管理相关 (修复报错的关键)
+    // 账户管理相关
     const val ACCOUNT_MANAGEMENT = "account_management"
-    const val ADD_ACCOUNT = "add_account"
+
+    // (修改) 支持传递 accountId，默认值为 -1 (新建)
+    const val ADD_ACCOUNT = "add_account?accountId={accountId}"
+    fun addAccountRoute(accountId: Long? = null) = "add_account?accountId=${accountId ?: -1L}"
 
     // 其他功能页面
     const val SEARCH = "search"

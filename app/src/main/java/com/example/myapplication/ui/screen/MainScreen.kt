@@ -137,7 +137,7 @@ fun NavigationGraph(
             DetailsScreen(
                 viewModel = expenseViewModel,
                 navController = navController,
-                defaultCurrency = defaultCurrency // 传递默认货币
+                defaultCurrency = defaultCurrency
             )
         }
 
@@ -154,7 +154,7 @@ fun NavigationGraph(
                 year = budgetScreenYear,
                 month = budgetScreenMonth,
                 onDateChange = onBudgetScreenDateChange,
-                defaultCurrency = defaultCurrency // 传递默认货币
+                defaultCurrency = defaultCurrency
             )
         }
 
@@ -163,7 +163,7 @@ fun NavigationGraph(
             AssetsScreen(
                 viewModel = expenseViewModel,
                 navController = navController,
-                defaultCurrency = defaultCurrency // 传递默认货币
+                defaultCurrency = defaultCurrency
             )
         }
 
@@ -216,9 +216,22 @@ fun NavigationGraph(
             AccountManagementScreen(viewModel = expenseViewModel, navController = navController)
         }
 
-        // 添加账户
-        composable(Routes.ADD_ACCOUNT) {
-            AddAccountScreen(viewModel = expenseViewModel, navController = navController)
+        // (修改) 添加账户 (支持编辑模式)
+        composable(
+            route = Routes.ADD_ACCOUNT,
+            arguments = listOf(
+                navArgument("accountId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getLong("accountId")
+            AddAccountScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                accountId = if (accountId == -1L) null else accountId
+            )
         }
 
         // 日历
@@ -226,7 +239,7 @@ fun NavigationGraph(
             CalendarScreen(
                 viewModel = expenseViewModel,
                 navController = navController,
-                defaultCurrency = defaultCurrency // 传递默认货币
+                defaultCurrency = defaultCurrency
             )
         }
 
@@ -249,7 +262,7 @@ fun NavigationGraph(
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 navController = navController,
-                defaultCurrency = defaultCurrency // 传递默认货币
+                defaultCurrency = defaultCurrency
             )
         }
 
@@ -257,7 +270,7 @@ fun NavigationGraph(
         composable(Routes.CURRENCY_SELECTION) {
             CurrencySelectionScreen(
                 navController = navController,
-                onCurrencySelected = onDefaultCurrencyChange // 回调
+                onCurrencySelected = onDefaultCurrencyChange
             )
         }
 
@@ -281,7 +294,7 @@ fun NavigationGraph(
                 viewModel = expenseViewModel,
                 navController = navController,
                 expenseId = expenseId,
-                defaultCurrency = defaultCurrency // 传递默认货币
+                defaultCurrency = defaultCurrency
             )
         }
 

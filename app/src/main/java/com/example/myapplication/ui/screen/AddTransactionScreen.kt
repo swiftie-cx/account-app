@@ -28,7 +28,7 @@ import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
-// import com.example.myapplication.ui.navigation.Routes // (注释掉，避免报错)
+// import com.example.myapplication.ui.navigation.Routes // (使用字符串导航，避免报错)
 import com.example.myapplication.data.ExchangeRates
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -49,18 +49,20 @@ fun AddTransactionScreen(
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var amount by remember { mutableStateOf("0") }
     var selectedDate by remember { mutableLongStateOf(dateMillis ?: System.currentTimeMillis()) }
+
+    // (功能) 获取默认账户ID
+    val defaultAccountId by viewModel.defaultAccountId.collectAsState()
+    val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+
     var selectedAccount by remember { mutableStateOf<Account?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
     var remark by remember { mutableStateOf("") }
 
-    // --- 转账状态 ---
     var fromAccount by remember { mutableStateOf<Account?>(null) }
     var toAccount by remember { mutableStateOf<Account?>(null) }
     var fromAmount by remember { mutableStateOf("0") }
     var toAmount by remember { mutableStateOf("0") }
-
-    // (功能) 默认焦点
     var focusedAmountField by remember { mutableStateOf("fromAmount") }
     var showAccountPickerFor by remember { mutableStateOf<String?>(null) }
 
@@ -70,7 +72,7 @@ fun AddTransactionScreen(
         from != null && to != null && from.currency == to.currency
     }
 
-    // (功能) 自动跳转焦点逻辑
+    // 自动跳转焦点
     LaunchedEffect(fromAccount, toAccount) {
         if (fromAccount != null && toAccount != null && fromAccount != toAccount && !isSameCurrency) {
             if (toAmount == "0" || toAmount == "") {
@@ -79,7 +81,6 @@ fun AddTransactionScreen(
         }
     }
 
-    // (功能) 自动推导键盘状态
     val isCalculation = remember(selectedTab, amount, fromAmount, toAmount, focusedAmountField, isSameCurrency) {
         when (selectedTab) {
             0, 1 -> amount.contains("+") || amount.contains("-")
@@ -95,7 +96,6 @@ fun AddTransactionScreen(
         }
     }
 
-    val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
     LaunchedEffect(key1 = expenseId, key2 = expenses, key3 = accounts) {
@@ -114,9 +114,18 @@ fun AddTransactionScreen(
         }
     }
 
-    LaunchedEffect(accounts) {
-        if (selectedAccount == null || selectedAccount?.id !in accounts.map { it.id }) {
-            selectedAccount = accounts.firstOrNull()
+    // (功能) 初始账户选择：优先使用默认账户
+    LaunchedEffect(accounts, defaultAccountId) {
+        if (selectedAccount == null) {
+            if (expenseId == null) {
+                val defaultAcc = accounts.find { it.id == defaultAccountId }
+                selectedAccount = defaultAcc ?: accounts.firstOrNull()
+            }
+        }
+
+        if (expenseId == null && fromAccount == null && accounts.isNotEmpty()) {
+            val defaultAcc = accounts.find { it.id == defaultAccountId }
+            fromAccount = defaultAcc ?: accounts.firstOrNull()
         }
     }
 
@@ -125,8 +134,10 @@ fun AddTransactionScreen(
             selectedCategory = null
             amount = "0"
             remark = ""
-            selectedAccount = accounts.firstOrNull()
-            fromAccount = null
+            val defaultAcc = accounts.find { it.id == defaultAccountId }
+            selectedAccount = defaultAcc ?: accounts.firstOrNull()
+
+            fromAccount = defaultAcc ?: accounts.firstOrNull()
             toAccount = null
             fromAmount = "0"
             toAmount = "0"
@@ -135,17 +146,14 @@ fun AddTransactionScreen(
         }
     }
 
-    // (功能) 核心输入处理：包含自动换算
     fun handleInput(transform: (String) -> String) {
         if (selectedTab == 2) {
             if (isSameCurrency) {
                 fromAmount = transform(fromAmount)
             } else {
                 if (focusedAmountField == "fromAmount") {
-                    // 手动修改转出
                     fromAmount = transform(fromAmount)
                 } else {
-                    // 修改转入 -> 自动算转出
                     val newToAmount = transform(toAmount)
                     toAmount = newToAmount
                     try {
@@ -190,7 +198,6 @@ fun AddTransactionScreen(
     val onTransferDoneClick: () -> Unit = {
         val finalFromStr = try { evaluateExpression(fromAmount).toString() } catch(e: Exception) { fromAmount }
         val finalToStr = try { evaluateExpression(toAmount).toString() } catch(e: Exception) { toAmount }
-
         val fromAmountValue = finalFromStr.toDoubleOrNull() ?: 0.0
         val toAmountValue = if (isSameCurrency) fromAmountValue else (finalToStr.toDoubleOrNull() ?: 0.0)
 
@@ -304,14 +311,11 @@ fun AddTransactionScreen(
                 }
                 2 -> { // 转账
                     Column(modifier = Modifier.fillMaxSize()) {
-
-                        // (修复) 这里重新加上了滚动容器
-                        // 使用 Column + weight(1f) + verticalScroll 包裹输入区域
-                        // 这样即使内容超出，也可以滚动查看，不会挤压键盘
+                        // (保留) 滚动布局
                         Column(
                             modifier = Modifier
-                                .weight(1f) // 占据键盘上方的剩余空间
-                                .verticalScroll(rememberScrollState()) // 允许垂直滚动
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
                         ) {
                             TransferScreenContent(
                                 fromAccount = fromAccount,
@@ -336,7 +340,6 @@ fun AddTransactionScreen(
                             )
                         }
 
-                        // 键盘固定在底部，不包含在 ScrollColumn 中
                         if (fromAccount != null && toAccount != null) {
                             NumericKeyboard(
                                 onNumberClick = { num -> handleInput { if (it == "0") num else it + num } },
@@ -379,9 +382,6 @@ fun evaluateExpression(expression: String): Double {
     return result
 }
 
-
-// --- 其他 Composable 函数 ---
-
 @Composable
 fun TransferScreenContent( fromAccount: Account?, toAccount: Account?, fromAmount: String, toAmount: String, isSameCurrency: Boolean, focusedField: String, onFromAccountClick: () -> Unit, onToAccountClick: () -> Unit, onFromAmountClick: () -> Unit, onToAmountClick: () -> Unit ) {
     Column(Modifier.padding(16.dp)) {
@@ -396,7 +396,6 @@ fun TransferScreenContent( fromAccount: Account?, toAccount: Account?, fromAmoun
         if (isSameCurrency) {
             AmountInputBox( amount = fromAmount, currency = fromAccount?.currency ?: "---", label = "转账金额", isFocused = true, onClick = {} )
         } else {
-            // 点击时更新 focusedField
             AmountInputBox( amount = fromAmount, currency = fromAccount?.currency ?: "---", label = "转出金额", isFocused = focusedField == "fromAmount", onClick = onFromAmountClick )
             Spacer(Modifier.height(8.dp))
             AmountInputBox( amount = toAmount, currency = toAccount?.currency ?: "---", label = "转入金额", isFocused = focusedField == "toAmount", onClick = onToAmountClick )
@@ -518,7 +517,7 @@ fun AccountPickerDialog( accounts: List<Account>, onAccountSelected: (Account) -
         },
         confirmButton = { TextButton(onClick = onDismissRequest) { Text("取消") } },
         dismissButton = {
-            // 使用字符串，避免 Route 报错
+            // 继续使用字符串以防报错
             TextButton(onClick = { navController.navigate("account_management"); onDismissRequest() }) {
                 Text("账户管理")
             }

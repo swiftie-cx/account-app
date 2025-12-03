@@ -13,8 +13,12 @@ import com.example.myapplication.ui.viewmodel.ExpenseViewModelFactory
 class MainActivity : ComponentActivity() {
     private val vm: ExpenseViewModel by viewModels {
         val db = AppDatabase.getDatabase(applicationContext)
-        // (修改) 同时传入三个 DAO
-        val repo = ExpenseRepository(db.expenseDao(), db.budgetDao(), db.accountDao())
+        val repo = ExpenseRepository(
+            db.expenseDao(),
+            db.budgetDao(),
+            db.accountDao(),
+            applicationContext // (新) 传入 Context 用于保存设置
+        )
         ExpenseViewModelFactory(repo)
     }
 
