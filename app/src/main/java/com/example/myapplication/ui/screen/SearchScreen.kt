@@ -1,6 +1,6 @@
 package com.example.myapplication.ui.screen
 
-import android.content.res.Configuration // (新)
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,11 +18,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration // (新)
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -38,19 +37,16 @@ import kotlin.math.abs
 import androidx.compose.material3.MaterialTheme
 import java.util.Calendar
 import com.example.myapplication.ui.navigation.Routes
-import java.text.SimpleDateFormat // (新)
-import java.util.Locale // (新)
+import java.text.SimpleDateFormat
+import java.util.Locale
+import androidx.compose.ui.draw.clip
 
-/**
- * 搜索页面 (已连接基础搜索逻辑)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     viewModel: ExpenseViewModel,
     navController: NavHostController,
 ) {
-    // --- 状态管理 ---
     var localSearchText by remember { mutableStateOf("") }
     val searchResults by viewModel.filteredExpenses.collectAsState()
     val allAccounts by viewModel.allAccounts.collectAsState()
@@ -67,16 +63,14 @@ fun SearchScreen(
 
     val focusRequester = remember { FocusRequester() }
 
-    // --- 数据处理逻辑 ---
     val accountMap = remember(allAccounts) { allAccounts.associateBy { it.id } }
     val categoryIconMap = remember {
         (expenseCategories + incomeCategories).associate { it.title to it.icon }
     }
 
     val displayItems = remember(searchResults, accountMap, selectedTypeIndex, selectedTimeIndex, customDateRangeMillis, selectedCategories) {
-        // 1. 根据时间筛选
         val timeFilteredResults = when (selectedTimeIndex) {
-            1 -> { // 本周
+            1 -> {
                 val calendar = Calendar.getInstance()
                 calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -86,7 +80,7 @@ fun SearchScreen(
                 val weekStart = calendar.time
                 searchResults.filter { !it.date.before(weekStart) }
             }
-            2 -> { // 本月
+            2 -> {
                 val calendar = Calendar.getInstance()
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -96,7 +90,7 @@ fun SearchScreen(
                 val monthStart = calendar.time
                 searchResults.filter { !it.date.before(monthStart) }
             }
-            3 -> { // 本年
+            3 -> {
                 val calendar = Calendar.getInstance()
                 calendar.set(Calendar.DAY_OF_YEAR, 1)
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -106,7 +100,7 @@ fun SearchScreen(
                 val yearStart = calendar.time
                 searchResults.filter { !it.date.before(yearStart) }
             }
-            4 -> { // 自定义
+            4 -> {
                 val (startMillis, endMillis) = customDateRangeMillis
                 if (startMillis != null && endMillis != null) {
                     val endOfDayCalendar = Calendar.getInstance().apply {
@@ -121,17 +115,15 @@ fun SearchScreen(
                     searchResults
                 }
             }
-            else -> searchResults // "全部"
+            else -> searchResults
         }
 
-        // 1.5. 根据类别筛选
         val categoryFilteredResults = if (selectedCategories.isNotEmpty()) {
             timeFilteredResults.filter { it.category in selectedCategories }
         } else {
             timeFilteredResults
         }
 
-        // 2. 处理转账
         val transferExpenses = categoryFilteredResults.filter { it.category.startsWith("转账") }
         val regularExpenses = categoryFilteredResults.filter { !it.category.startsWith("转账") }
 
@@ -153,15 +145,13 @@ fun SearchScreen(
                 )
             }
 
-        // 3. 根据类型筛选
         val finalItems: List<Any> = when (selectedTypeIndex) {
-            1 -> regularExpenses.filter { it.amount < 0 } // 支出
-            2 -> regularExpenses.filter { it.amount > 0 } // 收入
-            3 -> processedTransfers // 转账
-            else -> regularExpenses + processedTransfers // 全部
+            1 -> regularExpenses.filter { it.amount < 0 }
+            2 -> regularExpenses.filter { it.amount > 0 }
+            3 -> processedTransfers
+            else -> regularExpenses + processedTransfers
         }
 
-        // 4. 排序
         finalItems.sortedByDescending {
             when (it) {
                 is Expense -> it.date.time
@@ -186,11 +176,8 @@ fun SearchScreen(
         }
     }
 
-    // (修改) 日期范围选择器 - 强制中文显示
     if (showDateRangePicker) {
         val dateRangePickerState = rememberDateRangePickerState()
-
-        // 强制设置 Configuration 为中文
         val configuration = LocalConfiguration.current
         val chineseConfig = remember(configuration) {
             Configuration(configuration).apply { setLocale(Locale.CHINA) }
@@ -223,10 +210,10 @@ fun SearchScreen(
             ) {
                 DateRangePicker(
                     state = dateRangePickerState,
-                    // 自定义标题栏显示的日期格式 (解决默认英文格式问题)
                     headline = {
                         val startMillis = dateRangePickerState.selectedStartDateMillis
                         val endMillis = dateRangePickerState.selectedEndDateMillis
+                        // (修改) 强制中文格式
                         val dateFormat = SimpleDateFormat("MM月dd日", Locale.CHINA)
 
                         val text = if (startMillis != null && endMillis != null) {
@@ -250,7 +237,7 @@ fun SearchScreen(
                             style = MaterialTheme.typography.labelLarge
                         )
                     },
-                    showModeToggle = false // 隐藏手写输入切换，保持日历视图
+                    showModeToggle = false
                 )
             }
         }
@@ -318,7 +305,6 @@ fun SearchScreen(
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             Column {
-                // --- 搜索和过滤条件 ---
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     OutlinedTextField(
                         value = localSearchText,
@@ -368,7 +354,6 @@ fun SearchScreen(
 
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-                // --- 搜索结果列表 ---
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -385,7 +370,7 @@ fun SearchScreen(
                             }
                             is DisplayTransferItem -> TransferItem(
                                 item = item,
-                                onClick = { /* TODO: 决定合并转账的点击 */ }
+                                onClick = { /* TODO */ }
                             )
                         }
                     }
@@ -395,8 +380,6 @@ fun SearchScreen(
     }
 }
 
-// ... 辅助函数 FilterChipRow, CategoryFilterRow, TransferItem, ExpenseItem 保持不变 ...
-// (为了文件完整性，请确保保留原有的这些辅助函数，此处不再重复列出，因为并未修改)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FilterChipRow(

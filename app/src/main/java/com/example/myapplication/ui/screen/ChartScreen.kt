@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.screen
 
-import android.app.DatePickerDialog
+import android.content.res.Configuration
+// (修复) 补全了原生图形库的引用，解决 Paint, Typeface 报错
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
@@ -17,15 +18,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Lens
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +32,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,12 +63,10 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
     var endDateMillis by remember { mutableStateOf<Long?>(null) }
     var showDateRangeDialog by remember { mutableStateOf(false) }
 
-    // 是否为自定义日期整体统计模式
     val isCustomRange by remember(startDateMillis, endDateMillis) {
         mutableStateOf(startDateMillis != null && endDateMillis != null)
     }
 
-    // 类型 + 日期过滤
     val filteredTransactions = remember(
         allTransactions,
         transactionType,
@@ -95,7 +86,6 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         }
     }
 
-    // 普通模式下按周 / 月 / 年分组
     val groupedData = remember(filteredTransactions, chartMode) {
         filteredTransactions.groupBy { expense ->
             val calendar = Calendar.getInstance().apply { time = expense.date }
@@ -107,12 +97,12 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
                 }
 
                 ChartMode.MONTH -> {
-                    val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+                    val monthFormat = SimpleDateFormat("yyyy-MM", Locale.CHINA)
                     monthFormat.format(calendar.time)
                 }
 
                 ChartMode.YEAR -> {
-                    val yearFormat = SimpleDateFormat("yyyy", Locale.getDefault())
+                    val yearFormat = SimpleDateFormat("yyyy", Locale.CHINA)
                     yearFormat.format(calendar.time)
                 }
             }
@@ -123,7 +113,6 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         groupedData.keys.sorted()
     }
 
-    // 当前显示的页索引
     var currentIndex by remember(chartMode, sortedGroupKeys, isCustomRange) {
         val initialIndex = if (isCustomRange || sortedGroupKeys.isEmpty()) {
             0
@@ -163,7 +152,6 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         )
 
         if (isCustomRange) {
-            // 自定义日期：整段统计
             if (filteredTransactions.isNotEmpty()) {
                 ChartPage(filteredTransactions)
             } else {
@@ -175,7 +163,6 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
                 }
             }
         } else {
-            // 普通模式：按当前索引显示一页
             if (sortedGroupKeys.isNotEmpty()) {
                 val key = sortedGroupKeys[currentIndex.coerceIn(sortedGroupKeys.indices)]
                 val pageData = groupedData[key] ?: emptyList()
@@ -222,16 +209,15 @@ fun FilterBar(
 ) {
     val yellow = MaterialTheme.colorScheme.primaryContainer
     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-    val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.CHINA) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(yellow) // 1. 先设置背景色（延伸到状态栏区域）
-            .statusBarsPadding() // 2. (关键修复) 添加状态栏内边距，让内容下移，不被摄像头遮挡
+            .background(yellow)
+            .statusBarsPadding()
             .padding(bottom = 4.dp)
     ) {
-        // 第一行：返回 / 标题 / 日历
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -272,7 +258,6 @@ fun FilterBar(
             )
         }
 
-        // 第二行：日期区间显示
         if (startDateMillis != null || endDateMillis != null) {
             val startText = startDateMillis?.let { dateFormat.format(Date(it)) } ?: "开始时间"
             val endText = endDateMillis?.let { dateFormat.format(Date(it)) } ?: "结束时间"
@@ -289,7 +274,6 @@ fun FilterBar(
             }
         }
 
-        // 第三行：周 / 月 / 年（自定义模式隐藏）
         if (!isCustomRange) {
             Row(
                 modifier = Modifier
@@ -324,7 +308,6 @@ fun FilterBar(
             Spacer(modifier = Modifier.height(6.dp))
         }
 
-        // 第四行：周 / 月 / 年 下方的 TabRow
         if (!isCustomRange && sortedGroupKeys.isNotEmpty()) {
             key(chartMode) {
                 ScrollableTabRow(
@@ -388,7 +371,8 @@ fun FilterBar(
     }
 }
 
-// 日期范围弹窗
+// (重要) 使用 Material3 DatePicker + LocalConfiguration 完美解决闪退和中文问题
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateRangeDialog(
     startDate: Long?,
@@ -396,46 +380,37 @@ fun DateRangeDialog(
     onDismiss: () -> Unit,
     onConfirm: (Long?, Long?) -> Unit
 ) {
-    val context = LocalContext.current
-    val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.CHINA) }
     val today = remember { System.currentTimeMillis() }
 
     var tempStart by remember { mutableStateOf(startDate ?: today) }
     var tempEnd by remember { mutableStateOf(endDate ?: today) }
 
-    fun openPicker(isStart: Boolean) {
-        val millis = if (isStart) tempStart else tempEnd
-        val cal = Calendar.getInstance().apply { timeInMillis = millis }
-
-        DatePickerDialog(
-            context,
-            { _, y, m, d ->
-                val c = Calendar.getInstance().apply {
-                    set(y, m, d, 0, 0, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                if (isStart) tempStart = c.timeInMillis else tempEnd = c.timeInMillis
-            },
-            cal.get(Calendar.YEAR),
-            cal.get(Calendar.MONTH),
-            cal.get(Calendar.DAY_OF_MONTH)
-        ).show()
-    }
+    var showInnerPicker by remember { mutableStateOf(false) }
+    var isPickingStart by remember { mutableStateOf(true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        title = { Text("选择日期范围") },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { openPicker(true) }
-                        .padding(vertical = 8.dp),
+                        .clickable {
+                            isPickingStart = true
+                            showInnerPicker = true
+                        }
+                        .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("开始时间")
-                    Text(dateFormat.format(Date(tempStart)))
+                    Text("开始时间", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        dateFormat.format(Date(tempStart)),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Divider()
@@ -443,13 +418,20 @@ fun DateRangeDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { openPicker(false) }
-                        .padding(vertical = 8.dp),
+                        .clickable {
+                            isPickingStart = false
+                            showInnerPicker = true
+                        }
+                        .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("结束时间")
-                    Text(dateFormat.format(Date(tempEnd)))
+                    Text("结束时间", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        dateFormat.format(Date(tempEnd)),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         },
@@ -460,9 +442,61 @@ fun DateRangeDialog(
             OutlinedButton(onClick = onDismiss) { Text("取消") }
         }
     )
+
+    if (showInnerPicker) {
+        val initialDate = if (isPickingStart) tempStart else tempEnd
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDate)
+
+        // (关键修复) 使用 CompositionLocalProvider 覆盖配置，强制设为中文
+        // 这种方式是 Compose 原生的，非常安全，不会导致 Crash
+        val configuration = LocalConfiguration.current
+        val chineseConfig = remember(configuration) {
+            Configuration(configuration).apply { setLocale(Locale.CHINA) }
+        }
+
+        CompositionLocalProvider(LocalConfiguration provides chineseConfig) {
+            DatePickerDialog(
+                onDismissRequest = { showInnerPicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val selected = datePickerState.selectedDateMillis
+                        if (selected != null) {
+                            if (isPickingStart) tempStart = selected else tempEnd = selected
+                        }
+                        showInnerPicker = false
+                    }) { Text("确定") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showInnerPicker = false }) { Text("取消") }
+                }
+            ) {
+                DatePicker(
+                    state = datePickerState,
+                    // 自定义标题显示，避免出现英文格式
+                    headline = {
+                        val selectedDate = datePickerState.selectedDateMillis
+                        if (selectedDate != null) {
+                            val headerFormat = SimpleDateFormat("yyyy年M月d日", Locale.CHINA)
+                            Text(
+                                text = headerFormat.format(Date(selectedDate)),
+                                modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
+                                style = MaterialTheme.typography.headlineLarge
+                            )
+                        }
+                    },
+                    title = {
+                        Text(
+                            text = if (isPickingStart) "选择开始日期" else "选择结束日期",
+                            modifier = Modifier.padding(start = 24.dp, top = 16.dp)
+                        )
+                    },
+                    showModeToggle = false
+                )
+            }
+        }
+    }
 }
 
-// 图表 + 条形列表
 @Composable
 fun ChartPage(data: List<Expense>) {
     val categorySums = remember(data) {
@@ -498,7 +532,6 @@ fun ChartPage(data: List<Expense>) {
                     .height(220.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // 调用修改后的 PieChart
                 PieChart(categorySums)
             }
         } else {
@@ -613,30 +646,24 @@ fun ChartPage(data: List<Expense>) {
     }
 }
 
-// 数据类，用于图表内部使用
 private data class ChartData(val name: String, val value: Long, val color: Color)
 
-// 修改后的环形图：Top 8 (7 + Other) & 颜色同步
 @Composable
 fun PieChart(data: Map<String, Long>) {
     if (data.isEmpty()) return
 
-    // 1. 数据处理：Top 8 (如果 >8 则显示 Top 7 + 其他)
     val chartData = remember(data) {
         val sorted = data.entries.sortedByDescending { it.value }
         val allColors = getChartColors()
 
-        // (修改) 上限改为 8
         if (sorted.size <= 8) {
             sorted.mapIndexed { index, entry ->
                 ChartData(entry.key, entry.value, allColors[index % allColors.size])
             }
         } else {
-            // (修改) 取 Top 7
             val top7 = sorted.take(7).mapIndexed { index, entry ->
                 ChartData(entry.key, entry.value, allColors[index % allColors.size])
             }
-            // 剩下的归为 "其他"
             val otherSum = sorted.drop(7).sumOf { it.value }
             top7 + ChartData("其他", otherSum, Color(0xFF9E9E9E))
         }
@@ -645,7 +672,6 @@ fun PieChart(data: Map<String, Long>) {
     val total = chartData.sumOf { it.value }.toFloat()
     if (total <= 0f) return
 
-    // 准备文字画笔 (初始颜色不重要，后面会动态改)
     val density = LocalDensity.current.density
     val textPaint = remember {
         Paint().apply {
@@ -656,7 +682,6 @@ fun PieChart(data: Map<String, Long>) {
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val center = Offset(size.width / 2, size.height / 2)
-        // 缩小半径以容纳外部标注
         val radius = size.minDimension / 2 * 0.5f
         val strokeWidth = radius * 0.6f
 
@@ -665,7 +690,6 @@ fun PieChart(data: Map<String, Long>) {
         chartData.forEach { slice ->
             val sweepAngle = 360f * (slice.value / total)
 
-            // 绘制圆环
             drawArc(
                 color = slice.color,
                 startAngle = startAngle,
@@ -676,7 +700,6 @@ fun PieChart(data: Map<String, Long>) {
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
             )
 
-            // 绘制标注
             if (sweepAngle > 5f) {
                 val midAngle = startAngle + sweepAngle / 2
                 val midRad = Math.toRadians(midAngle.toDouble())
@@ -703,18 +726,16 @@ fun PieChart(data: Map<String, Long>) {
                     lineTo(lineEnd.x, lineEnd.y)
                 }
 
-                // (修改) 线条颜色跟随色块
                 drawPath(
                     path = path,
-                    color = slice.color, // 使用当前色块颜色
+                    color = slice.color,
                     style = Stroke(width = 1.dp.toPx())
                 )
 
                 val percent = (slice.value / total * 100).toInt()
                 val label = "${slice.name} $percent%"
 
-                // (修改) 文字颜色跟随色块
-                textPaint.color = slice.color.toArgb() // 设置为当前色块颜色
+                textPaint.color = slice.color.toArgb()
                 textPaint.textAlign = if (isRightSide) Paint.Align.LEFT else Paint.Align.RIGHT
 
                 val textX = if (isRightSide) lineEnd.x + 4.dp.toPx() else lineEnd.x - 4.dp.toPx()
@@ -740,12 +761,12 @@ private fun getCurrentGroupKey(mode: ChartMode): String {
         }
 
         ChartMode.MONTH -> {
-            val fmt = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+            val fmt = SimpleDateFormat("yyyy-MM", Locale.CHINA)
             fmt.format(calendar.time)
         }
 
         ChartMode.YEAR -> {
-            val fmt = SimpleDateFormat("yyyy", Locale.getDefault())
+            val fmt = SimpleDateFormat("yyyy", Locale.CHINA)
             fmt.format(calendar.time)
         }
     }
@@ -758,7 +779,7 @@ private fun getWeekDateRange(year: Int, week: Int): Pair<String, String> {
     calendar.set(Calendar.WEEK_OF_YEAR, week)
     calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
 
-    val format = SimpleDateFormat("MM月dd日", Locale.getDefault())
+    val format = SimpleDateFormat("MM月dd日", Locale.CHINA)
     val start = format.format(calendar.time)
     calendar.add(Calendar.DAY_OF_WEEK, 6)
     val end = format.format(calendar.time)
