@@ -2,16 +2,18 @@ package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.* // 使用 * 导入
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState // (新) 导入
+import androidx.compose.foundation.verticalScroll // (新) 导入
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems // 重命名 grid 的 items
-import androidx.compose.foundation.lazy.items // 导入 LazyColumn 的 items
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.* // 使用 * 导入
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,9 +28,7 @@ import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
-// --- (修复) 添加 Import ---
-import com.example.myapplication.ui.screen.Routes
-// --- 修复结束 ---
+import com.example.myapplication.ui.navigation.Routes
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,14 +42,13 @@ fun AddTransactionScreen(
     expenseId: Long? = null,
     dateMillis: Long? = null
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: 支出, 1: 收入, 2: 转账
     val tabs = listOf("支出", "收入", "转账")
 
     // --- 支出/收入 状态 ---
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var amount by remember { mutableStateOf("0") }
-    var isCalculation by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf(dateMillis ?: System.currentTimeMillis()) } // Use passed date
+    var selectedDate by remember { mutableLongStateOf(dateMillis ?: System.currentTimeMillis()) }
     var selectedAccount by remember { mutableStateOf<Account?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
@@ -62,10 +61,27 @@ fun AddTransactionScreen(
     var toAmount by remember { mutableStateOf("0") }
     var focusedAmountField by remember { mutableStateOf("fromAmount") }
     var showAccountPickerFor by remember { mutableStateOf<String?>(null) }
+
     val isSameCurrency = remember(fromAccount, toAccount) {
         val from = fromAccount
         val to = toAccount
         from != null && to != null && from.currency == to.currency
+    }
+
+    // 自动推导 isCalculation 状态
+    val isCalculation = remember(selectedTab, amount, fromAmount, toAmount, focusedAmountField, isSameCurrency) {
+        when (selectedTab) {
+            0, 1 -> amount.contains("+") || amount.contains("-") // 支出/收入：检查 amount
+            2 -> { // 转账：检查当前焦点的输入框
+                if (isSameCurrency) {
+                    fromAmount.contains("+") || fromAmount.contains("-")
+                } else {
+                    val targetAmount = if (focusedAmountField == "fromAmount") fromAmount else toAmount
+                    targetAmount.contains("+") || targetAmount.contains("-")
+                }
+            }
+            else -> false
+        }
     }
 
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
@@ -75,12 +91,14 @@ fun AddTransactionScreen(
         if (expenseId != null) {
             val expenseToEdit = expenses.find { it.id == expenseId }
             if (expenseToEdit != null) {
-                selectedTab = if (expenseToEdit.amount < 0) 0 else 1
-                selectedCategory = (expenseCategories + incomeCategories).find { it.title == expenseToEdit.category }
-                amount = abs(expenseToEdit.amount).toString()
-                selectedDate = expenseToEdit.date.time // This will override the initial date, which is correct for editing
-                selectedAccount = accounts.find { it.id == expenseToEdit.accountId }
-                remark = expenseToEdit.remark ?: ""
+                selectedTab = if (expenseToEdit.category.startsWith("转账")) 2 else if (expenseToEdit.amount < 0) 0 else 1
+                if (selectedTab != 2) {
+                    selectedCategory = (expenseCategories + incomeCategories).find { it.title == expenseToEdit.category }
+                    amount = abs(expenseToEdit.amount).toString()
+                    selectedDate = expenseToEdit.date.time
+                    selectedAccount = accounts.find { it.id == expenseToEdit.accountId }
+                    remark = expenseToEdit.remark ?: ""
+                }
             }
         }
     }
@@ -93,7 +111,6 @@ fun AddTransactionScreen(
     }
 
     LaunchedEffect(selectedTab) {
-        // Only reset if we are not editing
         if (expenseId == null) {
             selectedCategory = null
             amount = "0"
@@ -105,17 +122,18 @@ fun AddTransactionScreen(
             toAmount = "0"
             focusedAmountField = "fromAmount"
             showAccountPickerFor = null
-            // We don't reset selectedDate here, to keep the passed-in date
         }
     }
 
     // --- 完成按钮逻辑 ---
     val onExpenseDoneClick: () -> Unit = {
         if (selectedCategory != null && selectedAccount != null && amount != "0") {
-            val rawAmount = amount.toDouble()
+            val finalAmountStr = try { evaluateExpression(amount).toString() } catch(e: Exception) { amount }
+            val rawAmount = finalAmountStr.toDoubleOrNull() ?: 0.0
+
             val finalAmount = if (selectedTab == 0) -rawAmount else rawAmount
             val expense = Expense(
-                id = expenseId ?: 0, // Keep original ID if editing
+                id = expenseId ?: 0,
                 category = selectedCategory!!.title,
                 amount = finalAmount,
                 date = Date(selectedDate),
@@ -132,8 +150,11 @@ fun AddTransactionScreen(
     }
 
     val onTransferDoneClick: () -> Unit = {
-        val fromAmountValue = fromAmount.toDoubleOrNull() ?: 0.0
-        val toAmountValue = if (isSameCurrency) fromAmountValue else (toAmount.toDoubleOrNull() ?: 0.0)
+        val finalFromStr = try { evaluateExpression(fromAmount).toString() } catch(e: Exception) { fromAmount }
+        val finalToStr = try { evaluateExpression(toAmount).toString() } catch(e: Exception) { toAmount }
+
+        val fromAmountValue = finalFromStr.toDoubleOrNull() ?: 0.0
+        val toAmountValue = if (isSameCurrency) fromAmountValue else (finalToStr.toDoubleOrNull() ?: 0.0)
 
         if (fromAccount != null && toAccount != null && fromAmountValue > 0 && toAmountValue > 0 && fromAccount != toAccount) {
             viewModel.createTransfer(
@@ -141,7 +162,7 @@ fun AddTransactionScreen(
                 toAccountId = toAccount!!.id,
                 fromAmount = fromAmountValue,
                 toAmount = toAmountValue,
-                date = Date(selectedDate) // Use selected date
+                date = Date(selectedDate)
             )
             navController.popBackStack()
         }
@@ -191,8 +212,10 @@ fun AddTransactionScreen(
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            if (expenseId == null) { // Hide tabs when editing
+        Column(modifier = Modifier
+            .padding(innerPadding)
+            .fillMaxSize()) {
+            if (expenseId == null) {
                 TabRow(selectedTabIndex = selectedTab) {
                     tabs.forEachIndexed { index, title ->
                         Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
@@ -210,12 +233,14 @@ fun AddTransactionScreen(
                 0, 1 -> { // 支出 和 收入
                     Column(modifier = Modifier.fillMaxSize()) {
                         AmountDisplay(
-                            category = selectedCategory, amount = amount, date = selectedDate, // Pass Long
+                            category = selectedCategory, amount = amount, date = selectedDate,
                             account = selectedAccount, onAccountClick = { showAccountPicker = true }
                         )
                         OutlinedTextField(
                             value = remark, onValueChange = { remark = it }, label = { Text("备注 (可选)") },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), singleLine = true
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp), singleLine = true
                         )
                         CategoryGrid(
                             categories = categoriesToShow,
@@ -225,8 +250,8 @@ fun AddTransactionScreen(
                         if (selectedCategory != null) {
                             NumericKeyboard(
                                 onNumberClick = { if (amount == "0") amount = it else amount += it },
-                                onOperatorClick = { operator -> amount += " $operator "; isCalculation = true },
-                                onBackspaceClick = { amount = if (amount.length > 1) amount.dropLast(1) else "0"; isCalculation = amount.contains("+") || amount.contains("-") },
+                                onOperatorClick = { operator -> amount += " $operator " },
+                                onBackspaceClick = { amount = if (amount.length > 1) amount.dropLast(1) else "0" },
                                 onDateClick = { showDatePicker = true },
                                 onDoneClick = onExpenseDoneClick,
                                 onEqualsClick = {
@@ -236,7 +261,6 @@ fun AddTransactionScreen(
                                     } catch (e: Exception) {
                                         amount = "Error"
                                     }
-                                    isCalculation = false
                                 },
                                 isCalculation = isCalculation,
                                 selectedDate = selectedDate
@@ -246,17 +270,38 @@ fun AddTransactionScreen(
                 }
                 2 -> { // 转账
                     Column(modifier = Modifier.fillMaxSize()) {
-                        TransferScreenContent(
-                            fromAccount = fromAccount, toAccount = toAccount, fromAmount = fromAmount, toAmount = toAmount,
-                            isSameCurrency = isSameCurrency, focusedField = focusedAmountField,
-                            onFromAccountClick = { showAccountPickerFor = "from" }, onToAccountClick = { showAccountPickerFor = "to" },
-                            onFromAmountClick = { focusedAmountField = "fromAmount" }, onToAmountClick = { focusedAmountField = "toAmount" }
-                        )
-                        OutlinedTextField(
-                            value = remark, onValueChange = { remark = it }, label = { Text("备注 (可选)") },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), singleLine = true
-                        )
-                        Spacer(Modifier.weight(1f))
+                        // (修改) 使用可滚动的 Column 包裹上方内容
+                        Column(
+                            modifier = Modifier
+                                .weight(1f) // 占据键盘上方的所有空间
+                                .verticalScroll(rememberScrollState()) // 允许滚动
+                        ) {
+                            TransferScreenContent(
+                                fromAccount = fromAccount,
+                                toAccount = toAccount,
+                                fromAmount = fromAmount,
+                                toAmount = toAmount,
+                                isSameCurrency = isSameCurrency,
+                                focusedField = focusedAmountField,
+                                onFromAccountClick = { showAccountPickerFor = "from" },
+                                onToAccountClick = { showAccountPickerFor = "to" },
+                                onFromAmountClick = { focusedAmountField = "fromAmount" },
+                                onToAmountClick = { focusedAmountField = "toAmount" }
+                            )
+                            OutlinedTextField(
+                                value = remark,
+                                onValueChange = { remark = it },
+                                label = { Text("备注 (可选)") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                singleLine = true
+                            )
+                        }
+
+                        // (修改) 移除 Spacer，让键盘紧贴在底部
+                        // Spacer(Modifier.weight(1f))
+
                         if (fromAccount != null && toAccount != null) {
                             NumericKeyboard(
                                 onNumberClick = { num ->
@@ -265,15 +310,14 @@ fun AddTransactionScreen(
                                     else toAmount = if (toAmount == "0") num else toAmount + num
                                 },
                                 onOperatorClick = { operator ->
-                                    if (isSameCurrency) { fromAmount += " $operator "; isCalculation = true }
-                                    else if (focusedAmountField == "fromAmount") { fromAmount += " $operator "; isCalculation = true }
-                                    else { toAmount += " $operator "; isCalculation = true }
+                                    if (isSameCurrency) { fromAmount += " $operator " }
+                                    else if (focusedAmountField == "fromAmount") { fromAmount += " $operator " }
+                                    else { toAmount += " $operator " }
                                 },
                                 onBackspaceClick = {
                                     if (isSameCurrency) fromAmount = if (fromAmount.length > 1) fromAmount.dropLast(1) else "0"
                                     else if (focusedAmountField == "fromAmount") fromAmount = if (fromAmount.length > 1) fromAmount.dropLast(1) else "0"
                                     else toAmount = if (toAmount.length > 1) toAmount.dropLast(1) else "0"
-                                    isCalculation = fromAmount.contains("+") || fromAmount.contains("-") || toAmount.contains("+") || toAmount.contains("-")
                                 },
                                 onDateClick = { showDatePicker = true },
                                 onDoneClick = onTransferDoneClick,
@@ -287,7 +331,6 @@ fun AddTransactionScreen(
                                         else if (focusedAmountField == "fromAmount") fromAmount = "Error"
                                         else toAmount = "Error"
                                     }
-                                    isCalculation = false
                                 },
                                 isCalculation = isCalculation,
                                 selectedDate = selectedDate
@@ -302,10 +345,12 @@ fun AddTransactionScreen(
 
 fun evaluateExpression(expression: String): Double {
     val tokens = expression.split(" ")
-    var result = tokens[0].toDouble()
+    if (tokens.isEmpty()) return 0.0
+    var result = tokens[0].toDoubleOrNull() ?: 0.0
     for (i in 1 until tokens.size step 2) {
+        if (i + 1 >= tokens.size) break
         val operator = tokens[i]
-        val nextOperand = tokens[i + 1].toDouble()
+        val nextOperand = tokens[i + 1].toDoubleOrNull() ?: 0.0
         if (operator == "+") {
             result += nextOperand
         } else if (operator == "-") {
@@ -332,6 +377,7 @@ fun TransferScreenContent( fromAccount: Account?, toAccount: Account?, fromAmoun
         if (isSameCurrency) {
             AmountInputBox( amount = fromAmount, currency = fromAccount?.currency ?: "---", label = "转账金额", isFocused = true, onClick = {} )
         } else {
+            // (修改) 确保点击时触发焦点更新
             AmountInputBox( amount = fromAmount, currency = fromAccount?.currency ?: "---", label = "转出金额", isFocused = focusedField == "fromAmount", onClick = onFromAmountClick )
             Spacer(Modifier.height(8.dp))
             AmountInputBox( amount = toAmount, currency = toAccount?.currency ?: "---", label = "转入金额", isFocused = focusedField == "toAmount", onClick = onToAmountClick )
@@ -343,7 +389,9 @@ fun TransferScreenContent( fromAccount: Account?, toAccount: Account?, fromAmoun
 @Composable
 fun AccountSelectorBox( modifier: Modifier = Modifier, account: Account?, onClick: () -> Unit ) {
     Card( onClick = onClick, modifier = modifier, shape = MaterialTheme.shapes.medium ) {
-        Row( modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically ) {
+        Row( modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp), verticalAlignment = Alignment.CenterVertically ) {
             if (account != null) {
                 val icon = IconMapper.getIcon(account.iconName)
                 Icon(icon, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
@@ -373,7 +421,9 @@ fun AmountInputBox( amount: String, currency: String, label: String, isFocused: 
 fun AmountDisplay( category: Category?, amount: String, date: Long, // Receive Long
                    account: Account?, onAccountClick: () -> Unit ) {
     val formattedDate = SimpleDateFormat("MM月dd日", Locale.getDefault()).format(Date(date)) // Format Date from Long
-    Column( modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp) ) {
+    Column( modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 8.dp) ) {
         Row( modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically ) {
             if (category != null) {
                 Icon(category.icon, contentDescription = category.title, modifier = Modifier.padding(end = 8.dp))
@@ -381,8 +431,12 @@ fun AmountDisplay( category: Category?, amount: String, date: Long, // Receive L
             } else { Text("选择分类", style = MaterialTheme.typography.bodyLarge) }
             Text( text = amount, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End )
         }
-        Row( modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween ) {
-            Row( modifier = Modifier.clickable(onClick = onAccountClick).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically ) {
+        Row( modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween ) {
+            Row( modifier = Modifier
+                .clickable(onClick = onAccountClick)
+                .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically ) {
                 if (account != null) {
                     val icon = IconMapper.getIcon(account.iconName)
                     Icon(icon, contentDescription = account.name, modifier = Modifier.padding(end = 8.dp))
@@ -412,7 +466,10 @@ fun CategoryGrid(categories: List<Category>, onCategoryClick: (Category) -> Unit
 @Composable
 fun CategoryItem(category: Category, onClick: () -> Unit) {
     Column(
-        modifier = Modifier.clickable(onClick = onClick).padding(4.dp).aspectRatio(1f),
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(4.dp)
+            .aspectRatio(1f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -429,7 +486,10 @@ fun AccountPickerDialog( accounts: List<Account>, onAccountSelected: (Account) -
         text = {
             LazyColumn {
                 items(accounts) { account -> // Use LazyColumn's items
-                    Row( modifier = Modifier.fillMaxWidth().clickable { onAccountSelected(account) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically ) {
+                    Row( modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onAccountSelected(account) }
+                        .padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically ) {
                         val icon = IconMapper.getIcon(account.iconName)
                         Icon(icon, contentDescription = account.name, modifier = Modifier.padding(end = 16.dp))
                         Text(account.name)
