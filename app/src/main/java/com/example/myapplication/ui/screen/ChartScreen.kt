@@ -1,7 +1,6 @@
 package com.example.myapplication.ui.screen
 
 import android.content.res.Configuration
-// (修复) 补全了原生图形库的引用，解决 Paint, Typeface 报错
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
@@ -25,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -153,27 +153,19 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
 
         if (isCustomRange) {
             if (filteredTransactions.isNotEmpty()) {
-                ChartPage(filteredTransactions)
+                // 自定义模式下暂时只显示饼图列表，或者你可以扩展逻辑支持自定义折线图
+                ChartPage(filteredTransactions, ChartMode.MONTH) // 传入 ChartMode 只是占位
             } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("没有记录")
-                }
+                EmptyState()
             }
         } else {
             if (sortedGroupKeys.isNotEmpty()) {
                 val key = sortedGroupKeys[currentIndex.coerceIn(sortedGroupKeys.indices)]
                 val pageData = groupedData[key] ?: emptyList()
-                ChartPage(pageData)
+                // 传入当前的模式，用于生成正确的折线图X轴
+                ChartPage(pageData, chartMode)
             } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("没有记录")
-                }
+                EmptyState()
             }
         }
 
@@ -189,6 +181,16 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
                 }
             )
         }
+    }
+}
+
+@Composable
+fun EmptyState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("没有记录", color = Color.Gray)
     }
 }
 
@@ -371,7 +373,6 @@ fun FilterBar(
     }
 }
 
-// (重要) 使用 Material3 DatePicker + LocalConfiguration 完美解决闪退和中文问题
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateRangeDialog(
@@ -447,8 +448,6 @@ fun DateRangeDialog(
         val initialDate = if (isPickingStart) tempStart else tempEnd
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDate)
 
-        // (关键修复) 使用 CompositionLocalProvider 覆盖配置，强制设为中文
-        // 这种方式是 Compose 原生的，非常安全，不会导致 Crash
         val configuration = LocalConfiguration.current
         val chineseConfig = remember(configuration) {
             Configuration(configuration).apply { setLocale(Locale.CHINA) }
@@ -472,7 +471,6 @@ fun DateRangeDialog(
             ) {
                 DatePicker(
                     state = datePickerState,
-                    // 自定义标题显示，避免出现英文格式
                     headline = {
                         val selectedDate = datePickerState.selectedDateMillis
                         if (selectedDate != null) {
@@ -497,8 +495,194 @@ fun DateRangeDialog(
     }
 }
 
+// ---------------------- 折线图相关逻辑 ----------------------
+
+data class LineChartPoint(val label: String, val value: Float)
+
 @Composable
-fun ChartPage(data: List<Expense>) {
+fun LineChart(
+    dataPoints: List<LineChartPoint>,
+    modifier: Modifier = Modifier,
+    lineColor: Color = Color(0xFFFFC107) // 黄色调
+) {
+    if (dataPoints.isEmpty()) return
+
+    val maxValue = remember(dataPoints) { dataPoints.maxOfOrNull { it.value } ?: 0f }
+    val density = LocalDensity.current.density
+
+    // 文字画笔
+    val textPaint = remember {
+        Paint().apply {
+            color = android.graphics.Color.GRAY
+            textSize = 10f * density
+            textAlign = Paint.Align.CENTER
+        }
+    }
+
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+        // 留出底部写字的空间
+        val bottomPadding = 20.dp.toPx()
+        val chartHeight = height - bottomPadding
+
+        // 简单归一化：为了不让线顶到天花板，稍微给最大值留点余地
+        val yMax = if (maxValue == 0f) 100f else maxValue * 1.2f
+
+        val spacing = width / (dataPoints.size - 1).coerceAtLeast(1)
+
+        val path = Path()
+        val fillPath = Path()
+
+        dataPoints.forEachIndexed { index, point ->
+            val x = index * spacing
+            val y = chartHeight - (point.value / yMax * chartHeight)
+
+            if (index == 0) {
+                path.moveTo(x, y)
+                fillPath.moveTo(x, chartHeight) // 填充起始点：左下角
+                fillPath.lineTo(x, y)
+            } else {
+                path.lineTo(x, y)
+                fillPath.lineTo(x, y)
+            }
+
+            // 绘制X轴标签 (稍微稀疏一点，如果是月视图，不需要每天都画)
+            // 简单策略：周视图每天画，月视图每隔5天画，年视图每个月画
+            val shouldDrawLabel = when {
+                dataPoints.size <= 7 -> true // 周
+                dataPoints.size <= 12 -> true // 年
+                else -> index % 5 == 0 || index == dataPoints.lastIndex // 月：每5天或最后一天
+            }
+
+            if (shouldDrawLabel) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    point.label,
+                    x,
+                    height - 5.dp.toPx(), // 底部
+                    textPaint
+                )
+            }
+
+            // 绘制数据点 (圆圈)
+            drawCircle(
+                color = Color.White,
+                radius = 3.dp.toPx(),
+                center = Offset(x, y),
+                style = androidx.compose.ui.graphics.drawscope.Fill
+            )
+            drawCircle(
+                color = lineColor,
+                radius = 3.dp.toPx(),
+                center = Offset(x, y),
+                style = Stroke(width = 1.5.dp.toPx())
+            )
+        }
+
+        // 闭合填充路径
+        fillPath.lineTo((dataPoints.size - 1) * spacing, chartHeight)
+        fillPath.close()
+
+        // 绘制填充渐变
+        drawPath(
+            path = fillPath,
+            brush = Brush.verticalGradient(
+                colors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f)),
+                startY = 0f,
+                endY = chartHeight
+            )
+        )
+
+        // 绘制折线
+        drawPath(
+            path = path,
+            color = lineColor,
+            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        )
+    }
+}
+
+// 准备折线图数据
+fun prepareLineChartData(
+    expenses: List<Expense>,
+    chartMode: ChartMode
+): List<LineChartPoint> {
+    if (expenses.isEmpty()) return emptyList()
+
+    // 取出第一笔数据的时间作为基准，计算该时间段的完整范围
+    val sampleDate = expenses.first().date
+    val calendar = Calendar.getInstance()
+    calendar.time = sampleDate
+
+    val points = mutableListOf<LineChartPoint>()
+
+    when (chartMode) {
+        ChartMode.WEEK -> {
+            // 找到周一
+            calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            // 遍历7天
+            for (i in 0 until 7) {
+                val dayStart = calendar.time
+                // 往后推一天作为结束
+                val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
+                val dayEnd = nextDayCal.time
+
+                // 汇总当天的金额
+                val sum = expenses.filter { it.date >= dayStart && it.date < dayEnd }
+                    .sumOf { abs(it.amount) }
+                    .toFloat()
+
+                // 标签：MM-dd (例如 12-03)
+                val label = SimpleDateFormat("dd", Locale.CHINA).format(dayStart)
+                points.add(LineChartPoint(label, sum))
+
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            }
+        }
+        ChartMode.MONTH -> {
+            // 找到1号
+            calendar.set(Calendar.DAY_OF_MONTH, 1)
+            val maxDays = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+
+            for (i in 1..maxDays) {
+                val dayStart = calendar.time
+                val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
+                val dayEnd = nextDayCal.time
+
+                val sum = expenses.filter { it.date >= dayStart && it.date < dayEnd }
+                    .sumOf { abs(it.amount) }
+                    .toFloat()
+
+                // 标签：只显示日期数字
+                points.add(LineChartPoint(i.toString(), sum))
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            }
+        }
+        ChartMode.YEAR -> {
+            // 找到1月
+            calendar.set(Calendar.DAY_OF_YEAR, 1) // 设置为当年的第一天
+
+            for (i in 0 until 12) {
+                val monthStart = calendar.time
+                val nextMonthCal = Calendar.getInstance().apply { time = monthStart; add(Calendar.MONTH, 1) }
+                val monthEnd = nextMonthCal.time
+
+                val sum = expenses.filter { it.date >= monthStart && it.date < monthEnd }
+                    .sumOf { abs(it.amount) }
+                    .toFloat()
+
+                points.add(LineChartPoint("${i + 1}月", sum))
+                calendar.add(Calendar.MONTH, 1)
+            }
+        }
+    }
+    return points
+}
+
+// -----------------------------------------------------------
+
+@Composable
+fun ChartPage(data: List<Expense>, chartMode: ChartMode) {
     val categorySums = remember(data) {
         data.groupBy { it.category }.mapValues { (_, expenses) ->
             expenses.sumOf { abs(it.amount.toDouble()).toLong() }
@@ -521,124 +705,184 @@ fun ChartPage(data: List<Expense>) {
     val barBgColor = Color(0xFFFFF7CC)
     val iconBoxSize = 36.dp
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = "合计: $total", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(16.dp))
+    // (新) 准备折线图数据
+    val lineData = remember(data, chartMode) {
+        prepareLineChartData(data, chartMode)
+    }
 
-        if (total > 0f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                PieChart(categorySums)
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("没有数据")
-            }
+    LazyColumn(
+        modifier = Modifier.padding(16.dp),
+        contentPadding = PaddingValues(bottom = 16.dp)
+    ) {
+        // 1. 顶部合计
+        item {
+            Text(text = "合计: $total", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // 2. (新) 整体趋势标题 + 折线图
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(16.dp)
+                        .background(Color(0xFFF4B400), RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "整体趋势",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-        LazyColumn {
-            itemsIndexed(sortedEntries) { index, entry ->
-                val amount = entry.value.toFloat()
-                val percentage = if (total > 0) amount / total * 100f else 0f
-                val color = colors[index % colors.size]
-                val barRatio = if (maxAmount > 0) amount / maxAmount else 0f
+            // 折线图区域
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+            ) {
+                LineChart(
+                    dataPoints = lineData,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+        }
 
-                Column(
+        // 3. 分类统计标题 + 饼图
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(16.dp)
+                        .background(Color(0xFFF4B400), RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "分类统计",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (total > 0f) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp)
+                        .height(220.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val icon = categoryIconMap[entry.key]
-                        if (icon != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(iconBoxSize)
-                                    .clip(CircleShape)
-                                    .background(color.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = entry.key,
-                                    tint = color,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(iconBoxSize)
-                                    .clip(CircleShape)
-                                    .background(color.copy(alpha = 0.3f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Lens,
-                                    contentDescription = entry.key,
-                                    tint = color,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
+                    PieChart(categorySums)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("没有数据", color = Color.LightGray)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
-                        Spacer(modifier = Modifier.width(8.dp))
+        // 4. 分类列表
+        itemsIndexed(sortedEntries) { index, entry ->
+            val amount = entry.value.toFloat()
+            val percentage = if (total > 0) amount / total * 100f else 0f
+            val color = colors[index % colors.size]
+            val barRatio = if (maxAmount > 0) amount / maxAmount else 0f
 
-                        Text(
-                            text = entry.key,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Text(
-                            text = String.format("%.2f%%", percentage),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        Text(
-                            text = entry.value.toString(),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Spacer(modifier = Modifier.width(iconBoxSize + 8.dp))
-
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val icon = categoryIconMap[entry.key]
+                    if (icon != null) {
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(barBgColor)
+                                .size(iconBoxSize)
+                                .clip(CircleShape)
+                                .background(color.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(barRatio.coerceIn(0f, 1f))
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(barColor)
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = entry.key,
+                                tint = color,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(iconBoxSize)
+                                .clip(CircleShape)
+                                .background(color.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Lens,
+                                contentDescription = entry.key,
+                                tint = color,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = entry.key,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Text(
+                        text = String.format("%.2f%%", percentage),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Text(
+                        text = entry.value.toString(),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Spacer(modifier = Modifier.width(iconBoxSize + 8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(barBgColor)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(barRatio.coerceIn(0f, 1f))
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(barColor)
+                        )
                     }
                 }
             }
