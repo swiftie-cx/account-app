@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screen
 
+import android.content.res.Configuration // (新)
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration // (新)
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -28,7 +30,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Expense
-// (新) 导入 VM 和相关类
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
@@ -37,26 +38,23 @@ import kotlin.math.abs
 import androidx.compose.material3.MaterialTheme
 import java.util.Calendar
 import com.example.myapplication.ui.navigation.Routes
+import java.text.SimpleDateFormat // (新)
+import java.util.Locale // (新)
+
 /**
  * 搜索页面 (已连接基础搜索逻辑)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    viewModel: ExpenseViewModel, // (修改) 接收 ViewModel
+    viewModel: ExpenseViewModel,
     navController: NavHostController,
 ) {
     // --- 状态管理 ---
-
-    // (修改) 搜索框的文字使用 *本地* 状态
     var localSearchText by remember { mutableStateOf("") }
-
-    // (修改) 从 ViewModel 获取 *结果*
     val searchResults by viewModel.filteredExpenses.collectAsState()
-    // (新) 从 ViewModel 获取账户，用于显示列表项
     val allAccounts by viewModel.allAccounts.collectAsState()
 
-    // (保持本地) 其他过滤器暂时保持本地状态，不影响搜索
     val typeFilters = listOf("全部", "支出", "收入", "转账")
     var selectedTypeIndex by remember { mutableStateOf(0) }
     var selectedCategories by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -64,22 +62,17 @@ fun SearchScreen(
     val timeFilters = listOf("全部", "本周", "本月", "本年", "自定义")
     var selectedTimeIndex by remember { mutableStateOf(0) }
 
-    // (新) 自定义时间范围的状态
     var showDateRangePicker by remember { mutableStateOf(false) }
     var customDateRangeMillis by remember { mutableStateOf<Pair<Long?, Long?>>(null to null) }
 
     val focusRequester = remember { FocusRequester() }
 
-    // --- (新) 复制 DetailsScreen 的数据处理逻辑 ---
-    // (需要这些来正确显示列表项)
-    val accountMap = remember(allAccounts) {
-        allAccounts.associateBy { it.id }
-    }
+    // --- 数据处理逻辑 ---
+    val accountMap = remember(allAccounts) { allAccounts.associateBy { it.id } }
     val categoryIconMap = remember {
         (expenseCategories + incomeCategories).associate { it.title to it.icon }
     }
 
-    // (新) 预处理过滤后的列表，合并转账
     val displayItems = remember(searchResults, accountMap, selectedTypeIndex, selectedTimeIndex, customDateRangeMillis, selectedCategories) {
         // 1. 根据时间筛选
         val timeFilteredResults = when (selectedTimeIndex) {
@@ -138,7 +131,7 @@ fun SearchScreen(
             timeFilteredResults
         }
 
-        // 2. 用筛选后的结果继续处理
+        // 2. 处理转账
         val transferExpenses = categoryFilteredResults.filter { it.category.startsWith("转账") }
         val regularExpenses = categoryFilteredResults.filter { !it.category.startsWith("转账") }
 
@@ -177,7 +170,6 @@ fun SearchScreen(
             }
         }
     }
-    // --- 数据处理结束 ---
 
     if (showCategoryPicker) {
         Dialog(
@@ -194,44 +186,80 @@ fun SearchScreen(
         }
     }
 
-    // (新) 日期范围选择器
+    // (修改) 日期范围选择器 - 强制中文显示
     if (showDateRangePicker) {
         val dateRangePickerState = rememberDateRangePickerState()
 
-        DatePickerDialog(
-            onDismissRequest = { showDateRangePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDateRangePicker = false
+        // 强制设置 Configuration 为中文
+        val configuration = LocalConfiguration.current
+        val chineseConfig = remember(configuration) {
+            Configuration(configuration).apply { setLocale(Locale.CHINA) }
+        }
+
+        CompositionLocalProvider(LocalConfiguration provides chineseConfig) {
+            DatePickerDialog(
+                onDismissRequest = { showDateRangePicker = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDateRangePicker = false
+                            val startMillis = dateRangePickerState.selectedStartDateMillis
+                            val endMillis = dateRangePickerState.selectedEndDateMillis
+                            if (startMillis != null && endMillis != null) {
+                                customDateRangeMillis = startMillis to endMillis
+                                selectedTimeIndex = 4
+                            }
+                        },
+                        enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
+                    ) {
+                        Text("确定")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDateRangePicker = false }) {
+                        Text("取消")
+                    }
+                }
+            ) {
+                DateRangePicker(
+                    state = dateRangePickerState,
+                    // 自定义标题栏显示的日期格式 (解决默认英文格式问题)
+                    headline = {
                         val startMillis = dateRangePickerState.selectedStartDateMillis
                         val endMillis = dateRangePickerState.selectedEndDateMillis
-                        if (startMillis != null && endMillis != null) {
-                            customDateRangeMillis = startMillis to endMillis
-                            selectedTimeIndex = 4 // 确认后，正式选择“自定义”
+                        val dateFormat = SimpleDateFormat("MM月dd日", Locale.CHINA)
+
+                        val text = if (startMillis != null && endMillis != null) {
+                            "${dateFormat.format(Date(startMillis))} - ${dateFormat.format(Date(endMillis))}"
+                        } else if (startMillis != null) {
+                            dateFormat.format(Date(startMillis))
+                        } else {
+                            "开始日期 - 结束日期"
                         }
+
+                        Text(
+                            text = text,
+                            modifier = Modifier.padding(start = 64.dp, end = 12.dp, bottom = 12.dp),
+                            style = MaterialTheme.typography.headlineSmall
+                        )
                     },
-                    enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
-                ) {
-                    Text("确定")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDateRangePicker = false }) {
-                    Text("取消")
-                }
+                    title = {
+                        Text(
+                            text = "选择日期范围",
+                            modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    },
+                    showModeToggle = false // 隐藏手写输入切换，保持日历视图
+                )
             }
-        ) {
-            DateRangePicker(state = dateRangePickerState)
         }
     }
 
-    // 页面打开时，自动激活搜索框
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
 
-    // (新) 页面销毁时 (例如按返回键)，重置 ViewModel 中的搜索词
     DisposableEffect(Unit) {
         onDispose {
             viewModel.updateSearchText("")
@@ -263,26 +291,21 @@ fun SearchScreen(
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // (修改) 重置按钮
                     OutlinedButton(
                         onClick = {
-                            // 重置本地状态
                             localSearchText = ""
                             selectedTypeIndex = 0
                             selectedCategories = emptyList()
                             selectedTimeIndex = 0
-                            customDateRangeMillis = null to null // (新) 重置自定义日期
-                            // (新) 重置 ViewModel
+                            customDateRangeMillis = null to null
                             viewModel.updateSearchText("")
                         },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("重置")
                     }
-                    // (修改) 搜索按钮
                     Button(
                         onClick = {
-                            // (新) 将本地搜索词提交给 ViewModel
                             viewModel.updateSearchText(localSearchText)
                         },
                         modifier = Modifier.weight(1f)
@@ -293,15 +316,13 @@ fun SearchScreen(
             }
         }
     ) { innerPadding ->
-        // (修改) 使用 Box 来容纳 Column 和 LazyColumn
         Box(modifier = Modifier.padding(innerPadding)) {
             Column {
                 // --- 搜索和过滤条件 ---
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    // (修改) 搜索框
                     OutlinedTextField(
-                        value = localSearchText, // <-- 使用本地状态
-                        onValueChange = { localSearchText = it }, // <-- 更新本地状态
+                        value = localSearchText,
+                        onValueChange = { localSearchText = it },
                         placeholder = { Text("搜索备注、分类") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
                         modifier = Modifier
@@ -313,7 +334,6 @@ fun SearchScreen(
 
                     Divider(modifier = Modifier.padding(vertical = 4.dp))
 
-                    // (保持本地) 行 1: 类型
                     FilterChipRow(
                         title = "类型",
                         labels = typeFilters,
@@ -323,7 +343,6 @@ fun SearchScreen(
 
                     Divider(modifier = Modifier.padding(vertical = 4.dp))
 
-                    // (保持本地) 行 2: 类别
                     CategoryFilterRow(
                         selectedCategories = selectedCategories,
                         onClearCategories = { selectedCategories = emptyList() },
@@ -332,13 +351,12 @@ fun SearchScreen(
 
                     Divider(modifier = Modifier.padding(vertical = 4.dp))
 
-                    // (保持本地) 行 3: 时间
                     FilterChipRow(
                         title = "时间",
                         labels = timeFilters,
                         selectedIndex = selectedTimeIndex,
                         onChipSelected = { index ->
-                            if (index == 4) { // "自定义"
+                            if (index == 4) {
                                 showDateRangePicker = true
                             } else {
                                 selectedTimeIndex = index
@@ -347,11 +365,10 @@ fun SearchScreen(
                         }
                     )
                 }
-                // --- 搜索和过滤条件 结束 ---
 
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-                // (新) --- 搜索结果列表 ---
+                // --- 搜索结果列表 ---
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -373,16 +390,13 @@ fun SearchScreen(
                         }
                     }
                 }
-                // --- 搜索结果列表 结束 ---
             }
         }
     }
 }
 
-
-/**
- * 筛选器行 (用于 "类型" 和 "时间")
- */
+// ... 辅助函数 FilterChipRow, CategoryFilterRow, TransferItem, ExpenseItem 保持不变 ...
+// (为了文件完整性，请确保保留原有的这些辅助函数，此处不再重复列出，因为并未修改)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FilterChipRow(
@@ -414,9 +428,6 @@ private fun FilterChipRow(
     }
 }
 
-/**
- * 筛选器行 (用于 "类别")
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryFilterRow(
@@ -461,8 +472,6 @@ private fun CategoryFilterRow(
         }
     }
 }
-
-// --- (新) 复制 DetailsScreen 的列表项 ---
 
 @Composable
 private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {

@@ -227,7 +227,8 @@ fun FilterBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(yellow)
+            .background(yellow) // 1. 先设置背景色（延伸到状态栏区域）
+            .statusBarsPadding() // 2. (关键修复) 添加状态栏内边距，让内容下移，不被摄像头遮挡
             .padding(bottom = 4.dp)
     ) {
         // 第一行：返回 / 标题 / 日历

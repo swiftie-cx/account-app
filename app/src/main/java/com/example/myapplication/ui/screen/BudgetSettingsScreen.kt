@@ -1,11 +1,13 @@
 package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.* // 使用 * 导入
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // 确保导入 items
-import androidx.compose.material3.* // 使用 * 导入
-import androidx.compose.runtime.* // 使用 * 导入
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,7 @@ fun BudgetSettingsScreen(
     }
 
     val budgets by viewModel.getBudgetsForMonth(year, month).collectAsState(initial = emptyList())
+    // 确保列表刷新
     val budgetMap = remember(budgets) { budgets.associateBy { it.category } }
     val expenseCategoryTitles = remember { expenseCategories.map { it.title } }
     val allBudgetableCategories = remember { listOf("总预算") + expenseCategoryTitles }
@@ -38,26 +41,39 @@ fun BudgetSettingsScreen(
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            "${year}年${month}月预算设置",
-            style = MaterialTheme.typography.headlineLarge
-        )
-
-        LazyColumn {
-            items(allBudgetableCategories) { categoryTitle ->
-                BudgetItemRow(
-                    title = categoryTitle,
-                    budgetAmount = budgetMap[categoryTitle]?.amount,
-                    onEditClick = {
-                        editingCategory = categoryTitle
-                        showBottomSheet = true
+    // (修改) 使用 Scaffold 包裹，解决顶部遮挡问题，并添加 TopAppBar
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("${year}年${month}月预算设置") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
-                )
+                }
+            )
+        }
+    ) { innerPadding ->
+        // (修改) 内容区域应用 innerPadding
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+        ) {
+            LazyColumn {
+                items(allBudgetableCategories) { categoryTitle ->
+                    BudgetItemRow(
+                        title = categoryTitle,
+                        budgetAmount = budgetMap[categoryTitle]?.amount,
+                        onEditClick = {
+                            editingCategory = categoryTitle
+                            showBottomSheet = true
+                        }
+                    )
+                }
             }
         }
     }
-
 
     if (showBottomSheet && editingCategory != null) {
         ModalBottomSheet(
@@ -134,5 +150,3 @@ fun BudgetItemRow(title: String, budgetAmount: Double?, onEditClick: () -> Unit)
         Text(text = budgetAmount?.toString() ?: "编辑")
     }
 }
-
-// --- YearMonthPicker 函数定义已删除 ---

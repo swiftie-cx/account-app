@@ -1,8 +1,12 @@
 package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
@@ -10,6 +14,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,6 +48,12 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
+        // (核心修改)
+        // 告诉 MainScreen 的 Scaffold：不要处理顶部的状态栏(statusBars)高度。
+        // 只处理底部的导航栏(navigationBars)高度。
+        // 这样，子页面(NavigationGraph)就会从屏幕最顶端开始绘制，从而让色块覆盖摄像头区域。
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.statusBars),
+
         bottomBar = {
             AppBottomBar(navController = navController) {
                 budgetScreenYear = calendar.get(Calendar.YEAR)
@@ -103,11 +114,7 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
                             saveState = true
                         }
                         launchSingleTop = true
-
-                        // (核心修改)
-                        // 如果点击的是"明细"(Details)标签，强制不恢复状态(restoreState=false)。
-                        // 这样每次点击"明细"都会重置到列表页，而不是回到上次打开的子页面(如设置页)。
-                        // 其他标签(如 Budget/Assets)保持 true，以便记住用户的浏览位置。
+                        // 明细页不恢复状态，其他页恢复
                         restoreState = (item.route != BottomNavItem.Details.route)
                     }
                 }

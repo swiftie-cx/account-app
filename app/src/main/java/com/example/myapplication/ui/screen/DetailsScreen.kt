@@ -11,7 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Settings // (修改) 导入设置图标
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -145,7 +145,6 @@ fun DetailsScreen(
     Scaffold(
         topBar = {
             DetailsTopAppBar(
-                // (修改) 点击左上角设置图标 -> 跳转到设置页
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) },
                 onSearchClick = { navController.navigate(Routes.SEARCH) },
                 onCalendarClick = { navController.navigate(Routes.CALENDAR) }
@@ -165,7 +164,6 @@ fun DetailsScreen(
             LazyColumn {
                 groupedItems.forEach { (dateStr, itemsOnDate) ->
                     stickyHeader {
-                        // 添加日总收支
                         val dailyTotalExpense = itemsOnDate.filterIsInstance<Expense>().filter { it.amount < 0 && !it.category.startsWith("转账") }.sumOf { abs(it.amount) }
                         val dailyTotalIncome = itemsOnDate.filterIsInstance<Expense>().filter { it.amount > 0 && !it.category.startsWith("转账") }.sumOf { it.amount }
                         DateHeader(dateStr = dateStr, dailyExpense = dailyTotalExpense, dailyIncome = dailyTotalIncome)
@@ -185,7 +183,7 @@ fun DetailsScreen(
                             }
                             is DisplayTransferItem -> TransferItem(
                                 item = item,
-                                onClick = { /* TODO: 决定转账记录的点击行为 */ }
+                                onClick = { /* TODO */ }
                             )
                         }
                     }
@@ -195,19 +193,17 @@ fun DetailsScreen(
     }
 }
 
-
 // --- 顶部应用栏 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DetailsTopAppBar(
-    onSettingsClick: () -> Unit, // (修改) 参数名更明确
+    onSettingsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onCalendarClick: () -> Unit
 ) {
     CenterAlignedTopAppBar(
         title = { Text("魔法记账", fontWeight = FontWeight.Bold) },
         navigationIcon = {
-            // (修改) 图标改为 Settings
             IconButton(onClick = onSettingsClick) { Icon(Icons.Default.Settings, "设置") }
         },
         actions = {
@@ -220,9 +216,7 @@ private fun DetailsTopAppBar(
     )
 }
 
-// ... 下面的 SummaryHeader, DateHeader, TransferItem, ExpenseItem 保持不变 ...
-// (为了确保文件完整性，这里再次包含它们)
-
+// --- 顶部统计卡片 (核心修改) ---
 @Composable
 private fun SummaryHeader(
     year: Int, month: Int, expense: Double, income: Double, balance: Double, onMonthClick: () -> Unit
@@ -233,16 +227,34 @@ private fun SummaryHeader(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp) // 增加垂直间距，让布局更舒展
         ) {
+            // 第一行：标签行
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text(text = "${year}年", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
-                Text(text = "支出", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Start)
-                Text(text = "收入", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Start)
-                Text(text = "结余", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Start)
+                // 定义统一的标签样式：字体加大 (bodyMedium)，颜色加深
+                val labelStyle = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Text(text = "${year}年", modifier = Modifier.weight(1f), style = labelStyle)
+                Text(text = "支出", modifier = Modifier.weight(1f), style = labelStyle)
+                Text(text = "收入", modifier = Modifier.weight(1f), style = labelStyle)
+                Text(text = "结余", modifier = Modifier.weight(1f), style = labelStyle)
             }
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onMonthClick, modifier = Modifier.weight(1f).padding(start = 0.dp)) {
+
+            // 第二行：数值行
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 月份选择器 (修复对齐：去掉 TextButton，改用 Row+Clickable 以消除默认内边距)
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable(onClick = onMonthClick),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "${month}月",
                         style = MaterialTheme.typography.headlineMedium,
@@ -251,12 +263,15 @@ private fun SummaryHeader(
                     Icon(
                         Icons.Default.KeyboardArrowDown,
                         contentDescription = "选择月份",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-                Text(text = String.format("%.2f", abs(expense)), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Start)
-                Text(text = String.format("%.2f", income), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Start)
-                Text(text = String.format("%.2f", balance), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Start)
+
+                // 数值显示 (保持大号字体)
+                Text(text = String.format("%.2f", abs(expense)), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                Text(text = String.format("%.2f", income), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                Text(text = String.format("%.2f", balance), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
             }
         }
     }
@@ -264,7 +279,7 @@ private fun SummaryHeader(
 
 @Composable
 fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
-    val displayFormat = remember { SimpleDateFormat("MM月dd日 EEEE", Locale.getDefault()) }
+    val displayFormat = remember { SimpleDateFormat("MM月dd日 EEEE", Locale.CHINESE) }
     val originalFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val displayDate = originalFormat.parse(dateStr)?.let { displayFormat.format(it) } ?: dateStr
 
