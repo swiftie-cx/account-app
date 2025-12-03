@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
+import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.data.Expense
 import com.example.myapplication.ui.navigation.IconMapper
 import com.example.myapplication.ui.navigation.expenseCategories
@@ -27,7 +28,8 @@ import kotlin.math.abs
 fun TransactionDetailScreen(
     viewModel: ExpenseViewModel,
     navController: NavHostController,
-    expenseId: Long?
+    expenseId: Long?,
+    defaultCurrency: String = "CNY"
 ) {
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
@@ -132,7 +134,19 @@ fun TransactionDetailScreen(
                 // Details List
                 Column(modifier = Modifier.fillMaxWidth()) { // Align details to start
                     DetailRow(label = "类型", value = if (expense.amount < 0) "支出" else "收入") // Simplified type
+
+                    // 金额显示
                     DetailRow(label = "金额", value = "${account?.currency ?: ""} ${abs(expense.amount)}")
+
+                    // 如果币种不同，显示折算金额
+                    if (account != null && account.currency != defaultCurrency) {
+                        val converted = ExchangeRates.convert(abs(expense.amount), account.currency, defaultCurrency)
+                        DetailRow(
+                            label = "折合",
+                            value = "≈ $defaultCurrency ${String.format(Locale.US, "%.2f", converted)}"
+                        )
+                    }
+
                     DetailRow(label = "日期", value = shortDateFormat.format(expense.date))
                     DetailRow(label = "账户", value = account?.name ?: "未知账户") // Display account name
                     expense.remark?.let { DetailRow(label = "备注", value = it) }

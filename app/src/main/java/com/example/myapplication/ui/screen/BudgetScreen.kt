@@ -20,7 +20,7 @@ import com.example.myapplication.data.Budget
 import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 // --- (修复) 添加 Imports ---
-import com.example.myapplication.ui.screen.Routes // 导入 Routes
+import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.screen.YearMonthPicker // 导入 YearMonthPicker
 // --- 修复结束 ---
 import java.util.Calendar

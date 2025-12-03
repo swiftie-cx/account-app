@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-
+import com.example.myapplication.ui.navigation.Routes
 data class SettingItem(val title: String, val icon: ImageVector, val route: String? = null, val summary: String? = null)
 
 @OptIn(ExperimentalMaterial3Api::class)

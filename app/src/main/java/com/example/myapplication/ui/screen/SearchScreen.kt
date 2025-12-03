@@ -36,7 +36,7 @@ import java.util.Date
 import kotlin.math.abs
 import androidx.compose.material3.MaterialTheme
 import java.util.Calendar
-
+import com.example.myapplication.ui.navigation.Routes
 /**
  * 搜索页面 (已连接基础搜索逻辑)
  */

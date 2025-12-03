@@ -13,19 +13,16 @@ import androidx.compose.material3.* // 使用 * 导入
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.ExchangeRates
-import com.example.myapplication.data.Expense // 确保导入 Expense
 import com.example.myapplication.ui.navigation.IconMapper
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
-import com.example.myapplication.ui.screen.Routes // 确保导入 Routes
 import java.util.Locale
 import kotlin.math.abs
-
+import com.example.myapplication.ui.navigation.Routes
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, defaultCurrency: String) {

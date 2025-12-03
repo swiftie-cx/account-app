@@ -10,8 +10,8 @@ object Routes {
     const val BUDGET_SETTINGS = "budget_settings/{year}/{month}"
     fun budgetSettingsRoute(year: Int, month: Int) = "budget_settings/$year/$month"
 
-    // 账户管理相关
-    const val ACCOUNT_MANAGEMENT = "account_management" // 修复报错的关键
+    // 账户管理相关 (修复报错的关键)
+    const val ACCOUNT_MANAGEMENT = "account_management"
     const val ADD_ACCOUNT = "add_account"
 
     // 其他功能页面

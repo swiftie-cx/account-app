@@ -44,7 +44,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.abs
-
+import com.example.myapplication.ui.navigation.Routes
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyDetailsScreen(

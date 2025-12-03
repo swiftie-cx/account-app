@@ -8,7 +8,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBarItem // 确保导入
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -18,56 +18,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType // 确保导入
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument // 确保导入
+import androidx.navigation.navArgument
 import com.example.myapplication.ui.navigation.BottomNavItem
+import com.example.myapplication.ui.navigation.Routes // (关键) 导入统一管理的 Routes
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import java.util.Calendar
 
-
-// --- 定义 1: Routes 对象 (移到顶层) ---
-object Routes {
-    const val ADD_TRANSACTION = "add_transaction"
-    const val BUDGET_SETTINGS = "budget_settings/{year}/{month}"
-    fun budgetSettingsRoute(year: Int, month: Int) = "budget_settings/$year/$month"
-
-    const val ACCOUNT_MANAGEMENT = "account_management"
-    const val ADD_ACCOUNT = "add_account"
-
-    // 搜索页面路由
-    const val SEARCH = "search"
-
-    // (新) 日历页面路由
-    const val CALENDAR = "calendar"
-
-    // (新) 每日详情页面路由
-    const val DAILY_DETAILS = "daily_details/{dateMillis}"
-    fun dailyDetailsRoute(dateMillis: Long) = "daily_details/$dateMillis"
-
-    // (新) 设置页面路由
-    const val SETTINGS = "settings"
-    const val CURRENCY_SELECTION = "currency_selection"
-    const val CATEGORY_SETTINGS = "category_settings"
-    const val ADD_CATEGORY = "add_category"
-
-    // 交易详情页面路由
-    const val TRANSACTION_DETAIL = "transaction_detail/{expenseId}"
-    fun transactionDetailRoute(expenseId: Long) = "transaction_detail/$expenseId"
-}
-
-// --- 定义 2: MainScreen 可组合函数 ---
+// --- MainScreen 可组合函数 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(expenseViewModel: ExpenseViewModel) {
     val navController = rememberNavController()
 
     val calendar = Calendar.getInstance()
-    var budgetScreenYear by rememberSaveable { mutableStateOf(calendar.get(Calendar.YEAR)) }
-    var budgetScreenMonth by rememberSaveable { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
+    var budgetScreenYear by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
+    var budgetScreenMonth by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.MONTH) + 1) }
     var defaultCurrency by rememberSaveable { mutableStateOf("CNY") } // 初始默认货币
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -76,11 +46,13 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     Scaffold(
         bottomBar = {
             AppBottomBar(navController = navController) {
+                // 点击预算 Tab 时重置日期到当前月
                 budgetScreenYear = calendar.get(Calendar.YEAR)
                 budgetScreenMonth = calendar.get(Calendar.MONTH) + 1
             }
         },
         floatingActionButton = {
+            // 仅在明细页显示 FAB
             if (currentRoute == BottomNavItem.Details.route) {
                 FloatingActionButton(onClick = { navController.navigate(Routes.ADD_TRANSACTION) }) {
                     Icon(Icons.Default.Add, contentDescription = "Add Transaction")
@@ -107,15 +79,14 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     }
 }
 
-// --- 定义 3: AppBottomBar 可组合函数 ---
+// --- AppBottomBar 可组合函数 ---
 @Composable
 fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit) {
-    // 使用来自 BottomNavItem.kt 的更新后的项目
     val items = listOf(
         BottomNavItem.Details,
         BottomNavItem.Chart,
-        BottomNavItem.Budget, // 使用 "预算"
-        BottomNavItem.Assets  // 使用 "资产"
+        BottomNavItem.Budget,
+        BottomNavItem.Assets
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -132,7 +103,13 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
                         onBudgetTabClick()
                     }
                     navController.navigate(item.route) {
+                        // 避免在返回栈中积累过多的副本
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        // 避免重复点击同一个 item 时重新加载
                         launchSingleTop = true
+                        // 恢复状态
                         restoreState = true
                     }
                 }
@@ -141,7 +118,7 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
     }
 }
 
-// --- 定义 4: NavigationGraph 可组合函数 ---
+// --- NavigationGraph 可组合函数 ---
 @Composable
 fun NavigationGraph(
     navController: NavHostController,
@@ -154,27 +131,45 @@ fun NavigationGraph(
     onDefaultCurrencyChange: (String) -> Unit
 ) {
     NavHost(navController, startDestination = BottomNavItem.Details.route, modifier = modifier) {
+
+        // 1. 明细页
         composable(BottomNavItem.Details.route) {
-            // 传递 NavController
-            DetailsScreen(viewModel = expenseViewModel, navController = navController)
+            DetailsScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                defaultCurrency = defaultCurrency // 传递默认货币
+            )
         }
+
+        // 2. 图表页
         composable(BottomNavItem.Chart.route) {
             ChartScreen(viewModel = expenseViewModel)
         }
-        composable(BottomNavItem.Budget.route) { // 使用 "budget" 路由
+
+        // 3. 预算页
+        composable(BottomNavItem.Budget.route) {
             BudgetScreen(
                 viewModel = expenseViewModel,
                 navController = navController,
                 year = budgetScreenYear,
                 month = budgetScreenMonth,
                 onDateChange = onBudgetScreenDateChange,
-                defaultCurrency = defaultCurrency
+                defaultCurrency = defaultCurrency // 传递默认货币
             )
         }
-        composable(BottomNavItem.Assets.route) { // 使用 "assets" 路由
-            // 指向新的 AssetsScreen
-            AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
+
+        // 4. 资产页
+        composable(BottomNavItem.Assets.route) {
+            AssetsScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                defaultCurrency = defaultCurrency // 传递默认货币
+            )
         }
+
+        // --- 功能页面 ---
+
+        // 添加/编辑交易
         composable(
             route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}",
             arguments = listOf(
@@ -197,6 +192,8 @@ fun NavigationGraph(
                 dateMillis = if (dateMillis == -1L) null else dateMillis
             )
         }
+
+        // 预算设置
         composable(
             route = Routes.BUDGET_SETTINGS,
             arguments = listOf(
@@ -214,20 +211,26 @@ fun NavigationGraph(
             )
         }
 
+        // 账户管理
         composable(Routes.ACCOUNT_MANAGEMENT) {
             AccountManagementScreen(viewModel = expenseViewModel, navController = navController)
         }
 
+        // 添加账户
         composable(Routes.ADD_ACCOUNT) {
             AddAccountScreen(viewModel = expenseViewModel, navController = navController)
         }
 
-        // (新) 添加日历屏幕的路由
+        // 日历
         composable(Routes.CALENDAR) {
-            CalendarScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
+            CalendarScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                defaultCurrency = defaultCurrency // 传递默认货币
+            )
         }
 
-        // (新) 添加每日详情页面的路由
+        // 每日详情
         composable(
             route = Routes.DAILY_DETAILS,
             arguments = listOf(navArgument("dateMillis") { type = NavType.LongType })
@@ -242,21 +245,33 @@ fun NavigationGraph(
             }
         }
 
-        // (新) 添加设置和货币选择页面的路由
+        // 设置
         composable(Routes.SETTINGS) {
-            SettingsScreen(navController = navController, defaultCurrency = defaultCurrency)
+            SettingsScreen(
+                navController = navController,
+                defaultCurrency = defaultCurrency // 传递默认货币
+            )
         }
+
+        // 货币选择
         composable(Routes.CURRENCY_SELECTION) {
-            CurrencySelectionScreen(navController = navController, onCurrencySelected = onDefaultCurrencyChange)
+            CurrencySelectionScreen(
+                navController = navController,
+                onCurrencySelected = onDefaultCurrencyChange // 回调
+            )
         }
+
+        // 类别设置
         composable(Routes.CATEGORY_SETTINGS) {
             CategorySettingsScreen(navController = navController, viewModel = expenseViewModel)
         }
+
+        // 添加类别
         composable(Routes.ADD_CATEGORY) {
             AddCategoryScreen(navController = navController, viewModel = expenseViewModel)
         }
 
-        // 添加交易详情页面的目标
+        // 交易详情
         composable(
             route = Routes.TRANSACTION_DETAIL,
             arguments = listOf(navArgument("expenseId") { type = NavType.LongType })
@@ -265,22 +280,21 @@ fun NavigationGraph(
             TransactionDetailScreen(
                 viewModel = expenseViewModel,
                 navController = navController,
-                expenseId = expenseId
+                expenseId = expenseId,
+                defaultCurrency = defaultCurrency // 传递默认货币
             )
         }
-        // 添加搜索页面的目标
+
+        // 搜索
         composable(Routes.SEARCH) {
             SearchScreen(viewModel = expenseViewModel, navController = navController)
         }
     }
 }
 
-// --- 定义 5: PlaceholderScreen 可组合函数 ---
 @Composable
 fun PlaceholderScreen(screenName: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text = "$screenName Screen")
     }
 }
-
-// --- 文件结束 ---

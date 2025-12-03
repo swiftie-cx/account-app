@@ -2,8 +2,8 @@ package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable // 确保导入
-import androidx.compose.foundation.layout.* // 使用 * 导入
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -13,18 +13,20 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.* // 使用 * 导入
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign // 确保导入
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController // 确保导入
+import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
+import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.data.Expense
+import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
@@ -32,16 +34,19 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import com.example.myapplication.ui.screen.YearMonthPicker // 确保导入
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
+fun DetailsScreen(
+    viewModel: ExpenseViewModel,
+    navController: NavHostController,
+    defaultCurrency: String
+) {
     // --- 日期状态 ---
     val calendar = Calendar.getInstance()
-    var selectedYear by remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
-    var selectedMonth by remember { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
+    var selectedYear by remember { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
+    var selectedMonth by remember { mutableIntStateOf(calendar.get(Calendar.MONTH) + 1) }
     var showMonthPicker by remember { mutableStateOf(false) }
 
     // --- 获取数据 ---
@@ -124,7 +129,6 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
 
     // --- 5. 月份选择器 ---
     if (showMonthPicker) {
-        // 调用外部定义的 YearMonthPicker
         YearMonthPicker(
             year = selectedYear,
             month = selectedMonth,
@@ -142,8 +146,8 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
         topBar = {
             DetailsTopAppBar(
                 onMenuClick = { /* TODO: 实现菜单点击逻辑 */ },
-                onSearchClick = { navController.navigate(Routes.SEARCH) }, // 跳转到搜索页
-                onCalendarClick = { navController.navigate(Routes.CALENDAR) } // (修改) 跳转到日历页
+                onSearchClick = { navController.navigate(Routes.SEARCH) },
+                onCalendarClick = { navController.navigate(Routes.CALENDAR) }
             )
         }
     ) { innerPadding ->
@@ -158,7 +162,6 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
             )
 
             LazyColumn {
-                @OptIn(ExperimentalFoundationApi::class)
                 groupedItems.forEach { (dateStr, itemsOnDate) ->
                     stickyHeader {
                         // 添加日总收支
@@ -175,7 +178,8 @@ fun DetailsScreen(viewModel: ExpenseViewModel, navController: NavHostController)
                                     expense = item,
                                     icon = categoryIconMap[item.category],
                                     account = account,
-                                    onClick = { navController.navigate(Routes.transactionDetailRoute(item.id)) } // 跳转到详情页
+                                    defaultCurrency = defaultCurrency,
+                                    onClick = { navController.navigate(Routes.transactionDetailRoute(item.id)) }
                                 )
                             }
                             is DisplayTransferItem -> TransferItem(
@@ -280,7 +284,7 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
                 Text(
                     text = "收入: ${String.format("%.2f", dailyIncome)}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.Green.copy(alpha= 0.7f), // 或者用你的收入颜色
+                    color = Color.Green.copy(alpha= 0.7f),
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
@@ -338,9 +342,13 @@ private fun ExpenseItem(
     expense: Expense,
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
     account: Account?,
+    defaultCurrency: String,
     onClick: () -> Unit
 ) {
     val amountColor = if (expense.amount < 0) MaterialTheme.colorScheme.error else Color.Unspecified
+
+    val needsConversion = account != null && account.currency != defaultCurrency
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -369,16 +377,27 @@ private fun ExpenseItem(
 
         // 显示备注或类别
         val displayText = if (!expense.remark.isNullOrBlank()) expense.remark else expense.category
-        Text(text = displayText ?: expense.category, modifier = Modifier.weight(1f)) // Fallback
+        Text(text = displayText ?: expense.category, modifier = Modifier.weight(1f))
 
-        // 显示金额和货币
-        val amountText = "${account?.currency ?: ""} ${String.format("%.2f", abs(expense.amount))}"
-        Text(
-            text = amountText,
-            color = amountColor,
-            style = MaterialTheme.typography.bodyLarge
-        )
+        // 右侧金额显示区域
+        Column(horizontalAlignment = Alignment.End) {
+            // 原金额
+            val amountText = "${account?.currency ?: ""} ${String.format("%.2f", abs(expense.amount))}"
+            Text(
+                text = amountText,
+                color = amountColor,
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            // 如果币种不同，显示折算金额
+            if (needsConversion) {
+                val convertedAmount = ExchangeRates.convert(abs(expense.amount), account!!.currency, defaultCurrency)
+                Text(
+                    text = "≈ $defaultCurrency ${String.format(Locale.US, "%.2f", convertedAmount)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
-
-// --- YearMonthPicker 已移至 YearMonthPicker.kt ---
