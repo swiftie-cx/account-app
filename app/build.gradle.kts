@@ -72,4 +72,7 @@ dependencies {
 
     // ---- Reorderable 列表（新增）----
     implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+    // 网络请求 Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 }

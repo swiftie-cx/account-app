@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Budget
+import com.example.myapplication.data.ExchangeRates // (新) 导入
 import com.example.myapplication.data.Expense
 import com.example.myapplication.data.ExpenseRepository
 import com.example.myapplication.ui.navigation.Category
@@ -32,6 +33,13 @@ enum class CategoryType { EXPENSE, INCOME }
 class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() {
 
     private val budgetUpdateMutex = Mutex()
+
+    // (新) 初始化块：ViewModel 创建时自动更新汇率
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            ExchangeRates.updateRates()
+        }
+    }
 
     val allExpenses: StateFlow<List<Expense>> = repository.allExpenses
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
