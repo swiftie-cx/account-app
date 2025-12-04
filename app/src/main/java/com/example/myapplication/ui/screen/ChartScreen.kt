@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screen
 
-import android.content.res.Configuration
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
@@ -32,7 +31,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -153,7 +151,6 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
 
         if (isCustomRange) {
             if (filteredTransactions.isNotEmpty()) {
-                // 自定义模式下暂时只显示饼图列表，或者你可以扩展逻辑支持自定义折线图
                 ChartPage(filteredTransactions, ChartMode.MONTH) // 传入 ChartMode 只是占位
             } else {
                 EmptyState()
@@ -170,9 +167,11 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
         }
 
         if (showDateRangeDialog) {
-            DateRangeDialog(
-                startDate = startDateMillis,
-                endDate = endDateMillis,
+            // (修改) 使用我们自定义的纯 Compose 日期范围选择器
+            // 彻底替换原来的 DateRangeDialog
+            CustomDateRangePicker(
+                initialStartDate = startDateMillis,
+                initialEndDate = endDateMillis,
                 onDismiss = { showDateRangeDialog = false },
                 onConfirm = { start, end ->
                     startDateMillis = start
@@ -373,127 +372,7 @@ fun FilterBar(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DateRangeDialog(
-    startDate: Long?,
-    endDate: Long?,
-    onDismiss: () -> Unit,
-    onConfirm: (Long?, Long?) -> Unit
-) {
-    val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.CHINA) }
-    val today = remember { System.currentTimeMillis() }
-
-    var tempStart by remember { mutableStateOf(startDate ?: today) }
-    var tempEnd by remember { mutableStateOf(endDate ?: today) }
-
-    var showInnerPicker by remember { mutableStateOf(false) }
-    var isPickingStart by remember { mutableStateOf(true) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("选择日期范围") },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            isPickingStart = true
-                            showInnerPicker = true
-                        }
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("开始时间", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        dateFormat.format(Date(tempStart)),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Divider()
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            isPickingStart = false
-                            showInnerPicker = true
-                        }
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("结束时间", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        dateFormat.format(Date(tempEnd)),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(tempStart, tempEnd) }) { Text("确定") }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) { Text("取消") }
-        }
-    )
-
-    if (showInnerPicker) {
-        val initialDate = if (isPickingStart) tempStart else tempEnd
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDate)
-
-        val configuration = LocalConfiguration.current
-        val chineseConfig = remember(configuration) {
-            Configuration(configuration).apply { setLocale(Locale.CHINA) }
-        }
-
-        CompositionLocalProvider(LocalConfiguration provides chineseConfig) {
-            DatePickerDialog(
-                onDismissRequest = { showInnerPicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val selected = datePickerState.selectedDateMillis
-                        if (selected != null) {
-                            if (isPickingStart) tempStart = selected else tempEnd = selected
-                        }
-                        showInnerPicker = false
-                    }) { Text("确定") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showInnerPicker = false }) { Text("取消") }
-                }
-            ) {
-                DatePicker(
-                    state = datePickerState,
-                    headline = {
-                        val selectedDate = datePickerState.selectedDateMillis
-                        if (selectedDate != null) {
-                            val headerFormat = SimpleDateFormat("yyyy年M月d日", Locale.CHINA)
-                            Text(
-                                text = headerFormat.format(Date(selectedDate)),
-                                modifier = Modifier.padding(start = 24.dp, end = 12.dp, bottom = 12.dp),
-                                style = MaterialTheme.typography.headlineLarge
-                            )
-                        }
-                    },
-                    title = {
-                        Text(
-                            text = if (isPickingStart) "选择开始日期" else "选择结束日期",
-                            modifier = Modifier.padding(start = 24.dp, top = 16.dp)
-                        )
-                    },
-                    showModeToggle = false
-                )
-            }
-        }
-    }
-}
+// (此处已移除旧的 DateRangeDialog 函数)
 
 // ---------------------- 折线图相关逻辑 ----------------------
 

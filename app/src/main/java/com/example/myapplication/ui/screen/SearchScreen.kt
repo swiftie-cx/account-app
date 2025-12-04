@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screen
 
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,10 +17,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -29,17 +28,16 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Expense
+import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
+import java.util.Calendar
 import java.util.Date
 import kotlin.math.abs
-import androidx.compose.material3.MaterialTheme
-import java.util.Calendar
-import com.example.myapplication.ui.navigation.Routes
-import java.text.SimpleDateFormat
-import java.util.Locale
-import androidx.compose.ui.draw.clip
+
+// (已删除) data class DisplayTransferItem ...
+// 因为它已经在 DisplayModels.kt 中定义过了，这里直接使用即可。
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -176,71 +174,20 @@ fun SearchScreen(
         }
     }
 
+    // 使用自定义的 CustomDateRangePicker
     if (showDateRangePicker) {
-        val dateRangePickerState = rememberDateRangePickerState()
-        val configuration = LocalConfiguration.current
-        val chineseConfig = remember(configuration) {
-            Configuration(configuration).apply { setLocale(Locale.CHINA) }
-        }
-
-        CompositionLocalProvider(LocalConfiguration provides chineseConfig) {
-            DatePickerDialog(
-                onDismissRequest = { showDateRangePicker = false },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDateRangePicker = false
-                            val startMillis = dateRangePickerState.selectedStartDateMillis
-                            val endMillis = dateRangePickerState.selectedEndDateMillis
-                            if (startMillis != null && endMillis != null) {
-                                customDateRangeMillis = startMillis to endMillis
-                                selectedTimeIndex = 4
-                            }
-                        },
-                        enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
-                    ) {
-                        Text("确定")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDateRangePicker = false }) {
-                        Text("取消")
-                    }
+        CustomDateRangePicker(
+            initialStartDate = customDateRangeMillis.first,
+            initialEndDate = customDateRangeMillis.second,
+            onDismiss = { showDateRangePicker = false },
+            onConfirm = { start, end ->
+                if (start != null && end != null) {
+                    customDateRangeMillis = start to end
+                    selectedTimeIndex = 4 // 选中“自定义” Tab
                 }
-            ) {
-                DateRangePicker(
-                    state = dateRangePickerState,
-                    headline = {
-                        val startMillis = dateRangePickerState.selectedStartDateMillis
-                        val endMillis = dateRangePickerState.selectedEndDateMillis
-                        // (修改) 强制中文格式
-                        val dateFormat = SimpleDateFormat("MM月dd日", Locale.CHINA)
-
-                        val text = if (startMillis != null && endMillis != null) {
-                            "${dateFormat.format(Date(startMillis))} - ${dateFormat.format(Date(endMillis))}"
-                        } else if (startMillis != null) {
-                            dateFormat.format(Date(startMillis))
-                        } else {
-                            "开始日期 - 结束日期"
-                        }
-
-                        Text(
-                            text = text,
-                            modifier = Modifier.padding(start = 64.dp, end = 12.dp, bottom = 12.dp),
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                    },
-                    title = {
-                        Text(
-                            text = "选择日期范围",
-                            modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    },
-                    showModeToggle = false
-                )
+                showDateRangePicker = false
             }
-        }
+        )
     }
 
     LaunchedEffect(Unit) {
@@ -318,7 +265,7 @@ fun SearchScreen(
                         singleLine = true
                     )
 
-                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                     FilterChipRow(
                         title = "类型",
@@ -327,7 +274,7 @@ fun SearchScreen(
                         onChipSelected = { selectedTypeIndex = it }
                     )
 
-                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                     CategoryFilterRow(
                         selectedCategories = selectedCategories,
@@ -335,7 +282,7 @@ fun SearchScreen(
                         onAddClick = { showCategoryPicker = true }
                     )
 
-                    Divider(modifier = Modifier.padding(vertical = 4.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                     FilterChipRow(
                         title = "时间",
@@ -352,7 +299,7 @@ fun SearchScreen(
                     )
                 }
 
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
