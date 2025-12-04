@@ -58,7 +58,9 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val showScaffold = currentRoute != Routes.LOCK
+    // (修改点) 判断是否显示底栏：
+    // 如果是 锁屏页(LOCK) 或者 添加页(ADD_TRANSACTION)，则不显示 Scaffold (底栏和FAB)
+    val showScaffold = currentRoute != Routes.LOCK && currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true
 
     if (showScaffold) {
         Scaffold(
@@ -71,12 +73,11 @@ fun MainScreen(
             },
             floatingActionButton = {
                 if (currentRoute == BottomNavItem.Details.route) {
-                    // (修复) FAB 样式优化
                     FloatingActionButton(
                         onClick = { navController.navigate(Routes.ADD_TRANSACTION) },
-                        containerColor = MaterialTheme.colorScheme.primary, // 强制使用实心主题色
-                        contentColor = MaterialTheme.colorScheme.onPrimary, // 图标白色
-                        shape = CircleShape // 改为圆形，更符合传统认知
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = CircleShape
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "Add Transaction")
                     }
@@ -102,6 +103,7 @@ fun MainScreen(
             )
         }
     } else {
+        // 全屏模式 (无 Padding，无底栏)
         NavigationGraph(
             navController = navController,
             modifier = Modifier,
@@ -140,11 +142,10 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
                 icon = { Icon(item.icon, contentDescription = item.title) },
                 label = { Text(item.title) },
                 selected = isSelected,
-                // (修复) 强制选中颜色跟随主题
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.onPrimary, // 选中时图标变白
-                    selectedTextColor = MaterialTheme.colorScheme.primary,   // 选中时文字变主题色
-                    indicatorColor = MaterialTheme.colorScheme.primary,      // 选中背景球变实心主题色
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
