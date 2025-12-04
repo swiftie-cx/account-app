@@ -28,4 +28,9 @@ object Routes {
     const val CURRENCY_SELECTION = "currency_selection"
     const val CATEGORY_SETTINGS = "category_settings"
     const val ADD_CATEGORY = "add_category"
+    // (新增) 隐私密码页面路由
+    const val PRIVACY_SETTINGS = "privacy_settings"
+    // (新增) 锁屏页面
+    const val LOCK = "lock"
+    const val THEME_SETTINGS = "theme_settings"
 }

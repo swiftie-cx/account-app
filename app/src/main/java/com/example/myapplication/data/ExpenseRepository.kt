@@ -94,4 +94,42 @@ class ExpenseRepository(
         _defaultAccountId.value = -1L
         _accountOrder.value = emptyList()
     }
+    // 类型: "NONE", "PIN", "PATTERN"
+    fun getPrivacyType(): String {
+        return prefs.getString("privacy_type", "NONE") ?: "NONE"
+    }
+
+    fun savePrivacyType(type: String) {
+        prefs.edit().putString("privacy_type", type).apply()
+    }
+
+    fun savePin(pin: String) {
+        prefs.edit().putString("privacy_pin", pin).apply()
+    }
+
+    fun verifyPin(inputPin: String): Boolean {
+        val savedPin = prefs.getString("privacy_pin", "")
+        return savedPin == inputPin
+    }
+
+    // 手势密码保存为字符串 "1,2,3,4"
+    fun savePattern(pattern: List<Int>) {
+        val patternStr = pattern.joinToString(",")
+        prefs.edit().putString("privacy_pattern", patternStr).apply()
+    }
+
+    fun verifyPattern(inputPattern: List<Int>): Boolean {
+        val savedStr = prefs.getString("privacy_pattern", "")
+        val inputStr = inputPattern.joinToString(",")
+        return savedStr == inputStr
+    }
+
+    // 指纹开关
+    fun isBiometricEnabled(): Boolean {
+        return prefs.getBoolean("privacy_biometric", false)
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("privacy_biometric", enabled).apply()
+    }
 }

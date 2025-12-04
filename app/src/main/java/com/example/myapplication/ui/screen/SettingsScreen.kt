@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.ui.navigation.Routes
-// (新增) 导入 VM
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,7 +27,7 @@ import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 fun SettingsScreen(
     navController: NavHostController,
     defaultCurrency: String,
-    viewModel: ExpenseViewModel // (修改) 接收 ViewModel
+    viewModel: ExpenseViewModel
 ) {
     // 状态：控制两个弹窗
     var showWarningDialog by remember { mutableStateOf(false) }
@@ -78,23 +77,23 @@ fun SettingsScreen(
                 onClick = { navController.navigate(Routes.CURRENCY_SELECTION) }
             )
 
-            // 4. 主题
+            // 4. 主题 (关键修改：添加跳转逻辑)
             SettingsItem(
                 icon = Icons.Default.Palette,
                 title = "主题",
-                onClick = { /* TODO */ }
+                onClick = { navController.navigate(Routes.THEME_SETTINGS) }
             )
 
             // 5. 隐私密码
             SettingsItem(
                 icon = Icons.Default.Lock,
                 title = "隐私密码",
-                onClick = { /* TODO */ }
+                onClick = { navController.navigate(Routes.PRIVACY_SETTINGS) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 6. 清除数据 (点击触发第一步警告)
+            // 6. 清除数据
             SettingsItem(
                 icon = Icons.Default.DeleteForever,
                 title = "清除数据",
@@ -106,7 +105,7 @@ fun SettingsScreen(
         }
     }
 
-    // --- 第一步：警告弹窗 ---
+    // --- 警告弹窗 ---
     if (showWarningDialog) {
         AlertDialog(
             onDismissRequest = { showWarningDialog = false },
@@ -131,7 +130,7 @@ fun SettingsScreen(
         )
     }
 
-    // --- 第二步：输入验证弹窗 ---
+    // --- 最终确认弹窗 ---
     if (showFinalConfirmDialog) {
         val isMatch = confirmationInput == targetPhrase
 
@@ -163,11 +162,10 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        // (修改) 真正调用清除数据逻辑
                         viewModel.clearAllData()
                         showFinalConfirmDialog = false
                     },
-                    enabled = isMatch, // 只有输入匹配时按钮才可用
+                    enabled = isMatch,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )

@@ -4,15 +4,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
@@ -20,8 +24,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -32,11 +34,20 @@ import androidx.navigation.navArgument
 import com.example.myapplication.ui.navigation.BottomNavItem
 import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
+import com.example.myapplication.ui.viewmodel.ThemeViewModel
 import java.util.Calendar
+
+// --- 确保导入所有页面 ---
+import com.example.myapplication.ui.screen.LockScreen
+import com.example.myapplication.ui.screen.PrivacySettingsScreen
+import com.example.myapplication.ui.screen.ThemeSettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(expenseViewModel: ExpenseViewModel) {
+fun MainScreen(
+    expenseViewModel: ExpenseViewModel,
+    themeViewModel: ThemeViewModel
+) {
     val navController = rememberNavController()
 
     val calendar = Calendar.getInstance()
@@ -47,32 +58,55 @@ fun MainScreen(expenseViewModel: ExpenseViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    Scaffold(
-        // (核心修改)
-        // 告诉 MainScreen 的 Scaffold：不要处理顶部的状态栏(statusBars)高度。
-        // 只处理底部的导航栏(navigationBars)高度。
-        // 这样，子页面(NavigationGraph)就会从屏幕最顶端开始绘制，从而让色块覆盖摄像头区域。
-        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.statusBars),
+    val showScaffold = currentRoute != Routes.LOCK
 
-        bottomBar = {
-            AppBottomBar(navController = navController) {
-                budgetScreenYear = calendar.get(Calendar.YEAR)
-                budgetScreenMonth = calendar.get(Calendar.MONTH) + 1
-            }
-        },
-        floatingActionButton = {
-            if (currentRoute == BottomNavItem.Details.route) {
-                FloatingActionButton(onClick = { navController.navigate(Routes.ADD_TRANSACTION) }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+    if (showScaffold) {
+        Scaffold(
+            contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.statusBars),
+            bottomBar = {
+                AppBottomBar(navController = navController) {
+                    budgetScreenYear = calendar.get(Calendar.YEAR)
+                    budgetScreenMonth = calendar.get(Calendar.MONTH) + 1
                 }
-            }
-        },
-        floatingActionButtonPosition = FabPosition.Center
-    ) { innerPadding ->
+            },
+            floatingActionButton = {
+                if (currentRoute == BottomNavItem.Details.route) {
+                    // (修复) FAB 样式优化
+                    FloatingActionButton(
+                        onClick = { navController.navigate(Routes.ADD_TRANSACTION) },
+                        containerColor = MaterialTheme.colorScheme.primary, // 强制使用实心主题色
+                        contentColor = MaterialTheme.colorScheme.onPrimary, // 图标白色
+                        shape = CircleShape // 改为圆形，更符合传统认知
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Transaction")
+                    }
+                }
+            },
+            floatingActionButtonPosition = FabPosition.Center
+        ) { innerPadding ->
+            NavigationGraph(
+                navController = navController,
+                modifier = Modifier.padding(innerPadding),
+                expenseViewModel = expenseViewModel,
+                themeViewModel = themeViewModel,
+                budgetScreenYear = budgetScreenYear,
+                budgetScreenMonth = budgetScreenMonth,
+                onBudgetScreenDateChange = { year, month ->
+                    budgetScreenYear = year
+                    budgetScreenMonth = month
+                },
+                defaultCurrency = defaultCurrency,
+                onDefaultCurrencyChange = { currency ->
+                    defaultCurrency = currency
+                }
+            )
+        }
+    } else {
         NavigationGraph(
             navController = navController,
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier,
             expenseViewModel = expenseViewModel,
+            themeViewModel = themeViewModel,
             budgetScreenYear = budgetScreenYear,
             budgetScreenMonth = budgetScreenMonth,
             onBudgetScreenDateChange = { year, month ->
@@ -101,10 +135,19 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
 
     BottomAppBar {
         items.forEach { item ->
+            val isSelected = currentRoute == item.route
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.title) },
                 label = { Text(item.title) },
-                selected = currentRoute == item.route,
+                selected = isSelected,
+                // (修复) 强制选中颜色跟随主题
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary, // 选中时图标变白
+                    selectedTextColor = MaterialTheme.colorScheme.primary,   // 选中时文字变主题色
+                    indicatorColor = MaterialTheme.colorScheme.primary,      // 选中背景球变实心主题色
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
                 onClick = {
                     if (item.route == BottomNavItem.Budget.route) {
                         onBudgetTabClick()
@@ -114,7 +157,6 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
                             saveState = true
                         }
                         launchSingleTop = true
-                        // 明细页不恢复状态，其他页恢复
                         restoreState = (item.route != BottomNavItem.Details.route)
                     }
                 }
@@ -123,19 +165,33 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
     }
 }
 
-// --- NavigationGraph 保持不变 ---
 @Composable
 fun NavigationGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
     expenseViewModel: ExpenseViewModel,
+    themeViewModel: ThemeViewModel,
     budgetScreenYear: Int,
     budgetScreenMonth: Int,
     onBudgetScreenDateChange: (Int, Int) -> Unit,
     defaultCurrency: String,
     onDefaultCurrencyChange: (String) -> Unit
 ) {
-    NavHost(navController, startDestination = BottomNavItem.Details.route, modifier = modifier) {
+    val privacyType = expenseViewModel.getPrivacyType()
+    val startDestination = if (privacyType != "NONE") Routes.LOCK else BottomNavItem.Details.route
+
+    NavHost(navController, startDestination = startDestination, modifier = modifier) {
+
+        composable(Routes.LOCK) {
+            LockScreen(
+                viewModel = expenseViewModel,
+                onUnlockSuccess = {
+                    navController.navigate(BottomNavItem.Details.route) {
+                        popUpTo(Routes.LOCK) { inclusive = true }
+                    }
+                }
+            )
+        }
 
         composable(BottomNavItem.Details.route) {
             DetailsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
@@ -153,7 +209,6 @@ fun NavigationGraph(
             AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
-        // --- 功能页面 ---
         composable(
             route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}",
             arguments = listOf(
@@ -202,9 +257,25 @@ fun NavigationGraph(
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen(navController = navController,
+            SettingsScreen(
+                navController = navController,
                 defaultCurrency = defaultCurrency,
-                viewModel = expenseViewModel)
+                viewModel = expenseViewModel
+            )
+        }
+
+        composable(Routes.PRIVACY_SETTINGS) {
+            PrivacySettingsScreen(
+                navController = navController,
+                viewModel = expenseViewModel
+            )
+        }
+
+        composable(Routes.THEME_SETTINGS) {
+            ThemeSettingsScreen(
+                navController = navController,
+                themeViewModel = themeViewModel
+            )
         }
 
         composable(Routes.CURRENCY_SELECTION) {

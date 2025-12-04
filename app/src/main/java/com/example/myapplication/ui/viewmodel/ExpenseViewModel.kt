@@ -194,4 +194,37 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
             }
         }
     }
+    // --- Privacy / Security ---
+
+    fun getPrivacyType(): String {
+        return repository.getPrivacyType()
+    }
+
+    fun setPrivacyType(type: String) {
+        repository.savePrivacyType(type)
+    }
+
+    fun savePin(pin: String) {
+        repository.savePin(pin)
+    }
+
+    fun verifyPin(pin: String): Boolean {
+        return repository.verifyPin(pin)
+    }
+
+    fun savePattern(pattern: List<Int>) {
+        repository.savePattern(pattern)
+    }
+
+    fun verifyPattern(pattern: List<Int>): Boolean {
+        return repository.verifyPattern(pattern)
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        repository.setBiometricEnabled(enabled)
+    }
+
+    fun isBiometricEnabled(): Boolean {
+        return repository.isBiometricEnabled()
+    }
 }
