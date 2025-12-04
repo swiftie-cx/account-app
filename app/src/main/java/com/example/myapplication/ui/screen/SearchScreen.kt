@@ -32,32 +32,47 @@ import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
-
-// (已删除) data class DisplayTransferItem ...
-// 因为它已经在 DisplayModels.kt 中定义过了，这里直接使用即可。
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     viewModel: ExpenseViewModel,
     navController: NavHostController,
+    initialCategory: String? = null,
+    initialStartDate: Long? = null,
+    initialEndDate: Long? = null,
+    initialType: Int = 0 // 0全部, 1支出, 2收入
 ) {
     var localSearchText by remember { mutableStateOf("") }
     val searchResults by viewModel.filteredExpenses.collectAsState()
     val allAccounts by viewModel.allAccounts.collectAsState()
 
+    val isFromChart = initialStartDate != null || initialCategory != null
+
     val typeFilters = listOf("全部", "支出", "收入", "转账")
-    var selectedTypeIndex by remember { mutableStateOf(0) }
-    var selectedCategories by remember { mutableStateOf<List<String>>(emptyList()) }
+    var selectedTypeIndex by remember { mutableStateOf(initialType) }
+
+    var selectedCategories by remember {
+        mutableStateOf(if (initialCategory != null) listOf(initialCategory) else emptyList<String>())
+    }
+
     var showCategoryPicker by remember { mutableStateOf(false) }
     val timeFilters = listOf("全部", "本周", "本月", "本年", "自定义")
-    var selectedTimeIndex by remember { mutableStateOf(0) }
+
+    var selectedTimeIndex by remember {
+        mutableStateOf(if (initialStartDate != null) 4 else 0)
+    }
 
     var showDateRangePicker by remember { mutableStateOf(false) }
-    var customDateRangeMillis by remember { mutableStateOf<Pair<Long?, Long?>>(null to null) }
+
+    var customDateRangeMillis by remember {
+        mutableStateOf(initialStartDate to initialEndDate)
+    }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -66,35 +81,80 @@ fun SearchScreen(
         (expenseCategories + incomeCategories).associate { it.title to it.icon }
     }
 
+    // --- (修复) 智能标题生成逻辑 ---
+    val dynamicTitle = remember(initialCategory, customDateRangeMillis) {
+        val formatFullDay = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
+        val formatMonth = SimpleDateFormat("yyyy年MM月", Locale.CHINA)
+        val formatYear = SimpleDateFormat("yyyy年", Locale.CHINA)
+
+        val sb = StringBuilder()
+
+        if (initialCategory != null) {
+            sb.append(initialCategory)
+        }
+
+        val start = customDateRangeMillis.first
+        val end = customDateRangeMillis.second
+
+        if (start != null && end != null) {
+            if (sb.isNotEmpty()) sb.append(" - ")
+
+            val c1 = Calendar.getInstance().apply { timeInMillis = start }
+            val c2 = Calendar.getInstance().apply { timeInMillis = end }
+
+            val y1 = c1.get(Calendar.YEAR)
+            val m1 = c1.get(Calendar.MONTH)
+            val d1 = c1.get(Calendar.DAY_OF_MONTH)
+
+            val y2 = c2.get(Calendar.YEAR)
+            val m2 = c2.get(Calendar.MONTH)
+            val d2 = c2.get(Calendar.DAY_OF_MONTH)
+
+            // 1. 同一天 (yyyy年MM月dd日)
+            if (y1 == y2 && m1 == m2 && d1 == d2) {
+                sb.append(formatFullDay.format(Date(start)))
+            }
+            // 2. 整月 (yyyy年MM月)
+            // 条件：同年同月，Start是1号，End是该月最后一天
+            else if (y1 == y2 && m1 == m2 && d1 == 1 && d2 == c2.getActualMaximum(Calendar.DAY_OF_MONTH)) {
+                sb.append(formatMonth.format(Date(start)))
+            }
+            // 3. 整年 (yyyy年)
+            // 条件：Start是1月1日，End是12月31日
+            else if (y1 == y2 &&
+                m1 == Calendar.JANUARY && d1 == 1 &&
+                m2 == Calendar.DECEMBER && d2 == 31) {
+                sb.append(formatYear.format(Date(start)))
+            }
+            // 4. 其他范围 (yyyy年MM月dd日~yyyy年MM月dd日)
+            else {
+                sb.append("${formatFullDay.format(Date(start))}~${formatFullDay.format(Date(end))}")
+            }
+        }
+
+        if (sb.isEmpty()) "搜索" else sb.toString()
+    }
+
     val displayItems = remember(searchResults, accountMap, selectedTypeIndex, selectedTimeIndex, customDateRangeMillis, selectedCategories) {
         val timeFilteredResults = when (selectedTimeIndex) {
             1 -> {
                 val calendar = Calendar.getInstance()
                 calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val weekStart = calendar.time
                 searchResults.filter { !it.date.before(weekStart) }
             }
             2 -> {
                 val calendar = Calendar.getInstance()
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val monthStart = calendar.time
                 searchResults.filter { !it.date.before(monthStart) }
             }
             3 -> {
                 val calendar = Calendar.getInstance()
                 calendar.set(Calendar.DAY_OF_YEAR, 1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val yearStart = calendar.time
                 searchResults.filter { !it.date.before(yearStart) }
             }
@@ -103,12 +163,11 @@ fun SearchScreen(
                 if (startMillis != null && endMillis != null) {
                     val endOfDayCalendar = Calendar.getInstance().apply {
                         timeInMillis = endMillis
-                        set(Calendar.HOUR_OF_DAY, 23)
-                        set(Calendar.MINUTE, 59)
-                        set(Calendar.SECOND, 59)
+                        // 确保包含选定日期的最后一秒
+                        set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
                     }
                     val endOfDayMillis = endOfDayCalendar.timeInMillis
-                    searchResults.filter { it.date.time in startMillis..endOfDayMillis }
+                    searchResults.filter { it.date.time >= startMillis && it.date.time <= endOfDayMillis }
                 } else {
                     searchResults
                 }
@@ -174,7 +233,6 @@ fun SearchScreen(
         }
     }
 
-    // 使用自定义的 CustomDateRangePicker
     if (showDateRangePicker) {
         CustomDateRangePicker(
             initialStartDate = customDateRangeMillis.first,
@@ -183,7 +241,7 @@ fun SearchScreen(
             onConfirm = { start, end ->
                 if (start != null && end != null) {
                     customDateRangeMillis = start to end
-                    selectedTimeIndex = 4 // 选中“自定义” Tab
+                    selectedTimeIndex = 4
                 }
                 showDateRangePicker = false
             }
@@ -191,7 +249,9 @@ fun SearchScreen(
     }
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        if (!isFromChart) {
+            focusRequester.requestFocus()
+        }
     }
 
     DisposableEffect(Unit) {
@@ -203,48 +263,53 @@ fun SearchScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("搜索") },
+                title = { Text(dynamicTitle) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
+                // (修复) 使用主题色，与图表页保持一致
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         },
         bottomBar = {
-            BottomAppBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 4.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+            if (!isFromChart) {
+                BottomAppBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 4.dp
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            localSearchText = ""
-                            selectedTypeIndex = 0
-                            selectedCategories = emptyList()
-                            selectedTimeIndex = 0
-                            customDateRangeMillis = null to null
-                            viewModel.updateSearchText("")
-                        },
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("重置")
-                    }
-                    Button(
-                        onClick = {
-                            viewModel.updateSearchText(localSearchText)
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("搜索")
+                        OutlinedButton(
+                            onClick = {
+                                localSearchText = ""
+                                selectedTypeIndex = 0
+                                selectedCategories = emptyList()
+                                selectedTimeIndex = 0
+                                customDateRangeMillis = null to null
+                                viewModel.updateSearchText("")
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("重置")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.updateSearchText(localSearchText)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("搜索")
+                        }
                     }
                 }
             }
@@ -252,54 +317,55 @@ fun SearchScreen(
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             Column {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    OutlinedTextField(
-                        value = localSearchText,
-                        onValueChange = { localSearchText = it },
-                        placeholder = { Text("搜索备注、分类") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                            .focusRequester(focusRequester),
-                        singleLine = true
-                    )
+                if (!isFromChart) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        OutlinedTextField(
+                            value = localSearchText,
+                            onValueChange = { localSearchText = it },
+                            placeholder = { Text("搜索备注、分类") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .focusRequester(focusRequester),
+                            singleLine = true
+                        )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                    FilterChipRow(
-                        title = "类型",
-                        labels = typeFilters,
-                        selectedIndex = selectedTypeIndex,
-                        onChipSelected = { selectedTypeIndex = it }
-                    )
+                        FilterChipRow(
+                            title = "类型",
+                            labels = typeFilters,
+                            selectedIndex = selectedTypeIndex,
+                            onChipSelected = { selectedTypeIndex = it }
+                        )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                    CategoryFilterRow(
-                        selectedCategories = selectedCategories,
-                        onClearCategories = { selectedCategories = emptyList() },
-                        onAddClick = { showCategoryPicker = true }
-                    )
+                        CategoryFilterRow(
+                            selectedCategories = selectedCategories,
+                            onClearCategories = { selectedCategories = emptyList() },
+                            onAddClick = { showCategoryPicker = true }
+                        )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                    FilterChipRow(
-                        title = "时间",
-                        labels = timeFilters,
-                        selectedIndex = selectedTimeIndex,
-                        onChipSelected = { index ->
-                            if (index == 4) {
-                                showDateRangePicker = true
-                            } else {
-                                selectedTimeIndex = index
-                                customDateRangeMillis = null to null
+                        FilterChipRow(
+                            title = "时间",
+                            labels = timeFilters,
+                            selectedIndex = selectedTimeIndex,
+                            onChipSelected = { index ->
+                                if (index == 4) {
+                                    showDateRangePicker = true
+                                } else {
+                                    selectedTimeIndex = index
+                                    customDateRangeMillis = null to null
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()

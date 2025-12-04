@@ -6,6 +6,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -31,12 +33,15 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.example.myapplication.data.Expense
+import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
@@ -52,7 +57,7 @@ enum class ChartMode { WEEK, MONTH, YEAR }
 enum class TransactionType { INCOME, EXPENSE, BALANCE }
 
 @Composable
-fun ChartScreen(viewModel: ExpenseViewModel) {
+fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
     val allTransactions by viewModel.allExpenses.collectAsState(initial = emptyList())
 
     var transactionType by remember { mutableStateOf(TransactionType.EXPENSE) }
@@ -154,7 +159,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
 
         if (isCustomRange) {
             if (filteredTransactions.isNotEmpty()) {
-                ChartPage(filteredTransactions, ChartMode.MONTH, transactionType)
+                ChartPage(filteredTransactions, ChartMode.MONTH, transactionType, navController, "", isCustomRange = true, customStart = startDateMillis, customEnd = endDateMillis)
             } else {
                 EmptyState()
             }
@@ -162,7 +167,7 @@ fun ChartScreen(viewModel: ExpenseViewModel) {
             if (sortedGroupKeys.isNotEmpty()) {
                 val key = sortedGroupKeys[currentIndex.coerceIn(sortedGroupKeys.indices)]
                 val pageData = groupedData[key] ?: emptyList()
-                ChartPage(pageData, chartMode, transactionType)
+                ChartPage(pageData, chartMode, transactionType, navController, key)
             } else {
                 EmptyState()
             }
@@ -378,13 +383,14 @@ fun FilterBar(
 
 // ---------------------- 折线图相关逻辑 ----------------------
 
-data class LineChartPoint(val label: String, val value: Float)
+data class LineChartPoint(val label: String, val value: Float, val timeMillis: Long)
 
 @Composable
 fun LineChart(
     dataPoints: List<LineChartPoint>,
     modifier: Modifier = Modifier,
-    lineColor: Color = Color(0xFFFFC107) // 黄色调
+    lineColor: Color = Color(0xFFFFC107),
+    onPointClick: (LineChartPoint) -> Unit
 ) {
     if (dataPoints.isEmpty()) return
 
@@ -393,7 +399,7 @@ fun LineChart(
 
     val density = LocalDensity.current.density
 
-    // Y轴文字画笔 (右对齐)
+    // Y轴文字画笔
     val yLabelPaint = remember {
         Paint().apply {
             color = android.graphics.Color.GRAY
@@ -402,7 +408,7 @@ fun LineChart(
         }
     }
 
-    // X轴文字画笔 (居中对齐)
+    // X轴文字画笔
     val xLabelPaint = remember {
         Paint().apply {
             color = android.graphics.Color.GRAY
@@ -411,20 +417,65 @@ fun LineChart(
         }
     }
 
-    Canvas(modifier = modifier) {
+    // Tooltip 文字画笔
+    val tooltipTextPaint = remember {
+        Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 12f * density
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+    }
+
+    // Tooltip 日期格式化器 (MM月dd日)
+    val tooltipDateFormat = remember { SimpleDateFormat("MM月dd日", Locale.CHINA) }
+
+    var selectedIndex by remember { mutableIntStateOf(-1) }
+
+    Canvas(
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { offset ->
+                        val width = size.width
+                        val leftPadding = 45.dp.toPx()
+                        val chartWidth = width - leftPadding
+                        val spacing = chartWidth / (dataPoints.size - 1).coerceAtLeast(1)
+                        val index = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
+                        onPointClick(dataPoints[index])
+                        selectedIndex = -1
+                    }
+                )
+            }
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { offset ->
+                        val width = size.width
+                        val leftPadding = 45.dp.toPx()
+                        val spacing = (width - leftPadding) / (dataPoints.size - 1).coerceAtLeast(1)
+                        selectedIndex = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
+                    },
+                    onDrag = { change, _ ->
+                        val width = size.width
+                        val leftPadding = 45.dp.toPx()
+                        val spacing = (width - leftPadding) / (dataPoints.size - 1).coerceAtLeast(1)
+                        selectedIndex = ((change.position.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
+                    },
+                    onDragEnd = { selectedIndex = -1 },
+                    onDragCancel = { selectedIndex = -1 }
+                )
+            }
+    ) {
         val width = size.width
         val height = size.height
         val bottomPadding = 20.dp.toPx()
-        // 预留左侧 Y 轴标签的宽度
         val leftPadding = 45.dp.toPx()
 
         val chartWidth = width - leftPadding
         val chartHeight = height - bottomPadding
 
-        // 动态计算Y轴范围
         val rangeTop = if (actualMax > 0) actualMax * 1.2f else 0f
         val rangeBottom = if (actualMin < 0) actualMin * 1.2f else 0f
-
         val finalRangeTop = if (rangeTop == 0f && rangeBottom == 0f) 100f else rangeTop
         val range = finalRangeTop - rangeBottom
         val drawingRange = if (range == 0f) 100f else range
@@ -434,10 +485,8 @@ fun LineChart(
         for (i in 0 until gridLines) {
             val ratio = i.toFloat() / (gridLines - 1)
             val value = rangeBottom + (range * ratio)
-            // Y 坐标计算 (反转，0 在底部)
             val y = chartHeight - (ratio * chartHeight)
 
-            // 绘制水平虚线/实线
             drawLine(
                 color = Color.LightGray.copy(alpha = 0.5f),
                 start = Offset(leftPadding, y),
@@ -445,16 +494,15 @@ fun LineChart(
                 strokeWidth = 1.dp.toPx()
             )
 
-            // 绘制 Y 轴文字
             drawContext.canvas.nativeCanvas.drawText(
                 String.format(Locale.US, "%.0f", value),
-                leftPadding - 8.dp.toPx(), // 文字在 leftPadding 左侧
-                y + yLabelPaint.textSize / 3, // 垂直居中
+                leftPadding - 8.dp.toPx(),
+                y + yLabelPaint.textSize / 3,
                 yLabelPaint
             )
         }
 
-        // 2. 绘制 0 刻度线 (强调线)
+        // 2. 绘制 0 刻度线
         if (rangeBottom <= 0 && finalRangeTop >= 0) {
             val zeroY = chartHeight - ((0f - rangeBottom) / drawingRange * chartHeight)
             drawLine(
@@ -476,7 +524,6 @@ fun LineChart(
 
             if (index == 0) {
                 path.moveTo(x, y)
-                // 填充起点：X=当前点, Y=底部
                 fillPath.moveTo(x, chartHeight)
                 fillPath.lineTo(x, y)
             } else {
@@ -515,11 +562,9 @@ fun LineChart(
             )
         }
 
-        // 闭合填充路径
         fillPath.lineTo(leftPadding + (dataPoints.size - 1) * spacing, chartHeight)
         fillPath.close()
 
-        // 绘制填充渐变
         drawPath(
             path = fillPath,
             brush = Brush.verticalGradient(
@@ -529,16 +574,81 @@ fun LineChart(
             )
         )
 
-        // 绘制折线
         drawPath(
             path = path,
             color = lineColor,
             style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
         )
+
+        // 绘制选中高亮和 Tooltip
+        if (selectedIndex != -1 && selectedIndex in dataPoints.indices) {
+            val point = dataPoints[selectedIndex]
+            val x = leftPadding + selectedIndex * spacing
+            val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
+
+            // 垂直指示线
+            drawLine(
+                color = lineColor,
+                start = Offset(x, 0f),
+                end = Offset(x, chartHeight),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+            )
+
+            // 高亮圆点
+            drawCircle(
+                color = lineColor,
+                radius = 5.dp.toPx(),
+                center = Offset(x, y)
+            )
+            drawCircle(
+                color = Color.White,
+                radius = 3.dp.toPx(),
+                center = Offset(x, y)
+            )
+
+            // Tooltip 格式化修正
+            val dateText = tooltipDateFormat.format(Date(point.timeMillis))
+            val amountText = String.format("%.0f", point.value)
+
+            val textWidth = tooltipTextPaint.measureText(dateText).coerceAtLeast(tooltipTextPaint.measureText(amountText)) + 20.dp.toPx()
+            val textHeight = 40.dp.toPx()
+
+            var tooltipX = x - textWidth / 2
+            if (tooltipX < 0) tooltipX = 0f
+            if (tooltipX + textWidth > width) tooltipX = width - textWidth
+            val tooltipY = if (y - textHeight - 10.dp.toPx() < 0) y + 10.dp.toPx() else y - textHeight - 10.dp.toPx()
+
+            drawRoundRect(
+                color = lineColor,
+                topLeft = Offset(tooltipX, tooltipY),
+                size = Size(textWidth, textHeight),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx())
+            )
+
+            // 绘制日期
+            drawContext.canvas.nativeCanvas.drawText(
+                dateText,
+                tooltipX + textWidth / 2,
+                tooltipY + 15.dp.toPx(),
+                tooltipTextPaint
+            )
+            // 绘制金额
+            drawContext.canvas.nativeCanvas.drawText(
+                amountText,
+                tooltipX + textWidth / 2,
+                tooltipY + 32.dp.toPx(),
+                tooltipTextPaint
+            )
+        }
     }
 }
 
-// 准备折线图数据
+// 辅助扩展函数
+private fun Float.MathRound(): Int {
+    return kotlin.math.round(this).toInt()
+}
+
 fun prepareLineChartData(
     expenses: List<Expense>,
     chartMode: ChartMode,
@@ -554,10 +664,8 @@ fun prepareLineChartData(
 
     val sumFunc: (List<Expense>) -> Float = { list ->
         if (transactionType == TransactionType.BALANCE) {
-            // 结余：原始金额求和 (收入为正，支出为负)
             list.sumOf { it.amount }.toFloat()
         } else {
-            // 收入或支出：绝对值求和
             list.sumOf { abs(it.amount) }.toFloat()
         }
     }
@@ -565,6 +673,12 @@ fun prepareLineChartData(
     when (chartMode) {
         ChartMode.WEEK -> {
             calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            // (核心修改) 强制归零时分秒，确保 Point 携带的是纯净的 00:00:00
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+
             for (i in 0 until 7) {
                 val dayStart = calendar.time
                 val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
@@ -573,13 +687,17 @@ fun prepareLineChartData(
                 val sum = sumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
 
                 val label = SimpleDateFormat("dd", Locale.CHINA).format(dayStart)
-                points.add(LineChartPoint(label, sum))
+                // 存入归零后的时间戳
+                points.add(LineChartPoint(label, sum, dayStart.time))
 
                 calendar.add(Calendar.DAY_OF_MONTH, 1)
             }
         }
         ChartMode.MONTH -> {
             calendar.set(Calendar.DAY_OF_MONTH, 1)
+            // (核心修改) 强制归零
+            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+
             val maxDays = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
 
             for (i in 1..maxDays) {
@@ -589,12 +707,14 @@ fun prepareLineChartData(
 
                 val sum = sumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
 
-                points.add(LineChartPoint(i.toString(), sum))
+                points.add(LineChartPoint(i.toString(), sum, dayStart.time))
                 calendar.add(Calendar.DAY_OF_MONTH, 1)
             }
         }
         ChartMode.YEAR -> {
             calendar.set(Calendar.DAY_OF_YEAR, 1)
+            // (核心修改) 强制归零
+            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
 
             for (i in 0 until 12) {
                 val monthStart = calendar.time
@@ -603,7 +723,7 @@ fun prepareLineChartData(
 
                 val sum = sumFunc(expenses.filter { it.date >= monthStart && it.date < monthEnd })
 
-                points.add(LineChartPoint("${i + 1}月", sum))
+                points.add(LineChartPoint("${i + 1}月", sum, monthStart.time))
                 calendar.add(Calendar.MONTH, 1)
             }
         }
@@ -614,7 +734,16 @@ fun prepareLineChartData(
 // -----------------------------------------------------------
 
 @Composable
-fun ChartPage(data: List<Expense>, chartMode: ChartMode, transactionType: TransactionType) {
+fun ChartPage(
+    data: List<Expense>,
+    chartMode: ChartMode,
+    transactionType: TransactionType,
+    navController: NavHostController,
+    currentGroupKey: String,
+    isCustomRange: Boolean = false,
+    customStart: Long? = null,
+    customEnd: Long? = null
+) {
     val categorySums = remember(data) {
         data.groupBy { it.category }.mapValues { (_, expenses) ->
             expenses.sumOf { abs(it.amount.toDouble()).toLong() }
@@ -646,6 +775,15 @@ fun ChartPage(data: List<Expense>, chartMode: ChartMode, transactionType: Transa
 
     val lineData = remember(data, chartMode, transactionType) {
         prepareLineChartData(data, chartMode, transactionType)
+    }
+
+    // 计算当前时间段 (用于列表点击)
+    val dateRange = remember(currentGroupKey, chartMode, isCustomRange, customStart, customEnd) {
+        if (isCustomRange) {
+            (customStart ?: -1L) to (customEnd ?: -1L)
+        } else {
+            getDateRangeFromKey(currentGroupKey, chartMode)
+        }
     }
 
     LazyColumn(
@@ -681,6 +819,7 @@ fun ChartPage(data: List<Expense>, chartMode: ChartMode, transactionType: Transa
             }
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 折线图区域
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -688,15 +827,43 @@ fun ChartPage(data: List<Expense>, chartMode: ChartMode, transactionType: Transa
             ) {
                 LineChart(
                     dataPoints = lineData,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    onPointClick = { point ->
+                        // 计算点击后的时间范围，并传递 type
+                        val calendar = Calendar.getInstance()
+                        calendar.timeInMillis = point.timeMillis // 这个是当天的 00:00:00 或当月的 1日
+                        val start = calendar.timeInMillis
+                        val end = when(chartMode) {
+                            ChartMode.WEEK, ChartMode.MONTH -> {
+                                // 天：Start + 1天 - 1ms = 当天 23:59:59.999
+                                val c = Calendar.getInstance()
+                                c.timeInMillis = start
+                                c.add(Calendar.DAY_OF_MONTH, 1)
+                                c.timeInMillis - 1
+                            }
+                            ChartMode.YEAR -> {
+                                // 月：Start + 1月 - 1ms = 月末 23:59:59.999
+                                val c = Calendar.getInstance()
+                                c.timeInMillis = start
+                                c.add(Calendar.MONTH, 1)
+                                c.timeInMillis - 1
+                            }
+                        }
+
+                        val searchType = when(transactionType) {
+                            TransactionType.BALANCE -> 0
+                            TransactionType.EXPENSE -> 1
+                            TransactionType.INCOME -> 2
+                        }
+
+                        navController.navigate(Routes.searchRoute(startDate = start, endDate = end, type = searchType))
+                    }
                 )
             }
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        // 3. 分类/报表区域
         if (transactionType == TransactionType.BALANCE) {
-            // (新) 结余模式：显示报表
             item {
                 BalanceReportSection(data, chartMode)
             }
@@ -742,6 +909,7 @@ fun ChartPage(data: List<Expense>, chartMode: ChartMode, transactionType: Transa
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // 分类列表项
             itemsIndexed(sortedEntries) { index, entry ->
                 val amount = entry.value.toFloat()
                 val pieTotal = sortedEntries.sumOf { it.value }.toFloat()
@@ -753,6 +921,22 @@ fun ChartPage(data: List<Expense>, chartMode: ChartMode, transactionType: Transa
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp)
+                        .clickable {
+                            // 分类列表点击
+                            val searchType = when(transactionType) {
+                                TransactionType.EXPENSE -> 1
+                                TransactionType.INCOME -> 2
+                                else -> 0
+                            }
+                            navController.navigate(
+                                Routes.searchRoute(
+                                    category = entry.key,
+                                    startDate = dateRange.first,
+                                    endDate = dateRange.second,
+                                    type = searchType
+                                )
+                            )
+                        }
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -920,10 +1104,8 @@ fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
 fun generateBalanceReportItems(data: List<Expense>, chartMode: ChartMode): List<BalanceReportItem> {
     val calendar = Calendar.getInstance()
 
-    // 按日期(天或月)对数据进行分组
     val groupedByDate = data.groupBy { expense ->
         calendar.time = expense.date
-        // 将时间归一化，方便分组
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
@@ -931,15 +1113,12 @@ fun generateBalanceReportItems(data: List<Expense>, chartMode: ChartMode): List<
 
         if (chartMode == ChartMode.YEAR) {
             calendar.set(Calendar.DAY_OF_MONTH, 1) // 年模式按月分组，归一到1号
-        } else {
-            // 周/月模式按天分组，保持DAY_OF_MONTH不变
         }
         calendar.timeInMillis
     }
 
-    // 将分组后的数据转换为列表项，并按时间倒序排列
     return groupedByDate.entries
-        .sortedByDescending { it.key } // 按时间戳倒序
+        .sortedByDescending { it.key } // 按时间倒序
         .map { (timeMillis, expenses) ->
             calendar.timeInMillis = timeMillis
             val timeLabel = when (chartMode) {
@@ -954,8 +1133,6 @@ fun generateBalanceReportItems(data: List<Expense>, chartMode: ChartMode): List<
             BalanceReportItem(timeLabel, income, expense, balance)
         }
 }
-
-// -----------------------------------------------------------
 
 private data class ChartData(val name: String, val value: Long, val color: Color)
 
@@ -1108,4 +1285,45 @@ private fun getChartColors(): List<Color> {
         Color(0xFFEC407A),
         Color(0xFF26A69A)
     )
+}
+
+// 辅助函数：计算起止时间戳
+fun getDateRangeFromKey(key: String, mode: ChartMode): Pair<Long, Long> {
+    val calendar = Calendar.getInstance()
+    calendar.clear()
+    when (mode) {
+        ChartMode.WEEK -> {
+            val parts = key.split("-W")
+            if (parts.size == 2) {
+                val year = parts[0].toInt(); val week = parts[1].toInt()
+                calendar.set(Calendar.YEAR, year); calendar.set(Calendar.WEEK_OF_YEAR, week); calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+                val start = calendar.timeInMillis
+                calendar.add(Calendar.DAY_OF_YEAR, 7)
+                val end = calendar.timeInMillis - 1
+                return start to end
+            }
+        }
+        ChartMode.MONTH -> {
+            val parts = key.split("-")
+            if (parts.size == 2) {
+                val year = parts[0].toInt(); val month = parts[1].toInt()
+                calendar.set(Calendar.YEAR, year); calendar.set(Calendar.MONTH, month - 1); calendar.set(Calendar.DAY_OF_MONTH, 1)
+                val start = calendar.timeInMillis
+                calendar.add(Calendar.MONTH, 1)
+                val end = calendar.timeInMillis - 1
+                return start to end
+            }
+        }
+        ChartMode.YEAR -> {
+            val year = key.toIntOrNull()
+            if (year != null) {
+                calendar.set(Calendar.YEAR, year); calendar.set(Calendar.DAY_OF_YEAR, 1)
+                val start = calendar.timeInMillis
+                calendar.add(Calendar.YEAR, 1)
+                val end = calendar.timeInMillis - 1
+                return start to end
+            }
+        }
+    }
+    return -1L to -1L
 }

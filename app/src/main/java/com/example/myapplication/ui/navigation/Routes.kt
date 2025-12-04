@@ -1,5 +1,7 @@
 package com.example.myapplication.ui.navigation
 
+import android.net.Uri
+
 object Routes {
     // 交易相关
     const val ADD_TRANSACTION = "add_transaction"
@@ -12,25 +14,29 @@ object Routes {
 
     // 账户管理相关
     const val ACCOUNT_MANAGEMENT = "account_management"
-
-    // (修改) 支持传递 accountId，默认值为 -1 (新建)
     const val ADD_ACCOUNT = "add_account?accountId={accountId}"
     fun addAccountRoute(accountId: Long? = null) = "add_account?accountId=${accountId ?: -1L}"
 
     // 其他功能页面
-    const val SEARCH = "search"
     const val CALENDAR = "calendar"
     const val DAILY_DETAILS = "daily_details/{dateMillis}"
     fun dailyDetailsRoute(dateMillis: Long) = "daily_details/$dateMillis"
+
+    // (修改) Search 路由增加 type 参数 (0=全部, 1=支出, 2=收入)
+    const val SEARCH = "search?category={category}&startDate={startDate}&endDate={endDate}&type={type}"
+    fun searchRoute(category: String? = null, startDate: Long? = null, endDate: Long? = null, type: Int = 0): String {
+        val cat = if (category != null) Uri.encode(category) else ""
+        val start = startDate ?: -1L
+        val end = endDate ?: -1L
+        return "search?category=$cat&startDate=$start&endDate=$end&type=$type"
+    }
 
     // 设置相关
     const val SETTINGS = "settings"
     const val CURRENCY_SELECTION = "currency_selection"
     const val CATEGORY_SETTINGS = "category_settings"
     const val ADD_CATEGORY = "add_category"
-    // (新增) 隐私密码页面路由
     const val PRIVACY_SETTINGS = "privacy_settings"
-    // (新增) 锁屏页面
     const val LOCK = "lock"
     const val THEME_SETTINGS = "theme_settings"
 }

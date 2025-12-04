@@ -37,11 +37,6 @@ import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import com.example.myapplication.ui.viewmodel.ThemeViewModel
 import java.util.Calendar
 
-// --- 确保导入所有页面 ---
-import com.example.myapplication.ui.screen.LockScreen
-import com.example.myapplication.ui.screen.PrivacySettingsScreen
-import com.example.myapplication.ui.screen.ThemeSettingsScreen
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -58,8 +53,6 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // (修改点) 判断是否显示底栏：
-    // 如果是 锁屏页(LOCK) 或者 添加页(ADD_TRANSACTION)，则不显示 Scaffold (底栏和FAB)
     val showScaffold = currentRoute != Routes.LOCK && currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true
 
     if (showScaffold) {
@@ -103,7 +96,6 @@ fun MainScreen(
             )
         }
     } else {
-        // 全屏模式 (无 Padding，无底栏)
         NavigationGraph(
             navController = navController,
             modifier = Modifier,
@@ -199,7 +191,7 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Chart.route) {
-            ChartScreen(viewModel = expenseViewModel)
+            ChartScreen(viewModel = expenseViewModel, navController = navController)
         }
 
         composable(BottomNavItem.Budget.route) {
@@ -299,8 +291,28 @@ fun NavigationGraph(
             TransactionDetailScreen(viewModel = expenseViewModel, navController = navController, expenseId = expenseId, defaultCurrency = defaultCurrency)
         }
 
-        composable(Routes.SEARCH) {
-            SearchScreen(viewModel = expenseViewModel, navController = navController)
+        composable(
+            route = Routes.SEARCH,
+            arguments = listOf(
+                navArgument("category") { type = NavType.StringType; defaultValue = "" },
+                navArgument("startDate") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("endDate") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("type") { type = NavType.IntType; defaultValue = 0 } // (修改) 新增 type 参数
+            )
+        ) { backStackEntry ->
+            val category = backStackEntry.arguments?.getString("category").takeIf { !it.isNullOrBlank() }
+            val startDate = backStackEntry.arguments?.getLong("startDate")?.takeIf { it != -1L }
+            val endDate = backStackEntry.arguments?.getLong("endDate")?.takeIf { it != -1L }
+            val type = backStackEntry.arguments?.getInt("type") ?: 0
+
+            SearchScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                initialCategory = category,
+                initialStartDate = startDate,
+                initialEndDate = endDate,
+                initialType = type // (修改) 传递 type
+            )
         }
     }
 }
