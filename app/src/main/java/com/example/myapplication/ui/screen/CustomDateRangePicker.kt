@@ -30,13 +30,13 @@ fun CustomDateRangePicker(
     initialStartDate: Long?,
     initialEndDate: Long?,
     onConfirm: (Long?, Long?) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    isSingleSelection: Boolean = false
 ) {
     // 内部状态：当前选中的范围
     var startDate by remember { mutableStateOf(initialStartDate) }
     var endDate by remember { mutableStateOf(initialEndDate) }
 
-    // 内部状态：当前展示的年月（默认显示开始时间所在的月份，如果没有则显示当前月）
     val calendar = remember { Calendar.getInstance() }
 
     // 初始化显示的年月
@@ -73,8 +73,12 @@ fun CustomDateRangePicker(
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. 顶部标题栏：显示当前选中的范围
-                RangeHeader(startDate, endDate)
+                // 1. 顶部标题栏
+                if (isSingleSelection) {
+                    SingleDateHeader(startDate)
+                } else {
+                    RangeHeader(startDate, endDate)
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -113,25 +117,25 @@ fun CustomDateRangePicker(
                     month = displayMonth,
                     startDate = startDate,
                     endDate = endDate,
+                    isSingleSelection = isSingleSelection,
                     onDateClick = { dateMillis ->
-                        val clickedDate = dateMillis
-
-                        if (startDate == null) {
-                            // 情况1：还没选，直接设为开始
-                            startDate = clickedDate
-                        } else if (endDate == null) {
-                            // 情况2：已选开始，未选结束
-                            if (clickedDate < startDate!!) {
-                                // 如果点的比开始早，修正为新的开始
-                                startDate = clickedDate
-                            } else {
-                                // 设为结束
-                                endDate = clickedDate
-                            }
-                        } else {
-                            // 情况3：都选了，重新开始选
-                            startDate = clickedDate
+                        if (isSingleSelection) {
+                            startDate = dateMillis
                             endDate = null
+                        } else {
+                            val clickedDate = dateMillis
+                            if (startDate == null) {
+                                startDate = clickedDate
+                            } else if (endDate == null) {
+                                if (clickedDate < startDate!!) {
+                                    startDate = clickedDate
+                                } else {
+                                    endDate = clickedDate
+                                }
+                            } else {
+                                startDate = clickedDate
+                                endDate = null
+                            }
                         }
                     }
                 )
@@ -149,13 +153,32 @@ fun CustomDateRangePicker(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { onConfirm(startDate, endDate) },
-                        enabled = startDate != null // 至少选一个才能确认
+                        enabled = startDate != null
                     ) {
                         Text("确定")
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SingleDateHeader(date: Long?) {
+    val dateFormat = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA) }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "选择日期",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (date != null) dateFormat.format(Date(date)) else "请选择",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -243,48 +266,43 @@ fun CalendarGrid(
     month: Int,
     startDate: Long?,
     endDate: Long?,
+    isSingleSelection: Boolean,
     onDateClick: (Long) -> Unit
 ) {
     val calendar = Calendar.getInstance()
-    // 设置为当月1号
     calendar.set(year, month - 1, 1, 0, 0, 0)
     calendar.set(Calendar.MILLISECOND, 0)
 
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // 1=Sunday, 2=Monday...
-
-    // 前面的空白格数量 (日历第一排的空位)
+    val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
     val emptySlots = firstDayOfWeek - 1
-
     val totalSlots = emptySlots + daysInMonth
     val list = (0 until totalSlots).toList()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(7),
         verticalArrangement = Arrangement.spacedBy(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(0.dp) // 紧凑排列以便做范围背景
+        horizontalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         items(list) { index ->
             if (index < emptySlots) {
-                // 空白格
                 Box(modifier = Modifier.size(40.dp))
             } else {
                 val day = index - emptySlots + 1
                 calendar.set(year, month - 1, day)
                 val currentMillis = calendar.timeInMillis
 
-                // 判断状态
                 val isStart = startDate != null && isSameDay(currentMillis, startDate!!)
-                val isEnd = endDate != null && isSameDay(currentMillis, endDate!!)
-                val isInRange = startDate != null && endDate != null &&
+                val isEnd = !isSingleSelection && endDate != null && isSameDay(currentMillis, endDate!!)
+                val isInRange = !isSingleSelection && startDate != null && endDate != null &&
                         currentMillis > startDate!! && currentMillis < endDate!!
 
-                // 渲染日期单元格
                 DayCell(
                     day = day,
                     isStart = isStart,
                     isEnd = isEnd,
                     isInRange = isInRange,
+                    isSingleSelection = isSingleSelection, // 传入单选标志
                     onClick = { onDateClick(currentMillis) }
                 )
             }
@@ -298,42 +316,36 @@ fun DayCell(
     isStart: Boolean,
     isEnd: Boolean,
     isInRange: Boolean,
+    isSingleSelection: Boolean, // 新增参数
     onClick: () -> Unit
 ) {
-    // 范围背景色 (使用我们调整过的 PrimaryContainer)
     val rangeColor = MaterialTheme.colorScheme.primaryContainer
-    // 选中背景色 (使用 Primary)
     val selectedColor = MaterialTheme.colorScheme.primary
 
     Box(
         modifier = Modifier
-            .size(40.dp) // 单元格大小
+            .size(40.dp)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // 1. 范围背景 (长条)
-        if (isInRange || isStart || isEnd) {
+        // 修改点：只有在【非单选模式】下，才绘制范围背景长条
+        if (!isSingleSelection && (isInRange || isStart || isEnd)) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(vertical = 4.dp) // 上下留一点白，只在水平方向连贯
+                    .padding(vertical = 4.dp)
                     .background(
                         color = if (isInRange) rangeColor else Color.Transparent,
-                        // 如果是起点，左边要是圆的；如果是终点，右边是圆的；中间是直的
                         shape = when {
-                            isStart && isEnd -> CircleShape // 单选一天
+                            isStart && isEnd -> CircleShape
                             isStart -> RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp)
                             isEnd -> RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)
                             else -> androidx.compose.ui.graphics.RectangleShape
                         }
                     )
             )
-
-            // 为了解决 rangeColor 覆盖在 start/end 圆圈下的问题，
-            // 如果是 Start 或 End，我们需要额外画一个半截的背景来连接中间
+            // 补丁：解决圆角连接处的缝隙
             if ((isStart || isEnd) && !(isStart && isEnd)) {
-                // 这里的逻辑有点复杂，简单做法：
-                // Start/End 也是 Range 的一部分，只是上面多盖了一个圆圈
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -346,8 +358,8 @@ fun DayCell(
             }
         }
 
-        // 2. 选中圆圈 (Start/End)
-        if (isStart || isEnd) {
+        // 修改点：选中的圆圈。单选模式下，isStart 就是选中的那一天。
+        if (isStart || (!isSingleSelection && isEnd)) {
             Box(
                 modifier = Modifier
                     .size(32.dp)
@@ -356,17 +368,17 @@ fun DayCell(
             )
         }
 
-        // 3. 文字
+        // 文字颜色处理：选中为白色，未选中为主题文字色
+        val isSelected = isStart || (!isSingleSelection && isEnd)
         Text(
             text = day.toString(),
-            color = if (isStart || isEnd) MaterialTheme.colorScheme.onPrimary
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
             else MaterialTheme.colorScheme.onSurface,
-            fontWeight = if (isStart || isEnd) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
 }
 
-// 辅助函数：忽略时分秒比较日期
 fun isSameDay(millis1: Long, millis2: Long): Boolean {
     val c1 = Calendar.getInstance().apply { timeInMillis = millis1 }
     val c2 = Calendar.getInstance().apply { timeInMillis = millis2 }

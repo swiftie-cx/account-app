@@ -41,7 +41,6 @@ fun BudgetSettingsScreen(
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
-    // (修改) 使用 Scaffold 包裹，解决顶部遮挡问题，并添加 TopAppBar
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -54,7 +53,6 @@ fun BudgetSettingsScreen(
             )
         }
     ) { innerPadding ->
-        // (修改) 内容区域应用 innerPadding
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -104,7 +102,7 @@ fun BudgetSettingsScreen(
                         amount = if (amount.length > 1) amount.dropLast(1) else "0"
                         isCalculation = amount.contains("+") || amount.contains("-")
                     },
-                    onDateClick = { /* Not used */ },
+                    onAgainClick = null, // (修改) 留白，不显示“再记”
                     onDoneClick = {
                         val newAmount = amount.toDoubleOrNull() ?: 0.0
                         val existingBudget = budgetMap[editingCategory!!]

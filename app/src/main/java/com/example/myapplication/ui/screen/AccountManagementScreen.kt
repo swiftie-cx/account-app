@@ -63,10 +63,18 @@ fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostC
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate(Routes.addAccountRoute()) }) {
+            // (修改) 确保 FAB 样式正确，并添加 padding 防止贴边过近被系统手势或圆角遮挡
+            FloatingActionButton(
+                onClick = { navController.navigate(Routes.addAccountRoute()) },
+                containerColor = MaterialTheme.colorScheme.primary, // 显式设置颜色
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.padding(16.dp) // 增加额外的 padding 确保不贴边
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "添加账户")
             }
-        }
+        },
+        // (可选) 显式指定 FAB 位置，通常默认为 End，这里再次确认
+        floatingActionButtonPosition = FabPosition.End
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -85,7 +93,9 @@ fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostC
                 modifier = Modifier
                     .fillMaxSize()
                     .reorderable(state)
-                    .detectReorderAfterLongPress(state)
+                    .detectReorderAfterLongPress(state),
+                // (关键) 给底部留出空间，防止 FAB 遮挡最后一个列表项
+                contentPadding = PaddingValues(bottom = 88.dp)
             ) {
                 items(listData, key = { it.id }) { account ->
                     ReorderableItem(state, key = account.id) { isDragging ->

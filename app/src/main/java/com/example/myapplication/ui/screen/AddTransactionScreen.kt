@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,17 +10,27 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Note
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Expense
@@ -28,8 +39,9 @@ import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
-// import com.example.myapplication.ui.navigation.Routes // (使用字符串导航，避免报错)
 import com.example.myapplication.data.ExchangeRates
+// 务必导入 CustomDateRangePicker
+import com.example.myapplication.ui.screen.CustomDateRangePicker
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -50,14 +62,15 @@ fun AddTransactionScreen(
     var amount by remember { mutableStateOf("0") }
     var selectedDate by remember { mutableLongStateOf(dateMillis ?: System.currentTimeMillis()) }
 
-    // (功能) 获取默认账户ID
     val defaultAccountId by viewModel.defaultAccountId.collectAsState()
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
 
     var selectedAccount by remember { mutableStateOf<Account?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
+
     var remark by remember { mutableStateOf("") }
+    var showRemarkDialog by remember { mutableStateOf(false) }
 
     var fromAccount by remember { mutableStateOf<Account?>(null) }
     var toAccount by remember { mutableStateOf<Account?>(null) }
@@ -72,7 +85,6 @@ fun AddTransactionScreen(
         from != null && to != null && from.currency == to.currency
     }
 
-    // 自动跳转焦点
     LaunchedEffect(fromAccount, toAccount) {
         if (fromAccount != null && toAccount != null && fromAccount != toAccount && !isSameCurrency) {
             if (toAmount == "0" || toAmount == "") {
@@ -114,7 +126,6 @@ fun AddTransactionScreen(
         }
     }
 
-    // (功能) 初始账户选择：优先使用默认账户
     LaunchedEffect(accounts, defaultAccountId) {
         if (selectedAccount == null) {
             if (expenseId == null) {
@@ -131,7 +142,9 @@ fun AddTransactionScreen(
 
     LaunchedEffect(selectedTab) {
         if (expenseId == null) {
-            selectedCategory = null
+            val currentList = if (selectedTab == 0) expenseCategories else incomeCategories
+            selectedCategory = currentList.firstOrNull()
+
             amount = "0"
             remark = ""
             val defaultAcc = accounts.find { it.id == defaultAccountId }
@@ -172,29 +185,46 @@ fun AddTransactionScreen(
         }
     }
 
-    val onExpenseDoneClick: () -> Unit = {
+    // --- 核心逻辑提取：保存账单 ---
+    // shouldFinish: true 表示保存并退出，false 表示保存后清空继续记
+    fun saveExpense(shouldFinish: Boolean) {
         if (selectedCategory != null && selectedAccount != null && amount != "0") {
             val finalAmountStr = try { evaluateExpression(amount).toString() } catch(e: Exception) { amount }
             val rawAmount = finalAmountStr.toDoubleOrNull() ?: 0.0
 
+            // 如果计算结果为0，不保存
+            if (rawAmount == 0.0) return
+
             val finalAmount = if (selectedTab == 0) -rawAmount else rawAmount
             val expense = Expense(
-                id = expenseId ?: 0,
+                id = expenseId ?: 0, // 如果是再记，id 永远是 0 (新增)
                 category = selectedCategory!!.title,
                 amount = finalAmount,
                 date = Date(selectedDate),
                 accountId = selectedAccount!!.id,
                 remark = remark.takeIf { it.isNotBlank() }
             )
-            if (expenseId == null) {
-                viewModel.insert(expense)
-            } else {
+
+            if (expenseId != null && shouldFinish) {
+                // 编辑模式且点击完成 -> 更新
                 viewModel.updateExpense(expense)
+            } else {
+                // 新增模式 或 编辑模式点击再记 -> 插入新记录
+                viewModel.insert(expense)
             }
-            navController.popBackStack()
+
+            if (shouldFinish) {
+                navController.popBackStack()
+            } else {
+                // 再记模式：重置金额和备注，保持日期/账户/分类不变
+                amount = "0"
+                remark = ""
+                // 提示用户已保存? (Optional: UI enhancement would be a Snackbar)
+            }
         }
     }
 
+    // 转账保存逻辑 (转账一般不涉及连续再记，暂保持原样，或仅支持完成)
     val onTransferDoneClick: () -> Unit = {
         val finalFromStr = try { evaluateExpression(fromAmount).toString() } catch(e: Exception) { fromAmount }
         val finalToStr = try { evaluateExpression(toAmount).toString() } catch(e: Exception) { toAmount }
@@ -212,6 +242,8 @@ fun AddTransactionScreen(
             navController.popBackStack()
         }
     }
+
+    // --- Dialogs ---
 
     if (showAccountPickerFor != null) {
         AccountPickerDialog(
@@ -235,23 +267,35 @@ fun AddTransactionScreen(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    selectedDate = datePickerState.selectedDateMillis ?: System.currentTimeMillis()
-                    showDatePicker = false
-                }) { Text("确认") }
+        CustomDateRangePicker(
+            initialStartDate = selectedDate,
+            initialEndDate = null,
+            isSingleSelection = true,
+            onConfirm = { startDate, _ ->
+                if (startDate != null) {
+                    selectedDate = startDate
+                }
+                showDatePicker = false
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("取消") } }
-        ) { DatePicker(state = datePickerState) }
+            onDismiss = { showDatePicker = false }
+        )
+    }
+
+    if (showRemarkDialog) {
+        RemarkInputDialog(
+            initialRemark = remark,
+            onConfirm = { newRemark ->
+                remark = newRemark
+                showRemarkDialog = false
+            },
+            onDismiss = { showRemarkDialog = false }
+        )
     }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(if (expenseId == null) "添加" else "编辑") },
+                title = { Text(if (expenseId == null) "记一笔" else "编辑") },
                 navigationIcon = { TextButton(onClick = { navController.popBackStack() }) { Text("取消") } }
             )
         }
@@ -274,44 +318,52 @@ fun AddTransactionScreen(
             when (selectedTab) {
                 0, 1 -> { // 支出 和 收入
                     Column(modifier = Modifier.fillMaxSize()) {
-                        AmountDisplay(
-                            category = selectedCategory, amount = amount, date = selectedDate,
-                            account = selectedAccount, onAccountClick = { showAccountPicker = true }
+
+                        // 1. 金额显示卡片
+                        NewAmountDisplay(
+                            category = selectedCategory,
+                            amount = amount
                         )
-                        OutlinedTextField(
-                            value = remark, onValueChange = { remark = it }, label = { Text("备注 (可选)") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp), singleLine = true
-                        )
+
+                        // 2. 分类列表
                         CategoryGrid(
                             categories = categoriesToShow,
-                            onCategoryClick = { clickedCategory -> selectedCategory = if (selectedCategory == clickedCategory) null else clickedCategory },
+                            selectedCategory = selectedCategory,
+                            onCategoryClick = { clickedCategory -> selectedCategory = clickedCategory },
                             modifier = Modifier.weight(1f)
                         )
-                        if (selectedCategory != null) {
-                            NumericKeyboard(
-                                onNumberClick = { num -> handleInput { if (it == "0") num else it + num } },
-                                onOperatorClick = { op -> handleInput { it + " $op " } },
-                                onBackspaceClick = { handleInput { if (it.length > 1) it.dropLast(1) else "0" } },
-                                onDateClick = { showDatePicker = true },
-                                onDoneClick = onExpenseDoneClick,
-                                onEqualsClick = {
-                                    handleInput {
-                                        try {
-                                            evaluateExpression(it).toString()
-                                        } catch (e: Exception) { "Error" }
-                                    }
-                                },
-                                isCalculation = isCalculation,
-                                selectedDate = selectedDate
-                            )
-                        }
+
+                        // 3. 键盘上方的工具栏
+                        KeyboardActionToolbar(
+                            account = selectedAccount,
+                            dateMillis = selectedDate,
+                            remark = remark,
+                            onAccountClick = { showAccountPicker = true },
+                            onDateClick = { showDatePicker = true },
+                            onRemarkClick = { showRemarkDialog = true }
+                        )
+
+                        // 4. 数字键盘 (常驻)
+                        NumericKeyboard(
+                            onNumberClick = { num -> handleInput { if (it == "0") num else it + num } },
+                            onOperatorClick = { op -> handleInput { it + " $op " } },
+                            onBackspaceClick = { handleInput { if (it.length > 1) it.dropLast(1) else "0" } },
+                            onAgainClick = { saveExpense(shouldFinish = false) }, // (新增) 再记
+                            onDoneClick = { saveExpense(shouldFinish = true) }, // (修改) 完成
+                            onEqualsClick = {
+                                handleInput {
+                                    try {
+                                        evaluateExpression(it).toString()
+                                    } catch (e: Exception) { "Error" }
+                                }
+                            },
+                            isCalculation = isCalculation,
+                            selectedDate = null
+                        )
                     }
                 }
                 2 -> { // 转账
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // (保留) 滚动布局
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -329,6 +381,7 @@ fun AddTransactionScreen(
                                 onFromAmountClick = { focusedAmountField = "fromAmount" },
                                 onToAmountClick = { focusedAmountField = "toAmount" }
                             )
+
                             OutlinedTextField(
                                 value = remark,
                                 onValueChange = { remark = it },
@@ -341,11 +394,14 @@ fun AddTransactionScreen(
                         }
 
                         if (fromAccount != null && toAccount != null) {
+                            // 转账界面暂时复用新键盘，但忽略"再记"功能，或者将其视为等同于完成
+                            // 为了简单，转账界面 "再记" 这里不做特殊处理，或者您可以隐藏
+                            // 这里我们简单地让 "再记" 也执行保存并退出，或者暂不绑定逻辑
                             NumericKeyboard(
                                 onNumberClick = { num -> handleInput { if (it == "0") num else it + num } },
                                 onOperatorClick = { op -> handleInput { it + " $op " } },
                                 onBackspaceClick = { handleInput { if (it.length > 1) it.dropLast(1) else "0" } },
-                                onDateClick = { showDatePicker = true },
+                                onAgainClick = { /* 转账通常不需要连续记，留空或做成保存 */ },
                                 onDoneClick = onTransferDoneClick,
                                 onEqualsClick = {
                                     handleInput {
@@ -365,21 +421,197 @@ fun AddTransactionScreen(
     }
 }
 
-fun evaluateExpression(expression: String): Double {
-    val tokens = expression.split(" ")
-    if (tokens.isEmpty()) return 0.0
-    var result = tokens[0].toDoubleOrNull() ?: 0.0
-    for (i in 1 until tokens.size step 2) {
-        if (i + 1 >= tokens.size) break
-        val operator = tokens[i]
-        val nextOperand = tokens[i + 1].toDoubleOrNull() ?: 0.0
-        if (operator == "+") {
-            result += nextOperand
-        } else if (operator == "-") {
-            result -= nextOperand
+// 辅助组件 (CategoryGrid, KeyboardActionToolbar 等) 保持不变，请确保文件中保留了它们
+// ...
+// NewAmountDisplay, KeyboardActionToolbar, ActionChipItem, RemarkInputDialog,
+// TransferScreenContent, AccountSelectorBox, AmountInputBox, evaluateExpression,
+// CategoryGrid, CategoryItem, AccountPickerDialog 等请继续保留
+// (为节省篇幅，此处省略这些未变动的代码，请使用上一次提供的完整代码块中的这些组件)
+
+@Composable
+fun NewAmountDisplay(
+    category: Category?,
+    amount: String
+) {
+    val cardColor = MaterialTheme.colorScheme.primary
+    val contentColor = MaterialTheme.colorScheme.onPrimary
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .height(100.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (category != null) {
+                Icon(
+                    imageVector = category.icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = category.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = contentColor,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Text(
+                    text = "选择分类",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = contentColor.copy(alpha = 0.8f)
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = amount,
+                style = MaterialTheme.typography.displaySmall,
+                color = contentColor,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
-    return result
+}
+
+@Composable
+fun KeyboardActionToolbar(
+    account: Account?,
+    dateMillis: Long,
+    remark: String,
+    onAccountClick: () -> Unit,
+    onDateClick: () -> Unit,
+    onRemarkClick: () -> Unit
+) {
+    val dateFormat = remember { SimpleDateFormat("MM月dd日", Locale.getDefault()) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ActionChipItem(
+            icon = if (account != null) IconMapper.getIcon(account.iconName) else Icons.Default.CalendarToday,
+            text = account?.name ?: "选择账户",
+            onClick = onAccountClick,
+            modifier = Modifier.weight(1f)
+        )
+        ActionChipItem(
+            icon = Icons.Default.CalendarToday,
+            text = dateFormat.format(Date(dateMillis)),
+            onClick = onDateClick,
+            modifier = Modifier.weight(1f)
+        )
+        ActionChipItem(
+            icon = if(remark.isNotEmpty()) Icons.AutoMirrored.Filled.Note else Icons.Default.Edit,
+            text = if (remark.isNotEmpty()) remark else "添加备注",
+            onClick = onRemarkClick,
+            modifier = Modifier.weight(1.5f),
+            isHighlight = remark.isNotEmpty()
+        )
+    }
+}
+
+@Composable
+fun ActionChipItem(
+    icon: ImageVector,
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isHighlight: Boolean = false
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp),
+        color = if (isHighlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = modifier.height(40.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+fun RemarkInputDialog(
+    initialRemark: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(initialRemark) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("添加备注") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("请输入备注内容...") },
+                singleLine = true
+            )
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("确定") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+    )
+}
+
+@Composable
+fun CategoryGrid(categories: List<Category>, selectedCategory: Category?, onCategoryClick: (Category) -> Unit, modifier: Modifier = Modifier) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(5),
+        modifier = modifier.padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        gridItems(categories) { category ->
+            CategoryItem(category = category, isSelected = category == selectedCategory, onClick = { onCategoryClick(category) })
+        }
+    }
+}
+
+@Composable
+fun CategoryItem(category: Category, isSelected: Boolean, onClick: () -> Unit) {
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(4.dp).aspectRatio(1f),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
+    ) {
+        Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(backgroundColor), contentAlignment = Alignment.Center) {
+            Icon(imageVector = category.icon, contentDescription = category.title, tint = contentColor)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = category.title, style = MaterialTheme.typography.bodySmall, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Unspecified)
+    }
 }
 
 @Composable
@@ -389,7 +621,7 @@ fun TransferScreenContent( fromAccount: Account?, toAccount: Account?, fromAmoun
             modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             AccountSelectorBox( modifier = Modifier.weight(1f), account = fromAccount, onClick = onFromAccountClick )
-            Icon( Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "转账", modifier = Modifier.padding(horizontal = 8.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant )
+            Icon( Icons.Default.ArrowForward, contentDescription = "转账", modifier = Modifier.padding(horizontal = 8.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant )
             AccountSelectorBox( modifier = Modifier.weight(1f), account = toAccount, onClick = onToAccountClick )
         }
         Spacer(Modifier.height(16.dp))
@@ -406,10 +638,11 @@ fun TransferScreenContent( fromAccount: Account?, toAccount: Account?, fromAmoun
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountSelectorBox( modifier: Modifier = Modifier, account: Account?, onClick: () -> Unit ) {
-    Card( onClick = onClick, modifier = modifier, shape = MaterialTheme.shapes.medium ) {
-        Row( modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp), verticalAlignment = Alignment.CenterVertically ) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Row( modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically ) {
             if (account != null) {
                 val icon = IconMapper.getIcon(account.iconName)
                 Icon(icon, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
@@ -424,7 +657,12 @@ fun AccountSelectorBox( modifier: Modifier = Modifier, account: Account?, onClic
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AmountInputBox( amount: String, currency: String, label: String, isFocused: Boolean, onClick: () -> Unit ) {
-    Card( onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, border = if (isFocused) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant) ) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+        border = if (isFocused) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
         Row( modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.labelMedium)
@@ -436,78 +674,14 @@ fun AmountInputBox( amount: String, currency: String, label: String, isFocused: 
 }
 
 @Composable
-fun AmountDisplay( category: Category?, amount: String, date: Long, // Receive Long
-                   account: Account?, onAccountClick: () -> Unit ) {
-    val formattedDate = SimpleDateFormat("MM月dd日", Locale.getDefault()).format(Date(date)) // Format Date from Long
-    Column( modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp, vertical = 8.dp) ) {
-        Row( modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically ) {
-            if (category != null) {
-                Icon(category.icon, contentDescription = category.title, modifier = Modifier.padding(end = 8.dp))
-                Text(category.title, style = MaterialTheme.typography.bodyLarge)
-            } else { Text("选择分类", style = MaterialTheme.typography.bodyLarge) }
-            Text( text = amount, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End )
-        }
-        Row( modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween ) {
-            Row( modifier = Modifier
-                .clickable(onClick = onAccountClick)
-                .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically ) {
-                if (account != null) {
-                    val icon = IconMapper.getIcon(account.iconName)
-                    Icon(icon, contentDescription = account.name, modifier = Modifier.padding(end = 8.dp))
-                    Text(account.name, style = MaterialTheme.typography.bodyMedium)
-                } else { Text("选择账户", style = MaterialTheme.typography.bodyMedium) }
-                Icon(Icons.Default.ArrowDropDown, contentDescription = "选择账户")
-            }
-            Text( text = formattedDate, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant )
-        }
-    }
-}
-
-@Composable
-fun CategoryGrid(categories: List<Category>, onCategoryClick: (Category) -> Unit, modifier: Modifier = Modifier) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(5),
-        modifier = modifier.padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        gridItems(categories) { category -> // Use gridItems here
-            CategoryItem(category = category, onClick = { onCategoryClick(category) })
-        }
-    }
-}
-
-@Composable
-fun CategoryItem(category: Category, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(4.dp)
-            .aspectRatio(1f),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(category.icon, contentDescription = category.title)
-        Text(category.title, style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-@Composable
 fun AccountPickerDialog( accounts: List<Account>, onAccountSelected: (Account) -> Unit, onDismissRequest: () -> Unit, navController: NavHostController ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text("选择账户") },
         text = {
             LazyColumn {
-                items(accounts) { account -> // Use LazyColumn's items
-                    Row( modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onAccountSelected(account) }
-                        .padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically ) {
+                items(accounts) { account ->
+                    Row( modifier = Modifier.fillMaxWidth().clickable { onAccountSelected(account) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically ) {
                         val icon = IconMapper.getIcon(account.iconName)
                         Icon(icon, contentDescription = account.name, modifier = Modifier.padding(end = 16.dp))
                         Text(account.name)
@@ -516,11 +690,19 @@ fun AccountPickerDialog( accounts: List<Account>, onAccountSelected: (Account) -
             }
         },
         confirmButton = { TextButton(onClick = onDismissRequest) { Text("取消") } },
-        dismissButton = {
-            // 继续使用字符串以防报错
-            TextButton(onClick = { navController.navigate("account_management"); onDismissRequest() }) {
-                Text("账户管理")
-            }
-        }
+        dismissButton = { TextButton(onClick = { navController.navigate("account_management"); onDismissRequest() }) { Text("账户管理") } }
     )
+}
+
+fun evaluateExpression(expression: String): Double {
+    val tokens = expression.split(" ")
+    if (tokens.isEmpty()) return 0.0
+    var result = tokens[0].toDoubleOrNull() ?: 0.0
+    for (i in 1 until tokens.size step 2) {
+        if (i + 1 >= tokens.size) break
+        val operator = tokens[i]
+        val nextOperand = tokens[i + 1].toDoubleOrNull() ?: 0.0
+        if (operator == "+") result += nextOperand else if (operator == "-") result -= nextOperand
+    }
+    return result
 }

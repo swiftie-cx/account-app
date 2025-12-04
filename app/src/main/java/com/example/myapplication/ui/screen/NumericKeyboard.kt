@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,21 +16,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import java.util.Calendar
 
 @Composable
 fun NumericKeyboard(
     onNumberClick: (String) -> Unit,
     onOperatorClick: (String) -> Unit,
     onBackspaceClick: () -> Unit,
-    onDateClick: () -> Unit,
+    onAgainClick: (() -> Unit)? = null,
     onDoneClick: () -> Unit,
     onEqualsClick: () -> Unit,
     isCalculation: Boolean,
-    selectedDate: Long? = null // (修改) 改为可选参数，默认值为 null，这样就不会影响 Budget 页面了
+    selectedDate: Long? = null
 ) {
     Column(
         modifier = Modifier
@@ -40,23 +35,12 @@ fun NumericKeyboard(
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // 第一行: 7, 8, 9, 日期
+        // 第一行: 7, 8, 9, 删除
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             NumberButton("7", Modifier.weight(1f)) { onNumberClick("7") }
             NumberButton("8", Modifier.weight(1f)) { onNumberClick("8") }
             NumberButton("9", Modifier.weight(1f)) { onNumberClick("9") }
-
-            // (修改) 判断逻辑：如果有具体日期，显示日期按钮；否则显示通用图标
-            if (selectedDate != null) {
-                DateActionButton(
-                    dateMillis = selectedDate,
-                    modifier = Modifier.weight(1f),
-                    onClick = onDateClick
-                )
-            } else {
-                // 预算页面没有传日期，显示默认图标
-                ActionButton(Icons.Default.DateRange, Modifier.weight(1f)) { onDateClick() }
-            }
+            ActionButton(Icons.AutoMirrored.Filled.Backspace, Modifier.weight(1f)) { onBackspaceClick() }
         }
 
         // 第二行: 4, 5, 6, +
@@ -75,59 +59,65 @@ fun NumericKeyboard(
             OperatorButton("-", Modifier.weight(1f)) { onOperatorClick("-") }
         }
 
-        // 第四行: ., 0, 退格, 完成/等号
+        // 第四行: ., 0(变宽), 再记(可选), 完成/等号
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             NumberButton(".", Modifier.weight(1f)) { onNumberClick(".") }
-            NumberButton("0", Modifier.weight(1f)) { onNumberClick("0") }
-            ActionButton(Icons.AutoMirrored.Filled.Backspace, Modifier.weight(1f)) { onBackspaceClick() }
+
+            // (修改) 动态计算 0 的权重
+            val zeroWeight = if (onAgainClick != null) 1f else 2f
+            NumberButton("0", Modifier.weight(zeroWeight)) { onNumberClick("0") }
+
+            if (onAgainClick != null) {
+                TextActionButton(
+                    text = "再记",
+                    modifier = Modifier.weight(1f),
+                    onClick = onAgainClick
+                )
+            }
+
+            // 完成/等号按钮
             if (isCalculation) {
-                OperatorButton("=", Modifier.weight(1f), backgroundColor = MaterialTheme.colorScheme.primaryContainer) { onEqualsClick() }
+                OperatorButton(
+                    text = "=",
+                    modifier = Modifier.weight(1f),
+                    backgroundColor = MaterialTheme.colorScheme.primaryContainer
+                ) { onEqualsClick() }
             } else {
-                ActionButton(Icons.Default.Check, Modifier.weight(1f), backgroundColor = MaterialTheme.colorScheme.primaryContainer) { onDoneClick() }
+                TextActionButton(
+                    text = "完成",
+                    modifier = Modifier.weight(1f),
+                    backgroundColor = MaterialTheme.colorScheme.primary,
+                    textColor = MaterialTheme.colorScheme.onPrimary,
+                    onClick = onDoneClick
+                )
             }
         }
     }
 }
 
+// 辅助组件保持不变
 @Composable
-fun DateActionButton(
-    dateMillis: Long,
+fun TextActionButton(
+    text: String,
     modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
-    val calendar = Calendar.getInstance()
-    calendar.timeInMillis = dateMillis
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH) + 1
-    val day = calendar.get(Calendar.DAY_OF_MONTH)
-    val dateText = "$year/$month/$day"
-
     Box(
         modifier = modifier
             .height(60.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(backgroundColor)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = "Date",
-                modifier = Modifier.size(20.dp)
-            )
-            Text(
-                text = dateText,
-                fontSize = 10.sp,
-                lineHeight = 10.sp,
-                fontWeight = FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
     }
 }
 
