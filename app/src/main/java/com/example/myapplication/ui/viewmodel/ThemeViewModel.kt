@@ -13,46 +13,47 @@ data class ThemeOption(val name: String, val color: Color)
 
 // 2. 定义 32 款精选配色 (融合莫兰迪、大地色与经典色)
 val AppThemeOptions = listOf(
-    // === 系列一：现代都市 & 莫兰迪 (参考截图风格) ===
-    ThemeOption("雾霾蓝", Color(0xFF547578)),
-    ThemeOption("香槟金", Color(0xFF9E8436)),
-    ThemeOption("燕麦灰", Color(0xFF8D7B68)),
-    ThemeOption("赤陶色", Color(0xFFA05D44)),
-    ThemeOption("豆沙红", Color(0xFF944E43)), 
-    ThemeOption("大象灰", Color(0xFF53565A)),
-    ThemeOption("岩石灰", Color(0xFF444746)),
-    ThemeOption("紫藤灰", Color(0xFF705D75)),
+    ThemeOption("柔豆沙红", Color(0xFFB67A74)),
+    ThemeOption("玫瑰黯红", Color(0xFF9C5F5A)),
+    ThemeOption("枣泥红", Color(0xFF814443)),
+    ThemeOption("深勃艮第", Color(0xFF5A2C2C)),
 
-    // === 系列二：大地与暖阳 (黄色/橙色/棕色系 - 重点补充) ===
-    ThemeOption("姜黄色", Color(0xFF7E6800)),
-    ThemeOption("琥珀金", Color(0xFF966300)),
-    ThemeOption("落日黄", Color(0xFFB37E00)),
-    ThemeOption("活力橙", Color(0xFFC44D00)),
-    ThemeOption("脏橘色", Color(0xFF9E4908)),
-    ThemeOption("焦糖棕", Color(0xFF8D4F00)),
-    ThemeOption("可可棕", Color(0xFF6D4C41)),
-    ThemeOption("暖咖色", Color(0xFF5D4037)),
+    ThemeOption("复古橘", Color(0xFFD09363)),
+    ThemeOption("暖土橙", Color(0xFFB97A4A)),
+    ThemeOption("焦糖橙", Color(0xFF9A6038)),
+    ThemeOption("陶土棕", Color(0xFF704933)),
 
-    // === 系列三：自然与森林 (绿色/青色系) ===
-    ThemeOption("橄榄绿", Color(0xFF556500)),
-    ThemeOption("抹茶绿", Color(0xFF5F7142)),
-    ThemeOption("青苔绿", Color(0xFF4C662B)),
-    ThemeOption("森林绿", Color(0xFF006C4C)),
-    ThemeOption("祖母绿", Color(0xFF006D40)),
-    ThemeOption("薄荷绿", Color(0xFF006C51)),
-    ThemeOption("松石绿", Color(0xFF006A6A)),
-    ThemeOption("孔雀青", Color(0xFF006978)),
+    ThemeOption("复古芥末黄", Color(0xFFC5A544)),
+    ThemeOption("暗金黄", Color(0xFFA5872E)),
+    ThemeOption("赭黄", Color(0xFF8A6E26)),
+    ThemeOption("深黄铜", Color(0xFF6A571E)),
 
-    // === 系列四：经典与深邃 (蓝色/紫色/红色系) ===
-    ThemeOption("罗兰紫", Color(0xFF6750A4)),
-    ThemeOption("葡萄紫", Color(0xFF6E3987)),
-    ThemeOption("克莱因", Color(0xFF283593)),
-    ThemeOption("海洋蓝", Color(0xFF00618E)),
-    ThemeOption("午夜蓝", Color(0xFF0B2548)),
-    ThemeOption("勃艮第", Color(0xFF920025)),
-    ThemeOption("朱砂红", Color(0xFFB3261E)),
-    ThemeOption("极夜黑", Color(0xFF191C1C))
-)
+    ThemeOption("鼠尾草绿", Color(0xFF8A9C84)),
+    ThemeOption("灰苔绿", Color(0xFF6F7F6A)),
+    ThemeOption("黛绿灰", Color(0xFF556354)),
+    ThemeOption("深柏木绿", Color(0xFF3D493B)),
+
+    ThemeOption("深松石青", Color(0xFF5F807C)),
+    ThemeOption("灰蓝绿", Color(0xFF4C6B68)),
+    ThemeOption("海青灰", Color(0xFF3D5554)),
+    ThemeOption("深黛青", Color(0xFF2E4241)),
+
+    ThemeOption("灰天青", Color(0xFF8192A4)),
+    ThemeOption("钢蓝灰", Color(0xFF5F7284)),
+    ThemeOption("深夜蓝", Color(0xFF3B4755)),
+    ThemeOption("碳蓝灰", Color(0xFF2C333D)),
+
+    ThemeOption("灰梅紫", Color(0xFF9C8A9E)),
+    ThemeOption("葡萄紫灰", Color(0xFF79667C)),
+    ThemeOption("深暮紫", Color(0xFF574A5A)),
+    ThemeOption("暗紫灰", Color(0xFF3E3644)),
+
+    ThemeOption("石英灰", Color(0xFF9B9B9B)),
+    ThemeOption("玄岩灰", Color(0xFF6C6C6C)),
+    ThemeOption("铁灰", Color(0xFF4A4A4A)),
+    ThemeOption("极夜黑", Color(0xFF1F1F1F)),
+
+    )
 
 class ThemeViewModel(context: Context) : ViewModel() {
     private val prefs = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)

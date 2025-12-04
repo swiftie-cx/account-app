@@ -18,7 +18,6 @@ import com.example.myapplication.data.ExpenseRepository
 import com.example.myapplication.ui.screen.MainScreen
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import com.example.myapplication.ui.viewmodel.ExpenseViewModelFactory
-// (新增) 导入 ThemeViewModel
 import com.example.myapplication.ui.viewmodel.ThemeViewModel
 
 class MainActivity : ComponentActivity() {
@@ -38,31 +37,31 @@ class MainActivity : ComponentActivity() {
         val expenseViewModelFactory = ExpenseViewModelFactory(repository)
         val expenseViewModel = ViewModelProvider(this, expenseViewModelFactory)[ExpenseViewModel::class.java]
 
-        // 3. (新增) 初始化 ThemeViewModel
+        // 3. 初始化 ThemeViewModel
         val themeViewModel = ThemeViewModel(applicationContext)
 
         setContent {
-            // 4. (新增) 监听主题颜色状态
+            // 4. 监听主题颜色状态
             val themeColor by themeViewModel.themeColor.collectAsState()
             val isDarkTheme = isSystemInDarkTheme()
 
-            // 5. (新增) 动态构建 ColorScheme
-            // 这里我们用选中的颜色作为 primary，并简单推导其他颜色
-            // 如果追求完美，可以使用 Material Color Utilities 库生成完整色盘
+            // 5. 动态构建 ColorScheme
             val colorScheme = if (isDarkTheme) {
                 darkColorScheme(
                     primary = themeColor,
                     onPrimary = Color.White,
-                    primaryContainer = themeColor.copy(alpha = 0.3f), // 深色模式下容器色变暗
+                    primaryContainer = themeColor.copy(alpha = 0.3f), // 深色模式
                     onPrimaryContainer = Color.White
                 )
             } else {
                 lightColorScheme(
                     primary = themeColor,
                     onPrimary = Color.White,
-                    primaryContainer = themeColor.copy(alpha = 0.1f), // 浅色模式下容器色变淡
-                    onPrimaryContainer = themeColor
-                    // 其他颜色如 secondary, tertiary 也可以根据 themeColor 进行变换
+                    // (核心修复) 将透明度提升至 0.5f (50%)
+                    // 您的莫兰迪色系比较浅，必须用 50% 的浓度才能在白色背景上显出颜色
+                    // 这样“资产”、“预算”等卡片背景就会很清晰了
+                    primaryContainer = themeColor.copy(alpha = 0.5f),
+                    onPrimaryContainer = themeColor // 文字颜色直接用深色主题色，保证对比度
                 )
             }
 
@@ -70,7 +69,6 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(
                 colorScheme = colorScheme
             ) {
-                // 传入 themeViewModel 以便在设置页调用
                 MainScreen(expenseViewModel, themeViewModel)
             }
         }
