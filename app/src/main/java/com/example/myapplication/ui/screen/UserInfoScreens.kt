@@ -23,11 +23,10 @@ import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// 1. 用户信息主菜单
+// 1. 用户信息主菜单 (现在只显示已登录状态的内容)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
-    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val email by viewModel.userEmail.collectAsState()
     val context = LocalContext.current
 
@@ -50,101 +49,136 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (isLoggedIn) {
-                // --- 已登录视图 ---
+            // 头像/邮箱展示
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(text = email, style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(32.dp))
 
-                // 头像/邮箱展示
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(text = email, style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(32.dp))
+            // 功能列表
+            UserInfoItem(
+                icon = Icons.Default.LockReset,
+                title = "修改密码",
+                onClick = { navController.navigate(Routes.CHANGE_PASSWORD) }
+            )
 
-                // 功能列表
-                UserInfoItem(
-                    icon = Icons.Default.LockReset,
-                    title = "修改密码",
-                    onClick = { navController.navigate(Routes.CHANGE_PASSWORD) }
-                )
+            UserInfoItem(
+                icon = Icons.Default.HelpOutline,
+                title = "忘记密码",
+                onClick = { navController.navigate(Routes.FORGOT_PASSWORD) }
+            )
 
-                UserInfoItem(
-                    icon = Icons.Default.HelpOutline,
-                    title = "忘记密码",
-                    onClick = { navController.navigate(Routes.FORGOT_PASSWORD) }
-                )
+            Spacer(modifier = Modifier.weight(1f))
 
-                Spacer(modifier = Modifier.weight(1f))
+            // 退出登录
+            Button(
+                onClick = {
+                    viewModel.logout()
+                    Toast.makeText(context, "已退出登录", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack() // 返回设置页
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+            ) {
+                Text("退出登录")
+            }
 
-                // 退出登录
-                Button(
-                    onClick = {
-                        viewModel.logout()
-                        Toast.makeText(context, "已退出登录", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-                ) {
-                    Text("退出登录")
-                }
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 注销账号
-                Button(
-                    onClick = {
-                        viewModel.deleteUserAccount()
-                        Toast.makeText(context, "账号已注销", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)
-                ) {
-                    Text("注销账号")
-                }
-
-            } else {
-                // --- 未登录视图 ---
-                Spacer(modifier = Modifier.weight(1f))
-
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(100.dp),
-                    tint = MaterialTheme.colorScheme.surfaceVariant
-                )
-                Spacer(Modifier.height(16.dp))
-                Text("尚未登录", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // 底部两个大按钮
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Button(
-                        onClick = { navController.navigate(Routes.LOGIN) },
-                        modifier = Modifier.weight(1f).height(50.dp)
-                    ) {
-                        Text("登录")
-                    }
-                    OutlinedButton(
-                        onClick = { navController.navigate(Routes.REGISTER) },
-                        modifier = Modifier.weight(1f).height(50.dp)
-                    ) {
-                        Text("注册")
-                    }
-                }
-                Spacer(modifier = Modifier.height(32.dp))
+            // 注销账号
+            Button(
+                onClick = {
+                    viewModel.deleteUserAccount()
+                    Toast.makeText(context, "账号已注销", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack() // 返回设置页
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)
+            ) {
+                Text("注销账号")
             }
         }
     }
 }
 
-// 2. 注册界面
+// 2. 登录界面
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("登录") },
+                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } }
+            )
+        }
+    ) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("邮箱") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("密码") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            // 忘记密码链接
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                TextButton(onClick = { navController.navigate(Routes.FORGOT_PASSWORD) }) {
+                    Text("忘记密码？")
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                // 登录按钮
+                Button(
+                    onClick = {
+                        if (viewModel.login(email, password)) {
+                            Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack() // 返回设置页
+                        } else {
+                            Toast.makeText(context, "账号或密码错误", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f).height(50.dp),
+                    enabled = email.isNotBlank() && password.isNotBlank()
+                ) {
+                    Text("登录")
+                }
+
+                // 注册按钮入口
+                OutlinedButton(
+                    onClick = { navController.navigate(Routes.REGISTER) },
+                    modifier = Modifier.weight(1f).height(50.dp)
+                ) {
+                    Text("注册")
+                }
+            }
+        }
+    }
+}
+
+// 3. 注册界面 (原 RegisterScreen)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
@@ -252,6 +286,10 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
                     } else {
                         viewModel.register(email, password)
                         Toast.makeText(context, "注册成功并已登录", Toast.LENGTH_SHORT).show()
+                        // 注册成功后，先回到登录页(被pop了)，再回到设置页。
+                        // 或者这里直接 popBackStack() 回到上一层(可能是登录页)，
+                        // 所以推荐在 Login 页 navigate 到 Register，这样 Register pop 就回 Login。
+                        // 如果是从 Settings 直接来的，就回 Settings。
                         navController.popBackStack()
                     }
                 },
@@ -259,67 +297,6 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
                 enabled = email.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank() && code.isNotBlank()
             ) {
                 Text("注册并登录")
-            }
-        }
-    }
-}
-
-// 3. 登录界面 (新增)
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    val context = LocalContext.current
-
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("登录") },
-                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } }
-            )
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("邮箱") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            Spacer(Modifier.height(16.dp))
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("密码") },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            // 忘记密码链接
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                TextButton(onClick = { navController.navigate(Routes.FORGOT_PASSWORD) }) {
-                    Text("忘记密码？")
-                }
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            Button(
-                onClick = {
-                    if (viewModel.login(email, password)) {
-                        Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
-                        navController.popBackStack()
-                    } else {
-                        Toast.makeText(context, "账号或密码错误", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                enabled = email.isNotBlank() && password.isNotBlank()
-            ) {
-                Text("登录")
             }
         }
     }
@@ -408,7 +385,7 @@ fun ChangePasswordScreen(navController: NavHostController, viewModel: ExpenseVie
     }
 }
 
-// 5. 忘记密码 (重设密码)
+// 5. 忘记密码
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
@@ -423,8 +400,6 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // 如果是登录页面点进来的，email为空需手动输入；如果是登录后点进来的，自动填充
-    // 自动填充已绑定的邮箱（如果已登录）
     val boundEmail by viewModel.userEmail.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     LaunchedEffect(isLoggedIn, boundEmail) {
@@ -451,7 +426,7 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
                     label = { Text("邮箱") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    enabled = !isLoggedIn // 如果已登录，通常锁定邮箱框，或者允许修改看业务需求，这里简单处理
+                    enabled = !isLoggedIn
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -527,7 +502,6 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
                         if (newPassword.isNotBlank() && newPassword == confirmPassword) {
                             viewModel.saveUserPassword(newPassword)
                             Toast.makeText(context, "密码重置成功", Toast.LENGTH_SHORT).show()
-                            // 如果是从登录页进来的，退回登录页；如果是从信息页进来的，退回信息页
                             navController.popBackStack()
                         } else {
                             Toast.makeText(context, "两次密码不一致或为空", Toast.LENGTH_SHORT).show()
@@ -542,7 +516,6 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
     }
 }
 
-// UserInfoItem 辅助组件
 @Composable
 fun UserInfoItem(
     icon: ImageVector,

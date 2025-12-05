@@ -1,22 +1,27 @@
 package com.example.myapplication.ui.screen
 
+import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Paid
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.ui.navigation.Routes
@@ -29,6 +34,12 @@ fun SettingsScreen(
     defaultCurrency: String,
     viewModel: ExpenseViewModel
 ) {
+    // 监听登录状态和用户信息
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val userEmail by viewModel.userEmail.collectAsState()
+    val context = LocalContext.current
+
+    // 状态：控制警告弹窗
     var showWarningDialog by remember { mutableStateOf(false) }
     var showFinalConfirmDialog by remember { mutableStateOf(false) }
     var confirmationInput by remember { mutableStateOf("") }
@@ -50,59 +61,76 @@ fun SettingsScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .padding(16.dp)
         ) {
-            // 1. 用户信息 (修改)
-            SettingsItem(
-                icon = Icons.Default.Person,
-                title = "用户信息", // 修改标题
-                onClick = { navController.navigate(Routes.USER_INFO) } // 添加跳转
+            // --- 顶部：用户状态卡片 ---
+            UserStatusHeader(
+                isLoggedIn = isLoggedIn,
+                email = userEmail,
+                onClick = {
+                    if (isLoggedIn) {
+                        // 已登录 -> 跳转详细信息页
+                        navController.navigate(Routes.USER_INFO)
+                    } else {
+                        // 未登录 -> 跳转登录页
+                        navController.navigate(Routes.LOGIN)
+                    }
+                }
             )
 
-            // 2. 类别设置
-            SettingsItem(
-                icon = Icons.Default.Category,
-                title = "类别设置",
-                onClick = { navController.navigate(Routes.CATEGORY_SETTINGS) }
-            )
+            HorizontalDivider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
 
-            // 3. 默认货币
-            SettingsItem(
-                icon = Icons.Default.Paid,
-                title = "默认货币",
-                value = defaultCurrency,
-                onClick = { navController.navigate(Routes.CURRENCY_SELECTION) }
-            )
+            Column(modifier = Modifier.padding(16.dp)) {
+                // 1. 类别设置
+                SettingsItem(
+                    icon = Icons.Default.Category,
+                    title = "类别设置",
+                    onClick = { navController.navigate(Routes.CATEGORY_SETTINGS) }
+                )
 
-            // 4. 主题
-            SettingsItem(
-                icon = Icons.Default.Palette,
-                title = "主题",
-                onClick = { navController.navigate(Routes.THEME_SETTINGS) }
-            )
+                // 2. 默认货币
+                SettingsItem(
+                    icon = Icons.Default.Paid,
+                    title = "默认货币",
+                    value = defaultCurrency,
+                    onClick = { navController.navigate(Routes.CURRENCY_SELECTION) }
+                )
 
-            // 5. 隐私密码
-            SettingsItem(
-                icon = Icons.Default.Lock,
-                title = "隐私密码",
-                onClick = { navController.navigate(Routes.PRIVACY_SETTINGS) }
-            )
+                // 3. 主题
+                SettingsItem(
+                    icon = Icons.Default.Palette,
+                    title = "主题",
+                    onClick = { navController.navigate(Routes.THEME_SETTINGS) }
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                // 4. 隐私密码 (增加未登录拦截)
+                SettingsItem(
+                    icon = Icons.Default.Lock,
+                    title = "隐私密码",
+                    onClick = {
+                        if (isLoggedIn) {
+                            navController.navigate(Routes.PRIVACY_SETTINGS)
+                        } else {
+                            Toast.makeText(context, "请先登录账号", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
 
-            // 6. 清除数据
-            SettingsItem(
-                icon = Icons.Default.DeleteForever,
-                title = "清除数据",
-                titleColor = MaterialTheme.colorScheme.error,
-                iconColor = MaterialTheme.colorScheme.error,
-                showArrow = false,
-                onClick = { showWarningDialog = true }
-            )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 5. 清除数据
+                SettingsItem(
+                    icon = Icons.Default.DeleteForever,
+                    title = "清除数据",
+                    titleColor = MaterialTheme.colorScheme.error,
+                    iconColor = MaterialTheme.colorScheme.error,
+                    showArrow = false,
+                    onClick = { showWarningDialog = true }
+                )
+            }
         }
     }
 
-    // --- Warning Dialogs (Keep existing) ---
+    // --- 警告弹窗 ---
     if (showWarningDialog) {
         AlertDialog(
             onDismissRequest = { showWarningDialog = false },
@@ -117,12 +145,11 @@ fun SettingsScreen(
                     }
                 ) { Text("下一步", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = {
-                TextButton(onClick = { showWarningDialog = false }) { Text("取消") }
-            }
+            dismissButton = { TextButton(onClick = { showWarningDialog = false }) { Text("取消") } }
         )
     }
 
+    // --- 最终确认弹窗 ---
     if (showFinalConfirmDialog) {
         val isMatch = confirmationInput == targetPhrase
         AlertDialog(
@@ -149,14 +176,78 @@ fun SettingsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) { Text("彻底删除") }
             },
-            dismissButton = {
-                TextButton(onClick = { showFinalConfirmDialog = false }) { Text("取消") }
-            }
+            dismissButton = { TextButton(onClick = { showFinalConfirmDialog = false }) { Text("取消") } }
         )
     }
 }
 
-// SettingsItem function is kept as is (ensure it's present in the file)
+// 顶部用户状态组件
+@Composable
+fun UserStatusHeader(
+    isLoggedIn: Boolean,
+    email: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(24.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 头像
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // 文字信息
+        Column(modifier = Modifier.weight(1f)) {
+            if (isLoggedIn) {
+                Text(
+                    text = email,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "查看账号信息",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = "登录 / 注册",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "登录后使用云同步和隐私功能",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
 @Composable
 fun SettingsItem(
     icon: ImageVector,
