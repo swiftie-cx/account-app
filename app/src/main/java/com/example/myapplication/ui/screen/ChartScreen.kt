@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -441,9 +442,45 @@ fun LineChart(
                         val leftPadding = 45.dp.toPx()
                         val chartWidth = width - leftPadding
                         val spacing = chartWidth / (dataPoints.size - 1).coerceAtLeast(1)
-                        val index = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
-                        onPointClick(dataPoints[index])
-                        selectedIndex = -1
+
+                        // 1. 如果已有选中点，检查是否点击了 Tooltip
+                        if (selectedIndex != -1 && selectedIndex in dataPoints.indices) {
+                            val point = dataPoints[selectedIndex]
+                            // --- 复用绘制时的坐标计算逻辑 ---
+                            val rangeTop = if (actualMax > 0) actualMax * 1.2f else 0f
+                            val rangeBottom = if (actualMin < 0) actualMin * 1.2f else 0f
+                            val finalRangeTop = if (rangeTop == 0f && rangeBottom == 0f) 100f else rangeTop
+                            val range = finalRangeTop - rangeBottom
+                            val drawingRange = if (range == 0f) 100f else range
+                            val chartHeight = size.height - 20.dp.toPx() // bottomPadding
+
+                            val x = leftPadding + selectedIndex * spacing
+                            val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
+
+                            // Tooltip 尺寸计算
+                            val dateText = tooltipDateFormat.format(Date(point.timeMillis))
+                            val amountText = String.format("%.0f", point.value)
+                            val textWidth = tooltipTextPaint.measureText(dateText).coerceAtLeast(tooltipTextPaint.measureText(amountText)) + 20.dp.toPx()
+                            val textHeight = 40.dp.toPx()
+
+                            var tooltipX = x - textWidth / 2
+                            if (tooltipX < 0) tooltipX = 0f
+                            if (tooltipX + textWidth > width) tooltipX = width - textWidth
+                            val tooltipY = if (y - textHeight - 10.dp.toPx() < 0) y + 10.dp.toPx() else y - textHeight - 10.dp.toPx()
+
+                            val tooltipRect = Rect(offset = Offset(tooltipX, tooltipY), size = Size(textWidth, textHeight))
+
+                            if (tooltipRect.contains(offset)) {
+                                // 点击了气泡 -> 跳转详情
+                                onPointClick(point)
+                                selectedIndex = -1 // 选做: 跳转后取消选中
+                                return@detectTapGestures
+                            }
+                        }
+
+                        // 2. 如果没点到气泡，则选中点击位置对应的点
+                        val clickedIndex = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
+                        selectedIndex = clickedIndex
                     }
                 )
             }
@@ -461,8 +498,12 @@ fun LineChart(
                         val spacing = (width - leftPadding) / (dataPoints.size - 1).coerceAtLeast(1)
                         selectedIndex = ((change.position.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
                     },
-                    onDragEnd = { selectedIndex = -1 },
-                    onDragCancel = { selectedIndex = -1 }
+                    onDragEnd = {
+                        // 拖拽结束后保持选中，不重置，方便查看
+                    },
+                    onDragCancel = {
+                        // selectedIndex = -1 // 可选：取消选中
+                    }
                 )
             }
     ) {
@@ -835,18 +876,14 @@ fun ChartPage(
                         val start = calendar.timeInMillis
                         val end = when(chartMode) {
                             ChartMode.WEEK, ChartMode.MONTH -> {
-                                // 天：Start + 1天 - 1ms = 当天 23:59:59.999
-                                val c = Calendar.getInstance()
-                                c.timeInMillis = start
-                                c.add(Calendar.DAY_OF_MONTH, 1)
-                                c.timeInMillis - 1
+                                // 天：Start 是 00:00，End 应该是当天的 23:59:59
+                                calendar.add(Calendar.DAY_OF_MONTH, 1)
+                                calendar.timeInMillis - 1
                             }
                             ChartMode.YEAR -> {
-                                // 月：Start + 1月 - 1ms = 月末 23:59:59.999
-                                val c = Calendar.getInstance()
-                                c.timeInMillis = start
-                                c.add(Calendar.MONTH, 1)
-                                c.timeInMillis - 1
+                                // 月：Start 是 1号，End 应该是月末 23:59:59
+                                calendar.add(Calendar.MONTH, 1)
+                                calendar.timeInMillis - 1
                             }
                         }
 
