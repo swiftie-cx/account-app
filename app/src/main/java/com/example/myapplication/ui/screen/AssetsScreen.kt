@@ -113,8 +113,9 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        contentColor = MaterialTheme.colorScheme.primary
+                        // (修改) 使用 primaryContainer，与顶部卡片统一颜色
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
@@ -128,8 +129,9 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        contentColor = MaterialTheme.colorScheme.primary
+                        // (修改) 使用 primaryContainer，与顶部卡片统一颜色
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
@@ -157,13 +159,15 @@ private fun AssetHeaderSection(
             text = "资产",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 16.dp)
+            modifier = Modifier.padding(vertical = 16.dp),
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         // 总览卡片
         Card(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF3EFE0)), // 使用柔和的米黄色背景，类似参考图
+            // (修改) 关键改动：使用 primaryContainer 替代 surfaceContainerHigh，确保颜色跟随主题
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             elevation = CardDefaults.cardElevation(0.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -173,14 +177,16 @@ private fun AssetHeaderSection(
                 Text(
                     text = "净资产",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF8D8568) // 深褐色文字
+                    // (修改) 文字颜色适配 primaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "$currency ${String.format(Locale.US, "%.2f", netAssets)}",
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFB59D55) // 金色/土黄色数字
+                    // (修改) 使用 onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -193,14 +199,14 @@ private fun AssetHeaderSection(
                         Text(
                             text = "资产",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFF8D8568)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = "$currency ${String.format(Locale.US, "%.2f", assets)}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFB59D55)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
 
@@ -208,14 +214,14 @@ private fun AssetHeaderSection(
                         Text(
                             text = "负债",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFF8D8568)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = "$currency ${String.format(Locale.US, "%.2f", liabilities)}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFB59D55)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
@@ -249,13 +255,14 @@ fun AssetAccountItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFF3EFE0)), // 与顶部卡片呼应的淡色背景
+                    // (修改) 使用 primaryContainer，确保与顶部卡片色调一致
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = IconMapper.getIcon(account.iconName),
                     contentDescription = account.name,
-                    tint = Color(0xFFB59D55), // 金色图标
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer, // 图标颜色适配容器
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -267,7 +274,8 @@ fun AssetAccountItem(
                 text = account.name,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             // 金额
