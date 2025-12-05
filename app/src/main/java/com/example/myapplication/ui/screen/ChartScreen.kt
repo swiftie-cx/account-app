@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset // (新增) 导入 tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,7 +131,10 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background // 统一背景色
+        containerColor = MaterialTheme.colorScheme.background, // 统一背景色
+        // (关键修改1) 这里的 contentWindowInsets 排除 statusBars，防止 Scaffold 自动添加顶部 Padding
+        // 这样 FilterBar 就可以延伸到顶部。底部 NavigationBar 仍然保留。
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.statusBars)
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
 
@@ -226,11 +230,14 @@ fun FilterBar(
     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
     val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.CHINA) }
 
-    // 【修改】去掉了 Surface 的圆角和阴影，改为平铺的背景，视觉更干净
+    // 【修改】
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface) // 纯白/深色背景
+            // (关键修改2) 添加 statusBarsPadding 在 background 之后。
+            // 这样背景色会填充到状态栏区域，但内容会被推下来，避免重叠。
+            .statusBarsPadding()
             .padding(bottom = 8.dp)
     ) {
         // 1. 第一行：返回、类型切换、日历
@@ -341,21 +348,27 @@ fun FilterBar(
                 containerColor = Color.Transparent,
                 edgePadding = 16.dp,
                 indicator = { tabPositions ->
-                    if (tabPositions.isEmpty()) return@ScrollableTabRow
-                    val idx = currentIndex.coerceIn(tabPositions.indices)
-                    val pos = tabPositions[idx]
-                    // 自定义指示器：底部小圆点
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .wrapContentSize(Alignment.BottomCenter)
-                            .padding(bottom = 2.dp)
-                            .offset(x = (pos.left + pos.right) / 2 - pos.width / 2)
-                            .width(pos.width / 4)
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.primary)
-                    )
+                    if (tabPositions.isNotEmpty()) {
+                        val idx = currentIndex.coerceIn(tabPositions.indices)
+                        val pos = tabPositions[idx]
+
+                        // (修改) 使用 tabIndicatorOffset + 内部 Box 居中，确保对齐
+                        Box(
+                            modifier = Modifier
+                                .tabIndicatorOffset(pos) // 这一步让外层 Box 完美覆盖当前 Tab 的位置和宽度
+                                .fillMaxHeight()         // 占满高度以便进行底部对齐
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter) // 核心：在 Tab 区域内底部居中
+                                    .padding(bottom = 2.dp)
+                                    .width(20.dp) // 固定宽度，视觉上更整洁（原为 pos.width / 4）
+                                    .height(3.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                        }
+                    }
                 },
                 divider = {}
             ) {
@@ -968,8 +981,6 @@ fun CategoryRankItem(
     }
 }
 
-// ... [BalanceReportSection, generateBalanceReportItems, PieChart 保持原有逻辑] ...
-// 以下代码未变动，为保证文件完整性再次列出
 
 @Composable
 fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
