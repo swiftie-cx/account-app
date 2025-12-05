@@ -8,10 +8,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,7 +25,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
@@ -261,19 +266,19 @@ fun SearchScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background, // 统一背景色
         topBar = {
             TopAppBar(
-                title = { Text(dynamicTitle) },
+                title = { Text(dynamicTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
-                // (修复) 使用主题色，与图表页保持一致
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -281,7 +286,7 @@ fun SearchScreen(
             if (!isFromChart) {
                 BottomAppBar(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 4.dp
+                    tonalElevation = 8.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -298,7 +303,8 @@ fun SearchScreen(
                                 customDateRangeMillis = null to null
                                 viewModel.updateSearchText("")
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("重置")
                         }
@@ -306,7 +312,8 @@ fun SearchScreen(
                             onClick = {
                                 viewModel.updateSearchText(localSearchText)
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("搜索")
                         }
@@ -315,23 +322,39 @@ fun SearchScreen(
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            Column {
-                if (!isFromChart) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Column(modifier = Modifier.padding(innerPadding)) {
+            // 筛选区域 (白色背景卡片)
+            if (!isFromChart) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 2.dp,
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        // 搜索框
                         OutlinedTextField(
                             value = localSearchText,
                             onValueChange = { localSearchText = it },
-                            placeholder = { Text("搜索备注、分类") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
+                            placeholder = { Text("搜索备注、分类", style = MaterialTheme.typography.bodyMedium) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索", tint = MaterialTheme.colorScheme.primary) },
+                            trailingIcon = if(localSearchText.isNotEmpty()) {
+                                { IconButton(onClick = { localSearchText = "" }) { Icon(Icons.Default.Close, null) } }
+                            } else null,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp)
                                 .focusRequester(focusRequester),
-                            singleLine = true
+                            singleLine = true,
+                            shape = RoundedCornerShape(24.dp), // 圆润搜索框
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            )
                         )
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Spacer(Modifier.height(16.dp))
 
                         FilterChipRow(
                             title = "类型",
@@ -340,7 +363,7 @@ fun SearchScreen(
                             onChipSelected = { selectedTypeIndex = it }
                         )
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Spacer(Modifier.height(8.dp))
 
                         CategoryFilterRow(
                             selectedCategories = selectedCategories,
@@ -348,7 +371,7 @@ fun SearchScreen(
                             onAddClick = { showCategoryPicker = true }
                         )
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Spacer(Modifier.height(8.dp))
 
                         FilterChipRow(
                             title = "时间",
@@ -364,28 +387,41 @@ fun SearchScreen(
                             }
                         )
                     }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 }
+            }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(displayItems) { item ->
-                        when (item) {
-                            is Expense -> {
-                                val account = accountMap[item.accountId]
-                                ExpenseItem(
-                                    expense = item,
-                                    icon = categoryIconMap[item.category],
-                                    account = account,
-                                    onClick = { navController.navigate(Routes.transactionDetailRoute(item.id)) }
-                                )
-                            }
-                            is DisplayTransferItem -> TransferItem(
-                                item = item,
-                                onClick = { /* TODO */ }
+            // 结果列表
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                if (displayItems.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 64.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("没有找到相关记录", color = MaterialTheme.colorScheme.outline)
+                        }
+                    }
+                }
+                items(displayItems) { item ->
+                    when (item) {
+                        is Expense -> {
+                            val account = accountMap[item.accountId]
+                            ExpenseItem(
+                                expense = item,
+                                icon = categoryIconMap[item.category],
+                                account = account,
+                                onClick = { navController.navigate(Routes.transactionDetailRoute(item.id)) }
                             )
                         }
+                        is DisplayTransferItem -> TransferItem(
+                            item = item,
+                            onClick = { /* TODO */ }
+                        )
                     }
                 }
             }
@@ -402,22 +438,31 @@ private fun FilterChipRow(
     onChipSelected: (Int) -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = title,
             fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(50.dp)
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             itemsIndexed(labels) { index, label ->
+                val isSelected = selectedIndex == index
                 FilterChip(
-                    selected = selectedIndex == index,
+                    selected = isSelected,
                     onClick = { onChipSelected(index) },
-                    label = { Text(label) }
+                    label = { Text(label) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        borderColor = if(isSelected) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        enabled = true, selected = isSelected
+                    )
                 )
             }
         }
@@ -432,82 +477,134 @@ private fun CategoryFilterRow(
     onAddClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "类别",
             fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(50.dp)
         )
-        FilterChip(
-            selected = selectedCategories.isEmpty(),
-            onClick = onClearCategories,
-            label = { Text("全部") }
-        )
-        if (selectedCategories.isNotEmpty()) {
-            Spacer(Modifier.width(8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(selectedCategories) { category ->
-                    InputChip(
-                        selected = true,
-                        onClick = { /* Future: remove single category */ },
-                        label = { Text(category) }
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            item {
+                FilterChip(
+                    selected = selectedCategories.isEmpty(),
+                    onClick = onClearCategories,
+                    label = { Text("全部") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        borderColor = if(selectedCategories.isEmpty()) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        enabled = true, selected = selectedCategories.isEmpty()
                     )
+                )
+            }
+
+            items(selectedCategories) { category ->
+                InputChip(
+                    selected = true,
+                    onClick = { /* Future: remove single category */ },
+                    label = { Text(category) },
+                    trailingIcon = { Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp)) },
+                    colors = InputChipDefaults.inputChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
+                    border = null
+                )
+            }
+
+            item {
+                FilledIconButton(
+                    onClick = onAddClick,
+                    modifier = Modifier.size(32.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "选择类别", modifier = Modifier.size(18.dp))
                 }
             }
-        }
-        Spacer(Modifier.weight(1f))
-        FilledIconButton(
-            onClick = onAddClick,
-            shape = CircleShape
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "选择类别")
         }
     }
 }
 
+// --- 美化后的列表项组件 (复制自 DetailsScreen 以保持一致) ---
+
 @Composable
 private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
+    val transferColor = MaterialTheme.colorScheme.primary
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 16.dp)
-            .clickable(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.CompareArrows,
-            contentDescription = "转账",
+        Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(44.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(8.dp),
-            tint = MaterialTheme.colorScheme.onSecondaryContainer
-        )
-        Text(
-            text = "${item.fromAccount.name} → ${item.toAccount.name}",
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Column(horizontalAlignment = Alignment.End) {
-            val fromText = "${item.fromAccount.currency} ${String.format("%.2f", abs(item.fromAmount))}"
-            val toText = "→ ${item.toAccount.currency} ${String.format("%.2f", item.toAmount)}"
-            Text(
-                text = fromText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = toText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                .background(transferColor.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.CompareArrows,
+                contentDescription = "转账",
+                modifier = Modifier.size(22.dp),
+                tint = transferColor
             )
         }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "内部转账",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = item.fromAccount.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = item.toAccount.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Text(
+            text = String.format("%.2f", item.toAmount),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -518,41 +615,81 @@ private fun ExpenseItem(
     account: Account?,
     onClick: () -> Unit
 ) {
-    val amountColor = if (expense.amount < 0) MaterialTheme.colorScheme.error else Color.Unspecified
+    val isExpense = expense.amount < 0
+    val incomeColor = Color(0xFF4CAF50) // 绿色
+    val expenseColor = Color(0xFFE53935) // 红色
+    val amountColor = if (isExpense) expenseColor else incomeColor
+
+    val iconContainerColor = if (isExpense) {
+        expenseColor.copy(alpha = 0.1f)
+    } else {
+        incomeColor.copy(alpha = 0.1f)
+    }
+
+    val iconTintColor = if (isExpense) expenseColor else incomeColor
+
+    // 日期格式化
+    val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.CHINA) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 16.dp)
-            .clickable(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        if (icon != null) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                    .padding(8.dp),
-                contentAlignment = Alignment.Center
-            ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(if (icon != null) iconContainerColor else Color.Transparent),
+            contentAlignment = Alignment.Center
+        ) {
+            if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = expense.category,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    tint = iconTintColor,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-        } else {
-            Spacer(Modifier.size(40.dp))
         }
 
-        val displayText = if (!expense.remark.isNullOrBlank()) expense.remark else expense.category
-        Text(text = displayText ?: expense.category, modifier = Modifier.weight(1f))
+        Spacer(Modifier.size(16.dp))
 
-        val amountText = "${account?.currency ?: ""} ${String.format("%.2f", abs(expense.amount))}"
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = expense.category,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(2.dp))
+            val subText = buildString {
+                append(dateFormat.format(expense.date))
+                if (!expense.remark.isNullOrBlank()) {
+                    append(" · ")
+                    append(expense.remark)
+                } else if (account != null) {
+                    append(" · ")
+                    append(account.name)
+                }
+            }
+            Text(
+                text = subText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
         Text(
-            text = amountText,
+            text = if (isExpense) String.format("%.2f", expense.amount) else "+${String.format("%.2f", expense.amount)}",
             color = amountColor,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
         )
     }
 }

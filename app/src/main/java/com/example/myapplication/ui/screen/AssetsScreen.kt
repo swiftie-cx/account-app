@@ -6,16 +6,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-// import androidx.compose.material.icons.filled.Settings // (删除) 不再需要
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.ExchangeRates
@@ -57,43 +63,43 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
     val netAssets = assets - liabilities
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("资产") }
-                // (修改) 删除了 actions，移除了右上角设置按钮
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
+        // 移除默认 TopAppBar，改为在内容中自定义标题区域，风格更现代
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // 总览卡片
-            SummaryCard(
+            // 自定义标题栏 + 顶部总览卡片
+            AssetHeaderSection(
                 netAssets = netAssets,
                 assets = assets,
                 liabilities = liabilities,
                 currency = defaultCurrency
             )
 
+            // 账户列表
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(accountsWithBalance, key = { it.first.id }) { (account, currentBalance) ->
                     AssetAccountItem(
                         account = account,
                         currentBalance = currentBalance,
                         onClick = {
-                            // 这里可以留空或导航到账户流水详情
+                            // 预留：导航到账户详情或编辑
+                            navController.navigate(Routes.addAccountRoute(account.id))
                         }
                     )
                 }
             }
 
-            // 底部按钮
+            // 底部操作按钮区域
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -102,18 +108,32 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
             ) {
                 Button(
                     onClick = { navController.navigate(Routes.addAccountRoute()) },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
-                    Text("添加账户", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("添加账户", style = MaterialTheme.typography.titleMedium)
                 }
 
                 Button(
                     onClick = { navController.navigate(Routes.ACCOUNT_MANAGEMENT) },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
-                    Text("管理账户", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("管理账户", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -121,34 +141,82 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
 }
 
 @Composable
-private fun SummaryCard(netAssets: Double, assets: Double, liabilities: Double, currency: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer,
+private fun AssetHeaderSection(
+    netAssets: Double,
+    assets: Double,
+    liabilities: Double,
+    currency: String
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        shape = MaterialTheme.shapes.medium
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // 大标题
+        Text(
+            text = "资产",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
+
+        // 总览卡片
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF3EFE0)), // 使用柔和的米黄色背景，类似参考图
+            elevation = CardDefaults.cardElevation(0.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("净资产", style = MaterialTheme.typography.labelMedium)
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Text(
+                    text = "净资产",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF8D8568) // 深褐色文字
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "$currency ${String.format(Locale.US, "%.2f", netAssets)}",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFB59D55) // 金色/土黄色数字
                 )
-                Spacer(Modifier.height(8.dp))
-                Row {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("资产", style = MaterialTheme.typography.labelMedium)
-                        Text("$currency ${String.format(Locale.US, "%.2f", assets)}", style = MaterialTheme.typography.bodyLarge)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "资产",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFF8D8568)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "$currency ${String.format(Locale.US, "%.2f", assets)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFB59D55)
+                        )
                     }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("负债", style = MaterialTheme.typography.labelMedium)
-                        Text("$currency ${String.format(Locale.US, "%.2f", liabilities)}", style = MaterialTheme.typography.bodyLarge)
+
+                    Column {
+                        Text(
+                            text = "负债",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFF8D8568)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "$currency ${String.format(Locale.US, "%.2f", liabilities)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFB59D55)
+                        )
                     }
                 }
             }
@@ -165,49 +233,59 @@ fun AssetAccountItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
             .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(0.5.dp) // 轻微阴影
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val icon = IconMapper.getIcon(account.iconName)
+            // 图标容器
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                    .padding(8.dp),
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF3EFE0)), // 与顶部卡片呼应的淡色背景
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    icon,
+                    imageVector = IconMapper.getIcon(account.iconName),
                     contentDescription = account.name,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = Color(0xFFB59D55), // 金色图标
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            Spacer(Modifier.padding(start = 16.dp))
+            Spacer(Modifier.width(16.dp))
 
+            // 账户名
             Text(
                 text = account.name,
                 style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f)
             )
 
-            Text(
-                text = "${account.currency} ${String.format(Locale.US, "%.2f", currentBalance)}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "详情",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp)
-            )
+            // 金额
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${account.currency} ${String.format(Locale.US, "%.2f", currentBalance)}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }

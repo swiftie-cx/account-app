@@ -53,7 +53,11 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val showScaffold = currentRoute != Routes.LOCK && currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true
+    // (修改) 在此处添加 Routes.SEARCH 到隐藏列表
+    // 当当前路由是 LOCK, ADD_TRANSACTION 或 SEARCH 时，不显示主 Scaffold (即不显示底部导航栏)
+    val showScaffold = currentRoute != Routes.LOCK &&
+            currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true &&
+            currentRoute != Routes.SEARCH
 
     if (showScaffold) {
         Scaffold(
