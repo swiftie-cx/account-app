@@ -297,7 +297,7 @@ fun NavigationGraph(
                 navArgument("category") { type = NavType.StringType; defaultValue = "" },
                 navArgument("startDate") { type = NavType.LongType; defaultValue = -1L },
                 navArgument("endDate") { type = NavType.LongType; defaultValue = -1L },
-                navArgument("type") { type = NavType.IntType; defaultValue = 0 } // (修改) 新增 type 参数
+                navArgument("type") { type = NavType.IntType; defaultValue = 0 }
             )
         ) { backStackEntry ->
             val category = backStackEntry.arguments?.getString("category").takeIf { !it.isNullOrBlank() }
@@ -311,8 +311,25 @@ fun NavigationGraph(
                 initialCategory = category,
                 initialStartDate = startDate,
                 initialEndDate = endDate,
-                initialType = type // (修改) 传递 type
+                initialType = type
             )
+        }
+
+        // --- 用户信息相关路由 ---
+        composable(Routes.USER_INFO) {
+            UserInfoScreen(navController = navController, viewModel = expenseViewModel)
+        }
+        composable(Routes.LOGIN) {
+            LoginScreen(navController = navController, viewModel = expenseViewModel)
+        }
+        composable(Routes.REGISTER) {
+            RegisterScreen(navController = navController, viewModel = expenseViewModel)
+        }
+        composable(Routes.CHANGE_PASSWORD) {
+            ChangePasswordScreen(navController = navController, viewModel = expenseViewModel)
+        }
+        composable(Routes.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(navController = navController, viewModel = expenseViewModel)
         }
     }
 }

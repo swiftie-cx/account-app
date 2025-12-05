@@ -39,6 +39,39 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         }
     }
 
+    // --- 用户信息相关 ---
+
+    // 登录状态
+    val isLoggedIn: StateFlow<Boolean> = repository.isLoggedIn
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    // 用户邮箱
+    val userEmail: StateFlow<String> = repository.userEmail
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    // 注册
+    fun register(email: String, password: String) {
+        repository.register(email, password)
+    }
+
+    // 登录
+    fun login(email: String, password: String): Boolean {
+        return repository.login(email, password)
+    }
+
+    // 检查邮箱是否注册
+    fun isEmailRegistered(email: String): Boolean {
+        return repository.isEmailRegistered(email)
+    }
+
+    // 密码操作
+    fun verifyUserPassword(password: String) = repository.verifyUserPassword(password)
+    fun saveUserPassword(password: String) = repository.saveUserPassword(password)
+
+    fun logout() = repository.logout()
+    fun deleteUserAccount() = repository.deleteUserAccount()
+
+    // --- Data Streams ---
     val allExpenses: StateFlow<List<Expense>> = repository.allExpenses
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -56,7 +89,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         repository.saveAccountOrder(newOrder)
     }
 
-    // --- (新增) 清除所有数据 ---
     fun clearAllData() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.clearAllData()
@@ -194,37 +226,18 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
             }
         }
     }
+
     // --- Privacy / Security ---
+    // --- Privacy / Security ---
+    fun getPrivacyType(): String = repository.getPrivacyType()
 
-    fun getPrivacyType(): String {
-        return repository.getPrivacyType()
-    }
+    // (修改) 将 savePrivacyType 改回 setPrivacyType，与界面调用保持一致
+    fun setPrivacyType(type: String) = repository.savePrivacyType(type)
 
-    fun setPrivacyType(type: String) {
-        repository.savePrivacyType(type)
-    }
-
-    fun savePin(pin: String) {
-        repository.savePin(pin)
-    }
-
-    fun verifyPin(pin: String): Boolean {
-        return repository.verifyPin(pin)
-    }
-
-    fun savePattern(pattern: List<Int>) {
-        repository.savePattern(pattern)
-    }
-
-    fun verifyPattern(pattern: List<Int>): Boolean {
-        return repository.verifyPattern(pattern)
-    }
-
-    fun setBiometricEnabled(enabled: Boolean) {
-        repository.setBiometricEnabled(enabled)
-    }
-
-    fun isBiometricEnabled(): Boolean {
-        return repository.isBiometricEnabled()
-    }
+    fun savePin(pin: String) = repository.savePin(pin)
+    fun verifyPin(pin: String): Boolean = repository.verifyPin(pin)
+    fun savePattern(pattern: List<Int>) = repository.savePattern(pattern)
+    fun verifyPattern(pattern: List<Int>): Boolean = repository.verifyPattern(pattern)
+    fun setBiometricEnabled(enabled: Boolean) = repository.setBiometricEnabled(enabled)
+    fun isBiometricEnabled(): Boolean = repository.isBiometricEnabled()
 }

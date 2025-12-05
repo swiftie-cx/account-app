@@ -12,11 +12,79 @@ class ExpenseRepository(
     private val expenseDao: ExpenseDao,
     private val budgetDao: BudgetDao,
     private val accountDao: AccountDao,
-    context: Context // (关键) 构造函数接收 Context
+    context: Context
 ) {
     // --- 偏好设置 (SharedPreferences) ---
     private val prefs = context.getSharedPreferences("expense_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
+
+    // --- 用户认证逻辑 (模拟) ---
+
+    // 1. 监听登录状态
+    private val _isLoggedIn = MutableStateFlow(prefs.getBoolean("is_logged_in", false))
+    val isLoggedIn = _isLoggedIn.asStateFlow()
+
+    // 2. 监听当前用户邮箱 (仅用于显示)
+    private val _userEmail = MutableStateFlow(prefs.getString("user_email", "") ?: "")
+    val userEmail = _userEmail.asStateFlow()
+
+    // 注册 (保存账号信息 + 自动登录)
+    fun register(email: String, password: String) {
+        prefs.edit()
+            .putString("user_email", email)
+            .putString("user_password", password)
+            .putBoolean("is_logged_in", true) // 注册后自动登录
+            .apply()
+        _userEmail.value = email
+        _isLoggedIn.value = true
+    }
+
+    // 登录 (校验账号信息)
+    fun login(email: String, password: String): Boolean {
+        val savedEmail = prefs.getString("user_email", "")
+        val savedPassword = prefs.getString("user_password", "")
+
+        // 简单模拟：如果输入的账号密码和本地存的一致
+        if (savedEmail == email && savedPassword == password) {
+            prefs.edit().putBoolean("is_logged_in", true).apply()
+            _isLoggedIn.value = true
+            return true
+        }
+        return false
+    }
+
+    // 退出登录 (只改状态，不删数据)
+    fun logout() {
+        prefs.edit().putBoolean("is_logged_in", false).apply()
+        _isLoggedIn.value = false
+    }
+
+    // 注销账号 (删数据 + 退出)
+    fun deleteUserAccount() {
+        prefs.edit()
+            .remove("user_email")
+            .remove("user_password")
+            .remove("is_logged_in")
+            .apply()
+        _userEmail.value = ""
+        _isLoggedIn.value = false
+    }
+
+    // 检查邮箱是否被注册 (模拟：检查是否和本地存储的一样)
+    fun isEmailRegistered(email: String): Boolean {
+        val savedEmail = prefs.getString("user_email", "")
+        return savedEmail == email
+    }
+
+    // 保存新密码 (修改密码/重置密码用)
+    fun saveUserPassword(password: String) {
+        prefs.edit().putString("user_password", password).apply()
+    }
+
+    fun verifyUserPassword(password: String): Boolean {
+        val saved = prefs.getString("user_password", "")
+        return saved == password
+    }
 
     // 1. 默认账户 ID (StateFlow)
     private val _defaultAccountId = MutableStateFlow(prefs.getLong("default_account_id", -1L))
@@ -44,9 +112,7 @@ class ExpenseRepository(
     suspend fun upsertBudgets(budgets: List<Budget>) = budgetDao.upsertBudgets(budgets)
     suspend fun getMostRecentBudget() = budgetDao.getMostRecentBudget()
 
-    // --- Account methods (核心修改) ---
-
-    // (修改) allAccounts 会结合数据库数据 + 排序设置，返回“已排序”的列表
+    // --- Account methods ---
     val allAccounts: Flow<List<Account>> = accountDao.getAllAccounts()
         .combine(_accountOrder) { accounts, order ->
             if (order.isEmpty()) {
@@ -80,21 +146,24 @@ class ExpenseRepository(
         _accountOrder.value = ids
     }
 
-    // (新增) 清除所有数据逻辑
+    // 清除所有数据逻辑
     suspend fun clearAllData() {
         // 1. 清空数据库表
         expenseDao.deleteAll()
         budgetDao.deleteAll()
         accountDao.deleteAll()
 
-        // 2. 清空偏好设置 (重置默认账户、排序等)
+        // 2. 清空偏好设置
         prefs.edit().clear().apply()
 
         // 3. 重置内存中的状态
         _defaultAccountId.value = -1L
         _accountOrder.value = emptyList()
+        _userEmail.value = ""
+        _isLoggedIn.value = false
     }
-    // 类型: "NONE", "PIN", "PATTERN"
+
+    // --- 隐私设置 ---
     fun getPrivacyType(): String {
         return prefs.getString("privacy_type", "NONE") ?: "NONE"
     }
@@ -112,7 +181,6 @@ class ExpenseRepository(
         return savedPin == inputPin
     }
 
-    // 手势密码保存为字符串 "1,2,3,4"
     fun savePattern(pattern: List<Int>) {
         val patternStr = pattern.joinToString(",")
         prefs.edit().putString("privacy_pattern", patternStr).apply()
@@ -124,7 +192,6 @@ class ExpenseRepository(
         return savedStr == inputStr
     }
 
-    // 指纹开关
     fun isBiometricEnabled(): Boolean {
         return prefs.getBoolean("privacy_biometric", false)
     }

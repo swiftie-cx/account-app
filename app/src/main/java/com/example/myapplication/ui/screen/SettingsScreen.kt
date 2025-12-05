@@ -29,11 +29,8 @@ fun SettingsScreen(
     defaultCurrency: String,
     viewModel: ExpenseViewModel
 ) {
-    // 状态：控制两个弹窗
     var showWarningDialog by remember { mutableStateOf(false) }
     var showFinalConfirmDialog by remember { mutableStateOf(false) }
-
-    // 状态：第二次弹窗的输入内容
     var confirmationInput by remember { mutableStateOf("") }
     val targetPhrase = "确认清除全部数据"
 
@@ -55,11 +52,11 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // 1. 个人信息
+            // 1. 用户信息 (修改)
             SettingsItem(
                 icon = Icons.Default.Person,
-                title = "个人信息",
-                onClick = { /* TODO */ }
+                title = "用户信息", // 修改标题
+                onClick = { navController.navigate(Routes.USER_INFO) } // 添加跳转
             )
 
             // 2. 类别设置
@@ -77,7 +74,7 @@ fun SettingsScreen(
                 onClick = { navController.navigate(Routes.CURRENCY_SELECTION) }
             )
 
-            // 4. 主题 (关键修改：添加跳转逻辑)
+            // 4. 主题
             SettingsItem(
                 icon = Icons.Default.Palette,
                 title = "主题",
@@ -105,7 +102,7 @@ fun SettingsScreen(
         }
     }
 
-    // --- 警告弹窗 ---
+    // --- Warning Dialogs (Keep existing) ---
     if (showWarningDialog) {
         AlertDialog(
             onDismissRequest = { showWarningDialog = false },
@@ -115,73 +112,51 @@ fun SettingsScreen(
                 TextButton(
                     onClick = {
                         showWarningDialog = false
-                        showFinalConfirmDialog = true // 进入第二步
-                        confirmationInput = "" // 重置输入框
+                        showFinalConfirmDialog = true
+                        confirmationInput = ""
                     }
-                ) {
-                    Text("下一步", color = MaterialTheme.colorScheme.error)
-                }
+                ) { Text("下一步", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showWarningDialog = false }) {
-                    Text("取消")
-                }
+                TextButton(onClick = { showWarningDialog = false }) { Text("取消") }
             }
         )
     }
 
-    // --- 最终确认弹窗 ---
     if (showFinalConfirmDialog) {
         val isMatch = confirmationInput == targetPhrase
-
         AlertDialog(
             onDismissRequest = { showFinalConfirmDialog = false },
             title = { Text("最终确认") },
             text = {
                 Column {
                     Text("为了防止误操作，请在下方输入：")
-                    Text(
-                        text = targetPhrase,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
+                    Text(text = targetPhrase, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
                     OutlinedTextField(
                         value = confirmationInput,
                         onValueChange = { confirmationInput = it },
                         placeholder = { Text(targetPhrase) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.error,
-                            cursorColor = MaterialTheme.colorScheme.error
-                        )
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.error, cursorColor = MaterialTheme.colorScheme.error)
                     )
                 }
             },
             confirmButton = {
                 Button(
-                    onClick = {
-                        viewModel.clearAllData()
-                        showFinalConfirmDialog = false
-                    },
+                    onClick = { viewModel.clearAllData(); showFinalConfirmDialog = false },
                     enabled = isMatch,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("彻底删除")
-                }
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("彻底删除") }
             },
             dismissButton = {
-                TextButton(onClick = { showFinalConfirmDialog = false }) {
-                    Text("取消")
-                }
+                TextButton(onClick = { showFinalConfirmDialog = false }) { Text("取消") }
             }
         )
     }
 }
 
+// SettingsItem function is kept as is (ensure it's present in the file)
 @Composable
 fun SettingsItem(
     icon: ImageVector,
@@ -199,33 +174,15 @@ fun SettingsItem(
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            tint = iconColor,
-            modifier = Modifier.size(24.dp)
-        )
+        Icon(imageVector = icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = titleColor,
-            modifier = Modifier.weight(1f)
-        )
+        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = titleColor, modifier = Modifier.weight(1f))
         if (value != null) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(text = value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.width(8.dp))
         }
         if (showArrow) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

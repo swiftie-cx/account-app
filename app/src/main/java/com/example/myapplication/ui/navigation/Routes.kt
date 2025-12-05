@@ -22,7 +22,7 @@ object Routes {
     const val DAILY_DETAILS = "daily_details/{dateMillis}"
     fun dailyDetailsRoute(dateMillis: Long) = "daily_details/$dateMillis"
 
-    // (修改) Search 路由增加 type 参数 (0=全部, 1=支出, 2=收入)
+    // 搜索
     const val SEARCH = "search?category={category}&startDate={startDate}&endDate={endDate}&type={type}"
     fun searchRoute(category: String? = null, startDate: Long? = null, endDate: Long? = null, type: Int = 0): String {
         val cat = if (category != null) Uri.encode(category) else ""
@@ -39,4 +39,11 @@ object Routes {
     const val PRIVACY_SETTINGS = "privacy_settings"
     const val LOCK = "lock"
     const val THEME_SETTINGS = "theme_settings"
+
+    // --- 用户信息相关 ---
+    const val USER_INFO = "user_info"
+    const val LOGIN = "login"          // 新增：登录
+    const val REGISTER = "register"    // 新增：注册 (替代原来的 bind_email)
+    const val CHANGE_PASSWORD = "change_password"
+    const val FORGOT_PASSWORD = "forgot_password"
 }
