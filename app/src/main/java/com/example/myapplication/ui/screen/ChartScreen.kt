@@ -2,6 +2,8 @@ package com.example.myapplication.ui.screen
 
 import android.graphics.Paint
 import android.graphics.Typeface
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,19 +11,19 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset // (新增) 导入 tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -61,687 +64,408 @@ enum class TransactionType { INCOME, EXPENSE, BALANCE }
 fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
     val allTransactions by viewModel.allExpenses.collectAsState(initial = emptyList())
 
+    // 状态管理
     var transactionType by remember { mutableStateOf(TransactionType.EXPENSE) }
-    var chartMode by remember { mutableStateOf(ChartMode.WEEK) }
+    var chartMode by remember { mutableStateOf(ChartMode.MONTH) } // 默认按月
+    var currentDate by remember { mutableStateOf(Calendar.getInstance()) } // 当前选中的日期锚点
 
-    var startDateMillis by remember { mutableStateOf<Long?>(null) }
-    var endDateMillis by remember { mutableStateOf<Long?>(null) }
+    // 自定义日期范围状态
+    var customStartDate by remember { mutableStateOf<Long?>(null) }
+    var customEndDate by remember { mutableStateOf<Long?>(null) }
     var showDateRangeDialog by remember { mutableStateOf(false) }
+    val isCustomRange = customStartDate != null && customEndDate != null
 
-    val isCustomRange by remember(startDateMillis, endDateMillis) {
-        mutableStateOf(startDateMillis != null && endDateMillis != null)
-    }
-
-    val filteredTransactions = remember(
-        allTransactions,
-        transactionType,
-        startDateMillis,
-        endDateMillis
-    ) {
-        allTransactions.filter { expense ->
-            val matchType = when (transactionType) {
-                TransactionType.EXPENSE -> expense.amount < 0
-                TransactionType.INCOME -> expense.amount > 0
-                TransactionType.BALANCE -> true
-            }
-            val time = expense.date.time
-            val inRange =
-                (startDateMillis == null || time >= startDateMillis!!) &&
-                        (endDateMillis == null || time <= endDateMillis!!)
-            matchType && inRange
-        }
-    }
-
-    val groupedData = remember(filteredTransactions, chartMode) {
-        filteredTransactions.groupBy { expense ->
-            val calendar = Calendar.getInstance().apply { time = expense.date }
-            when (chartMode) {
-                ChartMode.WEEK -> {
-                    val year = calendar.get(Calendar.YEAR)
-                    val weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR)
-                    "%04d-W%02d".format(year, weekOfYear)
-                }
-
-                ChartMode.MONTH -> {
-                    val monthFormat = SimpleDateFormat("yyyy-MM", Locale.CHINA)
-                    monthFormat.format(calendar.time)
-                }
-
-                ChartMode.YEAR -> {
-                    val yearFormat = SimpleDateFormat("yyyy", Locale.CHINA)
-                    yearFormat.format(calendar.time)
-                }
-            }
-        }
-    }
-
-    val sortedGroupKeys = remember(groupedData) {
-        groupedData.keys.sorted()
-    }
-
-    var currentIndex by remember(chartMode, sortedGroupKeys, isCustomRange) {
-        val initialIndex = if (isCustomRange || sortedGroupKeys.isEmpty()) {
-            0
+    // 1. 计算当前的时间范围 (Start - End)
+    val (rangeStart, rangeEnd) = remember(chartMode, currentDate, customStartDate, customEndDate) {
+        if (isCustomRange) {
+            (customStartDate ?: 0L) to (customEndDate ?: 0L)
         } else {
-            val currentKey = getCurrentGroupKey(chartMode)
-            val idx = sortedGroupKeys.indexOf(currentKey)
-            (if (idx >= 0) idx else sortedGroupKeys.lastIndex).coerceAtLeast(0)
+            calculateDateRange(currentDate, chartMode)
         }
-        mutableStateOf(initialIndex)
+    }
+
+    // 2. 筛选当前时间范围内的所有交易
+    val currentPeriodExpenses = remember(allTransactions, rangeStart, rangeEnd) {
+        allTransactions.filter {
+            it.date.time in rangeStart..rangeEnd
+        }
+    }
+
+    // 3. 计算统计数据 (用于显示在三个大按钮上)
+    val totalExpense = remember(currentPeriodExpenses) {
+        currentPeriodExpenses.filter { it.amount < 0 && !it.category.startsWith("转账") }.sumOf { abs(it.amount) }
+    }
+    val totalIncome = remember(currentPeriodExpenses) {
+        currentPeriodExpenses.filter { it.amount > 0 && !it.category.startsWith("转账") }.sumOf { it.amount }
+    }
+    val totalBalance = totalIncome - totalExpense
+
+    // 4. 根据选中的类型 (支出/收入/结余) 进一步筛选用于图表的数据
+    val chartData = remember(currentPeriodExpenses, transactionType) {
+        currentPeriodExpenses.filter { expense ->
+            when (transactionType) {
+                TransactionType.EXPENSE -> expense.amount < 0 && !expense.category.startsWith("转账")
+                TransactionType.INCOME -> expense.amount > 0 && !expense.category.startsWith("转账")
+                TransactionType.BALANCE -> !expense.category.startsWith("转账") // 结余通常涉及所有非转账
+            }
+        }
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background, // 统一背景色
-        // (关键修改1) 这里的 contentWindowInsets 排除 statusBars，防止 Scaffold 自动添加顶部 Padding
-        // 这样 FilterBar 就可以延伸到顶部。底部 NavigationBar 仍然保留。
+        containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets.exclude(WindowInsets.statusBars)
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
 
-            // 顶部筛选栏 (修改：去掉了奇怪的圆角和阴影)
-            FilterBar(
-                transactionType = transactionType,
+            // --- 顶部仪表盘区域 (包含所有筛选逻辑) ---
+            DashboardHeader(
                 chartMode = chartMode,
-                startDateMillis = startDateMillis,
-                endDateMillis = endDateMillis,
+                currentDate = currentDate,
+                rangeStart = rangeStart,
+                rangeEnd = rangeEnd,
+                transactionType = transactionType,
+                totalExpense = totalExpense,
+                totalIncome = totalIncome,
+                totalBalance = totalBalance,
                 isCustomRange = isCustomRange,
-                currentIndex = currentIndex,
-                sortedGroupKeys = sortedGroupKeys,
-                onBackClick = {
-                    startDateMillis = null
-                    endDateMillis = null
+                onModeChange = {
+                    chartMode = it
+                    customStartDate = null
+                    customEndDate = null
                 },
-                onTypeToggle = {
-                    transactionType = when (transactionType) {
-                        TransactionType.EXPENSE -> TransactionType.INCOME
-                        TransactionType.INCOME -> TransactionType.BALANCE
-                        TransactionType.BALANCE -> TransactionType.EXPENSE
+                onDateChange = { offset ->
+                    val newCal = currentDate.clone() as Calendar
+                    when (chartMode) {
+                        ChartMode.WEEK -> newCal.add(Calendar.WEEK_OF_YEAR, offset)
+                        ChartMode.MONTH -> newCal.add(Calendar.MONTH, offset)
+                        ChartMode.YEAR -> newCal.add(Calendar.YEAR, offset)
                     }
+                    currentDate = newCal
                 },
-                onChartModeChange = { chartMode = it },
-                onCalendarClick = { showDateRangeDialog = true },
-                onTabClick = { index ->
-                    currentIndex = index
+                onTypeChange = { transactionType = it },
+                onCustomRangeClick = { showDateRangeDialog = true },
+                onBackFromCustom = {
+                    customStartDate = null
+                    customEndDate = null
                 }
             )
 
-            // 内容区域
-            if (isCustomRange) {
-                if (filteredTransactions.isNotEmpty()) {
-                    ChartPage(filteredTransactions, ChartMode.MONTH, transactionType, navController, "", isCustomRange = true, customStart = startDateMillis, customEnd = endDateMillis)
-                } else {
-                    EmptyState()
-                }
+            // --- 图表内容区域 ---
+            if (chartData.isNotEmpty()) {
+                ChartPageContent(
+                    data = chartData,
+                    chartMode = if (isCustomRange) ChartMode.MONTH else chartMode, // 自定义范围暂按月显示粒度
+                    transactionType = transactionType,
+                    navController = navController,
+                    dateRange = rangeStart to rangeEnd
+                )
             } else {
-                if (sortedGroupKeys.isNotEmpty()) {
-                    val key = sortedGroupKeys[currentIndex.coerceIn(sortedGroupKeys.indices)]
-                    val pageData = groupedData[key] ?: emptyList()
-                    ChartPage(pageData, chartMode, transactionType, navController, key)
-                } else {
-                    EmptyState()
-                }
+                EmptyState()
             }
         }
     }
 
     if (showDateRangeDialog) {
         CustomDateRangePicker(
-            initialStartDate = startDateMillis,
-            initialEndDate = endDateMillis,
+            initialStartDate = customStartDate,
+            initialEndDate = customEndDate,
             onDismiss = { showDateRangeDialog = false },
             onConfirm = { start, end ->
-                startDateMillis = start
-                endDateMillis = end
+                customStartDate = start
+                customEndDate = end
                 showDateRangeDialog = false
             }
         )
     }
 }
 
+// --- 核心组件：仪表盘头部 ---
 @Composable
-fun EmptyState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(64.dp))
-            Spacer(Modifier.height(16.dp))
-            Text("本周期没有记录", color = MaterialTheme.colorScheme.outline)
+fun DashboardHeader(
+    chartMode: ChartMode,
+    currentDate: Calendar,
+    rangeStart: Long,
+    rangeEnd: Long,
+    transactionType: TransactionType,
+    totalExpense: Double,
+    totalIncome: Double,
+    totalBalance: Double,
+    isCustomRange: Boolean,
+    onModeChange: (ChartMode) -> Unit,
+    onDateChange: (Int) -> Unit,
+    onTypeChange: (TransactionType) -> Unit,
+    onCustomRangeClick: () -> Unit,
+    onBackFromCustom: () -> Unit
+) {
+    val dateFormat = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA) }
+    val monthFormat = remember { SimpleDateFormat("yyyy年MM月", Locale.CHINA) }
+    val yearFormat = remember { SimpleDateFormat("yyyy年", Locale.CHINA) }
+
+    // 动态生成日期显示文本
+    val dateTitle = remember(chartMode, currentDate, isCustomRange, rangeStart, rangeEnd) {
+        if (isCustomRange) {
+            "自定义范围"
+        } else {
+            when (chartMode) {
+                ChartMode.WEEK -> "第 ${currentDate.get(Calendar.WEEK_OF_YEAR)} 周"
+                ChartMode.MONTH -> monthFormat.format(currentDate.time)
+                ChartMode.YEAR -> yearFormat.format(currentDate.time)
+            }
         }
     }
-}
 
-@Composable
-fun FilterBar(
-    transactionType: TransactionType,
-    chartMode: ChartMode,
-    startDateMillis: Long?,
-    endDateMillis: Long?,
-    isCustomRange: Boolean,
-    currentIndex: Int,
-    sortedGroupKeys: List<String>,
-    onBackClick: () -> Unit,
-    onTypeToggle: () -> Unit,
-    onChartModeChange: (ChartMode) -> Unit,
-    onCalendarClick: () -> Unit,
-    onTabClick: (Int) -> Unit
-) {
-    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-    val dateFormat = remember { SimpleDateFormat("yyyy年M月d日", Locale.CHINA) }
+    val rangeText = remember(rangeStart, rangeEnd) {
+        "${dateFormat.format(Date(rangeStart))} - ${dateFormat.format(Date(rangeEnd))}"
+    }
 
-    // 【修改】
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface) // 纯白/深色背景
-            // (关键修改2) 添加 statusBarsPadding 在 background 之后。
-            // 这样背景色会填充到状态栏区域，但内容会被推下来，避免重叠。
+            .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
-            .padding(bottom = 8.dp)
+            .padding(bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. 第一行：返回、类型切换、日历
+        // 1. 顶部模式切换 (周/月/年) - 胶囊风格
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(vertical = 12.dp)
+                .height(32.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                .padding(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ChartMode.values().forEach { mode ->
+                val isSelected = chartMode == mode && !isCustomRange
+                val bgColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent, label = "bg")
+                val textColor by animateColorAsState(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, label = "text")
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(horizontal = 2.dp)
+                        .clip(CircleShape)
+                        .background(bgColor)
+                        .clickable { onModeChange(mode) }
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = when (mode) {
+                            ChartMode.WEEK -> "周"
+                            ChartMode.MONTH -> "月"
+                            ChartMode.YEAR -> "年"
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = textColor
+                    )
+                }
+            }
+
+            // 自定义按钮图标
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+                    .background(if(isCustomRange) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .clickable { onCustomRangeClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.DateRange,
+                    null,
+                    tint = if(isCustomRange) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // 2. 日期导航 (箭头 + 大标题 + 范围小字)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             if (isCustomRange) {
-                IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                IconButton(onClick = onBackFromCustom) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
                 }
             } else {
-                Spacer(modifier = Modifier.width(48.dp)) // 占位保持居中
+                IconButton(onClick = { onDateChange(-1) }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "前一页")
+                }
             }
 
-            // 类型切换 (支出/收入/结余)
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .clickable { onTypeToggle() }
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = when (transactionType) {
-                        TransactionType.EXPENSE -> "支出"
-                        TransactionType.INCOME -> "收入"
-                        TransactionType.BALANCE -> "结余"
-                    },
+                    text = dateTitle,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.Bold
                 )
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = rangeText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            IconButton(onClick = onCalendarClick) {
-                Icon(
-                    imageVector = Icons.Filled.DateRange,
-                    contentDescription = "日期",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
+            if (isCustomRange) {
+                Spacer(Modifier.width(48.dp)) // 占位保持居中
+            } else {
+                IconButton(onClick = { onDateChange(1) }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "后一页")
+                }
             }
         }
 
-        // 自定义时间段显示
-        if (startDateMillis != null || endDateMillis != null) {
-            val startText = startDateMillis?.let { dateFormat.format(Date(it)) } ?: "开始时间"
-            val endText = endDateMillis?.let { dateFormat.format(Date(it)) } ?: "结束时间"
+        Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "$startText ~ $endText",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)
+        // 3. 统计卡片选择器 (Stats Cards Selectors)
+        // 使用 Row + weight(1f) 均分
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StatSelectionCard(
+                title = "支出",
+                amount = totalExpense,
+                isSelected = transactionType == TransactionType.EXPENSE,
+                baseColor = Color(0xFFD02A25), // 红色
+                onClick = { onTypeChange(TransactionType.EXPENSE) },
+                modifier = Modifier.weight(1f)
             )
-        }
 
-        // 2. 第二行：周/月/年 切换 (Segmented Control 风格)
-        if (!isCustomRange) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh), // 浅灰槽
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ChartMode.values().forEach { mode ->
-                    val selected = chartMode == mode
-                    val textColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                    val bgColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+            StatSelectionCard(
+                title = "收入",
+                amount = totalIncome,
+                isSelected = transactionType == TransactionType.INCOME,
+                baseColor = Color(0xFF43A047), // 绿色
+                onClick = { onTypeChange(TransactionType.INCOME) },
+                modifier = Modifier.weight(1f)
+            )
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(2.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(bgColor)
-                            .clickable { onChartModeChange(mode) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = when (mode) {
-                                ChartMode.WEEK -> "周"
-                                ChartMode.MONTH -> "月"
-                                ChartMode.YEAR -> "年"
-                            },
-                            color = textColor,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        // 3. 第三行：时间轴滚动条
-        if (!isCustomRange && sortedGroupKeys.isNotEmpty()) {
-            ScrollableTabRow(
-                selectedTabIndex = currentIndex.coerceIn(sortedGroupKeys.indices),
-                containerColor = Color.Transparent,
-                edgePadding = 16.dp,
-                indicator = { tabPositions ->
-                    if (tabPositions.isNotEmpty()) {
-                        val idx = currentIndex.coerceIn(tabPositions.indices)
-                        val pos = tabPositions[idx]
-
-                        // (修改) 使用 tabIndicatorOffset + 内部 Box 居中，确保对齐
-                        Box(
-                            modifier = Modifier
-                                .tabIndicatorOffset(pos) // 这一步让外层 Box 完美覆盖当前 Tab 的位置和宽度
-                                .fillMaxHeight()         // 占满高度以便进行底部对齐
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter) // 核心：在 Tab 区域内底部居中
-                                    .padding(bottom = 2.dp)
-                                    .width(20.dp) // 固定宽度，视觉上更整洁（原为 pos.width / 4）
-                                    .height(3.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                            )
-                        }
-                    }
-                },
-                divider = {}
-            ) {
-                sortedGroupKeys.forEachIndexed { index, key ->
-                    val selected = currentIndex == index
-                    Tab(
-                        selected = selected,
-                        onClick = { onTabClick(index) },
-                        selectedContentColor = MaterialTheme.colorScheme.primary,
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        text = {
-                            val style = if(selected) MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyMedium
-                            when (chartMode) {
-                                ChartMode.WEEK -> {
-                                    val (yearStr, weekStr) = key.split("-W")
-                                    val yearInt = yearStr.toInt()
-                                    val weekInt = weekStr.toInt()
-                                    val title = if (yearInt == currentYear) "${weekInt}周" else "${yearStr}-${weekInt}周"
-                                    Text(title, style = style)
-                                }
-                                ChartMode.MONTH -> {
-                                    val (y, m) = key.split("-")
-                                    Text(if (y.toInt() == currentYear) "${m}月" else "${y}年${m}月", style = style)
-                                }
-                                ChartMode.YEAR -> {
-                                    Text("${key}年", style = style)
-                                }
-                            }
-                        }
-                    )
-                }
-            }
+            StatSelectionCard(
+                title = "结余",
+                amount = totalBalance,
+                isSelected = transactionType == TransactionType.BALANCE,
+                baseColor = MaterialTheme.colorScheme.primary, // 主题色
+                onClick = { onTypeChange(TransactionType.BALANCE) },
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
-
-// ---------------------- 折线图相关逻辑 ----------------------
-
-data class LineChartPoint(val label: String, val value: Float, val timeMillis: Long)
 
 @Composable
-fun LineChart(
-    dataPoints: List<LineChartPoint>,
-    modifier: Modifier = Modifier,
-    lineColor: Color = MaterialTheme.colorScheme.primary,
-    onPointClick: (LineChartPoint) -> Unit
+fun StatSelectionCard(
+    title: String,
+    amount: Double,
+    isSelected: Boolean,
+    baseColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    if (dataPoints.isEmpty()) return
+    // 动画效果
+    val backgroundColor by animateColorAsState(
+        if (isSelected) baseColor else MaterialTheme.colorScheme.surfaceContainer,
+        label = "cardBg"
+    )
+    val contentColor by animateColorAsState(
+        if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+        label = "cardContent"
+    )
+    val scale by animateFloatAsState(if (isSelected) 1.05f else 1f, label = "scale")
+    val elevation = if (isSelected) 8.dp else 0.dp
 
-    val actualMax = remember(dataPoints) { dataPoints.maxOfOrNull { it.value } ?: 0f }
-    val actualMin = remember(dataPoints) { dataPoints.minOfOrNull { it.value } ?: 0f }
-
-    val density = LocalDensity.current.density
-
-    // 文字画笔 (坐标轴)
-    val textPaint = remember {
-        Paint().apply {
-            color = android.graphics.Color.LTGRAY // 浅灰色坐标
-            textSize = 10f * density
-            textAlign = Paint.Align.CENTER
-        }
-    }
-
-    // 文字画笔 (气泡内部文字 - 白色)
-    val tooltipTextPaint = remember {
-        Paint().apply {
-            color = android.graphics.Color.WHITE
-            textSize = 12f * density
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        }
-    }
-
-    // 日期格式化器
-    val tooltipDateFormat = remember { SimpleDateFormat("MM-dd", Locale.CHINA) }
-
-    // 渐变填充颜色
-    val gradientColors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f))
-
-    var selectedIndex by remember { mutableIntStateOf(-1) }
-
-    Canvas(
-        modifier = modifier
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { offset ->
-                    val width = size.width
-                    val leftPadding = 32.dp.toPx()
-                    val chartWidth = width - leftPadding - 16.dp.toPx()
-                    val spacing = chartWidth / (dataPoints.size - 1).coerceAtLeast(1)
-
-                    // 1. 检查是否点击了已显示的 Tooltip (跳转)
-                    if (selectedIndex != -1 && selectedIndex in dataPoints.indices) {
-                        val point = dataPoints[selectedIndex]
-                        val chartHeight = size.height - 24.dp.toPx()
-                        val rangeTop = if (actualMax > 0) actualMax * 1.2f else 100f
-                        val rangeBottom = if (actualMin < 0) actualMin * 1.2f else 0f
-                        val drawingRange = (rangeTop - rangeBottom).coerceAtLeast(1f)
-
-                        val x = leftPadding + selectedIndex * spacing
-                        val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
-
-                        // 简易判断：如果在点附近点击，触发跳转
-                        val clickRadius = 40.dp.toPx()
-                        if (kotlin.math.abs(offset.x - x) < clickRadius && kotlin.math.abs(offset.y - y) < clickRadius) {
-                            onPointClick(point)
-                            return@detectTapGestures
-                        }
-                    }
-
-                    // 2. 否则选中新的点
-                    val index = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
-                    selectedIndex = index
-                })
-            }
-            .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { offset ->
-                        val width = size.width
-                        val leftPadding = 32.dp.toPx()
-                        val spacing = (width - leftPadding - 16.dp.toPx()) / (dataPoints.size - 1).coerceAtLeast(1)
-                        selectedIndex = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
-                    },
-                    onDrag = { change, _ ->
-                        val width = size.width
-                        val leftPadding = 32.dp.toPx()
-                        val spacing = (width - leftPadding - 16.dp.toPx()) / (dataPoints.size - 1).coerceAtLeast(1)
-                        selectedIndex = ((change.position.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
-                    }
-                )
-            }
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = backgroundColor,
+        shadowElevation = elevation,
+        modifier = modifier.scale(scale).height(80.dp) // 固定高度，整齐
     ) {
-        val width = size.width
-        val height = size.height
-        val bottomPadding = 24.dp.toPx()
-        val leftPadding = 32.dp.toPx()
-
-        val chartWidth = width - leftPadding - 16.dp.toPx()
-        val chartHeight = height - bottomPadding
-
-        val rangeTop = if (actualMax > 0) actualMax * 1.2f else 100f
-        val rangeBottom = if (actualMin < 0) actualMin * 1.2f else 0f
-        val drawingRange = (rangeTop - rangeBottom).coerceAtLeast(1f)
-
-        // 1. 绘制虚线网格
-        val gridLines = 4
-        for (i in 0..gridLines) {
-            val ratio = i.toFloat() / gridLines
-            val y = chartHeight - (ratio * chartHeight)
-            drawLine(
-                color = Color.LightGray.copy(alpha = 0.5f),
-                start = Offset(leftPadding, y),
-                end = Offset(width, y),
-                strokeWidth = 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-            )
-        }
-
-        // 2. 绘制折线和填充
-        val spacing = chartWidth / (dataPoints.size - 1).coerceAtLeast(1)
-        val path = Path()
-        val fillPath = Path()
-
-        dataPoints.forEachIndexed { index, point ->
-            val x = leftPadding + index * spacing
-            val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
-
-            if (index == 0) {
-                path.moveTo(x, y)
-                fillPath.moveTo(x, chartHeight)
-                fillPath.lineTo(x, y)
-            } else {
-                path.lineTo(x, y)
-                fillPath.lineTo(x, y)
-            }
-
-            // X轴 标签
-            if (dataPoints.size <= 7 || index % (dataPoints.size / 5) == 0) {
-                drawContext.canvas.nativeCanvas.drawText(
-                    point.label,
-                    x,
-                    height - 5.dp.toPx(),
-                    textPaint
-                )
-            }
-        }
-
-        fillPath.lineTo(leftPadding + (dataPoints.size - 1) * spacing, chartHeight)
-        fillPath.close()
-
-        // 绘制渐变填充
-        drawPath(
-            path = fillPath,
-            brush = Brush.verticalGradient(
-                colors = gradientColors,
-                startY = 0f,
-                endY = chartHeight
-            )
-        )
-
-        // 绘制线条
-        drawPath(
-            path = path,
-            color = lineColor,
-            style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
-        )
-
-        // 3. 绘制普通数据点 (小圈)
-        dataPoints.forEachIndexed { index, point ->
-            val x = leftPadding + index * spacing
-            val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
-
-            drawCircle(
-                color = Color.White,
-                radius = 4.dp.toPx(),
-                center = Offset(x, y),
-                style = androidx.compose.ui.graphics.drawscope.Fill
-            )
-            drawCircle(
-                color = lineColor,
-                radius = 4.dp.toPx(),
-                center = Offset(x, y),
-                style = Stroke(width = 2.dp.toPx())
-            )
-        }
-
-        // 4. 【恢复】选中高亮和气泡 (Tooltip)
-        if (selectedIndex != -1 && selectedIndex in dataPoints.indices) {
-            val point = dataPoints[selectedIndex]
-            val x = leftPadding + selectedIndex * spacing
-            val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
-
-            // 垂直指示线
-            drawLine(
-                color = lineColor.copy(alpha = 0.5f),
-                start = Offset(x, 0f),
-                end = Offset(x, chartHeight),
-                strokeWidth = 1.5.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = if(isSelected) contentColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // 选中点的大圈
-            drawCircle(
-                color = lineColor,
-                radius = 6.dp.toPx(),
-                center = Offset(x, y)
-            )
-            drawCircle(
-                color = Color.White,
-                radius = 3.dp.toPx(),
-                center = Offset(x, y)
-            )
-
-            // --- 绘制气泡 ---
-            val dateText = tooltipDateFormat.format(Date(point.timeMillis))
-            val amountText = String.format("%.0f", point.value)
-
-            // 气泡尺寸计算
-            val textWidth = tooltipTextPaint.measureText(dateText).coerceAtLeast(tooltipTextPaint.measureText(amountText)) + 24.dp.toPx()
-            val textHeight = 44.dp.toPx()
-
-            // 确保气泡不超出边界
-            var tooltipX = x - textWidth / 2
-            if (tooltipX < 0) tooltipX = 0f
-            if (tooltipX + textWidth > width) tooltipX = width - textWidth
-
-            // 气泡在点上方，如果在顶部则移到下方
-            val tooltipY = if (y - textHeight - 12.dp.toPx() < 0) y + 12.dp.toPx() else y - textHeight - 12.dp.toPx()
-
-            // 画气泡背景 (圆角矩形)
-            drawRoundRect(
-                color = lineColor, // 使用主题色背景
-                topLeft = Offset(tooltipX, tooltipY),
-                size = Size(textWidth, textHeight),
-                cornerRadius = CornerRadius(8.dp.toPx())
-            )
-
-            // 画气泡文字 (日期)
-            drawContext.canvas.nativeCanvas.drawText(
-                dateText,
-                tooltipX + textWidth / 2,
-                tooltipY + 16.dp.toPx(),
-                tooltipTextPaint
-            )
-            // 画气泡文字 (金额)
-            drawContext.canvas.nativeCanvas.drawText(
-                amountText,
-                tooltipX + textWidth / 2,
-                tooltipY + 34.dp.toPx(),
-                tooltipTextPaint
+            // 自动缩小字体以适应金额长度
+            Text(
+                text = String.format("%.0f", amount), // 取整显示更简洁，点击详情看小数
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = contentColor,
+                maxLines = 1
             )
         }
     }
 }
 
-private fun Float.MathRound(): Int {
-    return kotlin.math.round(this).toInt()
-}
+// --- 辅助逻辑 ---
 
-fun prepareLineChartData(
-    expenses: List<Expense>,
-    chartMode: ChartMode,
-    transactionType: TransactionType
-): List<LineChartPoint> {
-    if (expenses.isEmpty()) return emptyList()
+fun calculateDateRange(calendar: Calendar, mode: ChartMode): Pair<Long, Long> {
+    val cal = calendar.clone() as Calendar
+    // 设置为当天的开始
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
 
-    val sampleDate = expenses.first().date
-    val calendar = Calendar.getInstance()
-    calendar.time = sampleDate
+    val startMillis: Long
+    val endMillis: Long
 
-    val points = mutableListOf<LineChartPoint>()
-
-    val sumFunc: (List<Expense>) -> Float = { list ->
-        if (transactionType == TransactionType.BALANCE) {
-            list.sumOf { it.amount }.toFloat()
-        } else {
-            list.sumOf { abs(it.amount) }.toFloat()
-        }
-    }
-
-    when (chartMode) {
+    when (mode) {
         ChartMode.WEEK -> {
-            calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
-
-            for (i in 0 until 7) {
-                val dayStart = calendar.time
-                val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
-                val dayEnd = nextDayCal.time
-                val sum = sumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
-                val label = SimpleDateFormat("dd", Locale.CHINA).format(dayStart)
-                points.add(LineChartPoint(label, sum, dayStart.time))
-                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            if (cal.firstDayOfWeek == Calendar.SUNDAY) {
+                cal.add(Calendar.DAY_OF_MONTH, 1)
             }
+            startMillis = cal.timeInMillis
+            cal.add(Calendar.DAY_OF_YEAR, 6)
+            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
+            endMillis = cal.timeInMillis
         }
         ChartMode.MONTH -> {
-            calendar.set(Calendar.DAY_OF_MONTH, 1)
-            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
-            val maxDays = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-            for (i in 1..maxDays) {
-                val dayStart = calendar.time
-                val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
-                val dayEnd = nextDayCal.time
-                val sum = sumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
-                points.add(LineChartPoint(i.toString(), sum, dayStart.time))
-                calendar.add(Calendar.DAY_OF_MONTH, 1)
-            }
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            startMillis = cal.timeInMillis
+            val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+            cal.set(Calendar.DAY_OF_MONTH, maxDay)
+            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
+            endMillis = cal.timeInMillis
         }
         ChartMode.YEAR -> {
-            calendar.set(Calendar.DAY_OF_YEAR, 1)
-            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
-            for (i in 0 until 12) {
-                val monthStart = calendar.time
-                val nextMonthCal = Calendar.getInstance().apply { time = monthStart; add(Calendar.MONTH, 1) }
-                val monthEnd = nextMonthCal.time
-                val sum = sumFunc(expenses.filter { it.date >= monthStart && it.date < monthEnd })
-                points.add(LineChartPoint("${i + 1}月", sum, monthStart.time))
-                calendar.add(Calendar.MONTH, 1)
-            }
+            cal.set(Calendar.DAY_OF_YEAR, 1)
+            startMillis = cal.timeInMillis
+            cal.set(Calendar.MONTH, 11) // 12月
+            cal.set(Calendar.DAY_OF_MONTH, 31)
+            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
+            endMillis = cal.timeInMillis
         }
     }
-    return points
+    return startMillis to endMillis
 }
 
+// --- ChartPage 复用逻辑 ---
+
 @Composable
-fun ChartPage(
+fun ChartPageContent(
     data: List<Expense>,
     chartMode: ChartMode,
     transactionType: TransactionType,
     navController: NavHostController,
-    currentGroupKey: String,
-    isCustomRange: Boolean = false,
-    customStart: Long? = null,
-    customEnd: Long? = null
+    dateRange: Pair<Long, Long>
 ) {
     val categorySums = remember(data) {
         data.groupBy { it.category }.mapValues { (_, expenses) ->
@@ -751,14 +475,6 @@ fun ChartPage(
 
     val sortedEntries = remember(categorySums) {
         categorySums.entries.sortedByDescending { it.value }
-    }
-
-    val total = remember(data, transactionType) {
-        if (transactionType == TransactionType.BALANCE) {
-            data.sumOf { it.amount }.toFloat()
-        } else {
-            sortedEntries.sumOf { it.value }.toFloat()
-        }
     }
 
     val maxAmount = sortedEntries.maxOfOrNull { it.value }?.toFloat() ?: 0f
@@ -772,39 +488,11 @@ fun ChartPage(
         prepareLineChartData(data, chartMode, transactionType)
     }
 
-    val dateRange = remember(currentGroupKey, chartMode, isCustomRange, customStart, customEnd) {
-        if (isCustomRange) {
-            (customStart ?: -1L) to (customEnd ?: -1L)
-        } else {
-            getDateRangeFromKey(currentGroupKey, chartMode)
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.padding(16.dp),
         contentPadding = PaddingValues(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. 总览大字
-        item {
-            Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                Text(
-                    text = when (transactionType) {
-                        TransactionType.BALANCE -> "总结余"
-                        TransactionType.EXPENSE -> "总支出"
-                        TransactionType.INCOME -> "总收入"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = String.format("%.2f", total),
-                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-
         // 2. 趋势图卡片
         item {
             Card(
@@ -823,7 +511,11 @@ fun ChartPage(
                         LineChart(
                             dataPoints = lineData,
                             modifier = Modifier.fillMaxSize(),
-                            lineColor = MaterialTheme.colorScheme.primary, // 使用主题色
+                            lineColor = when(transactionType) {
+                                TransactionType.EXPENSE -> Color(0xFFE53935)
+                                TransactionType.INCOME -> Color(0xFF43A047)
+                                else -> MaterialTheme.colorScheme.primary
+                            },
                             onPointClick = { point ->
                                 val calendar = Calendar.getInstance()
                                 calendar.timeInMillis = point.timeMillis
@@ -883,7 +575,7 @@ fun ChartPage(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // 分类列表 (重构为更现代的样式)
+                        // 分类列表
                         sortedEntries.forEachIndexed { index, entry ->
                             val amount = entry.value.toFloat()
                             val percentage = if (pieTotal > 0) amount / pieTotal * 100f else 0f
@@ -917,7 +609,22 @@ fun ChartPage(
     }
 }
 
-// 现代化的分类列表项
+// --- 缺失组件补充 ---
+
+@Composable
+fun EmptyState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(64.dp))
+            Spacer(Modifier.height(16.dp))
+            Text("本周期没有记录", color = MaterialTheme.colorScheme.outline)
+        }
+    }
+}
+
 @Composable
 fun CategoryRankItem(
     name: String,
@@ -925,7 +632,7 @@ fun CategoryRankItem(
     percentage: Float,
     color: Color,
     ratio: Float,
-    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    icon: ImageVector?,
     onClick: () -> Unit
 ) {
     Row(
@@ -934,12 +641,11 @@ fun CategoryRankItem(
             .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 图标
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(color.copy(alpha = 0.1f)), // 浅色背景
+                .background(color.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
             if (icon != null) {
@@ -961,7 +667,6 @@ fun CategoryRankItem(
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
-            // 圆角进度条
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -980,7 +685,6 @@ fun CategoryRankItem(
         }
     }
 }
-
 
 @Composable
 fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
@@ -1001,7 +705,6 @@ fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 表头
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                 Text("时间", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
                 Text("收入", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
@@ -1033,24 +736,157 @@ fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
     }
 }
 
-fun generateBalanceReportItems(data: List<Expense>, chartMode: ChartMode): List<BalanceReportItem> {
-    val calendar = Calendar.getInstance()
-    val groupedByDate = data.groupBy { expense ->
-        calendar.time = expense.date
-        calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
-        if (chartMode == ChartMode.YEAR) calendar.set(Calendar.DAY_OF_MONTH, 1)
-        calendar.timeInMillis
-    }
-    return groupedByDate.entries.sortedByDescending { it.key }.map { (timeMillis, expenses) ->
-        calendar.timeInMillis = timeMillis
-        val timeLabel = when (chartMode) {
-            ChartMode.WEEK, ChartMode.MONTH -> calendar.get(Calendar.DAY_OF_MONTH).toString() + "日"
-            ChartMode.YEAR -> (calendar.get(Calendar.MONTH) + 1).toString() + "月"
+// ---------------------- 绘图逻辑 ----------------------
+
+@Composable
+fun LineChart(
+    dataPoints: List<LineChartPoint>,
+    modifier: Modifier = Modifier,
+    lineColor: Color = MaterialTheme.colorScheme.primary,
+    onPointClick: (LineChartPoint) -> Unit
+) {
+    if (dataPoints.isEmpty()) return
+
+    val actualMax = remember(dataPoints) { dataPoints.maxOfOrNull { it.value } ?: 0f }
+    val actualMin = remember(dataPoints) { dataPoints.minOfOrNull { it.value } ?: 0f }
+
+    val density = LocalDensity.current.density
+    val textPaint = remember {
+        Paint().apply {
+            color = android.graphics.Color.LTGRAY
+            textSize = 10f * density
+            textAlign = Paint.Align.CENTER
         }
-        val income = expenses.filter { it.amount > 0 }.sumOf { it.amount }
-        val expense = expenses.filter { it.amount < 0 }.sumOf { abs(it.amount) }
-        val balance = income - expense
-        BalanceReportItem(timeLabel, income, expense, balance)
+    }
+    val tooltipTextPaint = remember {
+        Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 12f * density
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+    }
+    val tooltipDateFormat = remember { SimpleDateFormat("MM-dd", Locale.CHINA) }
+    val gradientColors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f))
+    var selectedIndex by remember { mutableIntStateOf(-1) }
+
+    Canvas(
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { offset ->
+                    val width = size.width
+                    val leftPadding = 32.dp.toPx()
+                    val chartWidth = width - leftPadding - 16.dp.toPx()
+                    val spacing = chartWidth / (dataPoints.size - 1).coerceAtLeast(1)
+                    if (selectedIndex != -1 && selectedIndex in dataPoints.indices) {
+                        val point = dataPoints[selectedIndex]
+                        val chartHeight = size.height - 24.dp.toPx()
+                        val rangeTop = if (actualMax > 0) actualMax * 1.2f else 100f
+                        val rangeBottom = if (actualMin < 0) actualMin * 1.2f else 0f
+                        val drawingRange = (rangeTop - rangeBottom).coerceAtLeast(1f)
+                        val x = leftPadding + selectedIndex * spacing
+                        val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
+                        val clickRadius = 40.dp.toPx()
+                        if (kotlin.math.abs(offset.x - x) < clickRadius && kotlin.math.abs(offset.y - y) < clickRadius) {
+                            onPointClick(point)
+                            return@detectTapGestures
+                        }
+                    }
+                    val index = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
+                    selectedIndex = index
+                })
+            }
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { offset ->
+                        val width = size.width
+                        val leftPadding = 32.dp.toPx()
+                        val spacing = (width - leftPadding - 16.dp.toPx()) / (dataPoints.size - 1).coerceAtLeast(1)
+                        selectedIndex = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
+                    },
+                    onDrag = { change, _ ->
+                        val width = size.width
+                        val leftPadding = 32.dp.toPx()
+                        val spacing = (width - leftPadding - 16.dp.toPx()) / (dataPoints.size - 1).coerceAtLeast(1)
+                        selectedIndex = ((change.position.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
+                    }
+                )
+            }
+    ) {
+        val width = size.width
+        val height = size.height
+        val bottomPadding = 24.dp.toPx()
+        val leftPadding = 32.dp.toPx()
+        val chartWidth = width - leftPadding - 16.dp.toPx()
+        val chartHeight = height - bottomPadding
+        val rangeTop = if (actualMax > 0) actualMax * 1.2f else 100f
+        val rangeBottom = if (actualMin < 0) actualMin * 1.2f else 0f
+        val drawingRange = (rangeTop - rangeBottom).coerceAtLeast(1f)
+
+        val gridLines = 4
+        for (i in 0..gridLines) {
+            val ratio = i.toFloat() / gridLines
+            val y = chartHeight - (ratio * chartHeight)
+            drawLine(
+                color = Color.LightGray.copy(alpha = 0.5f),
+                start = Offset(leftPadding, y),
+                end = Offset(width, y),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+            )
+        }
+
+        val spacing = chartWidth / (dataPoints.size - 1).coerceAtLeast(1)
+        val path = Path()
+        val fillPath = Path()
+
+        dataPoints.forEachIndexed { index, point ->
+            val x = leftPadding + index * spacing
+            val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
+            if (index == 0) {
+                path.moveTo(x, y)
+                fillPath.moveTo(x, chartHeight)
+                fillPath.lineTo(x, y)
+            } else {
+                path.lineTo(x, y)
+                fillPath.lineTo(x, y)
+            }
+            if (dataPoints.size <= 7 || index % (dataPoints.size / 5) == 0) {
+                drawContext.canvas.nativeCanvas.drawText(point.label, x, height - 5.dp.toPx(), textPaint)
+            }
+        }
+        fillPath.lineTo(leftPadding + (dataPoints.size - 1) * spacing, chartHeight)
+        fillPath.close()
+        drawPath(path = fillPath, brush = Brush.verticalGradient(colors = gradientColors, startY = 0f, endY = chartHeight))
+        drawPath(path = path, color = lineColor, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+
+        dataPoints.forEachIndexed { index, point ->
+            val x = leftPadding + index * spacing
+            val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
+            drawCircle(color = Color.White, radius = 4.dp.toPx(), center = Offset(x, y), style = androidx.compose.ui.graphics.drawscope.Fill)
+            drawCircle(color = lineColor, radius = 4.dp.toPx(), center = Offset(x, y), style = Stroke(width = 2.dp.toPx()))
+        }
+
+        if (selectedIndex != -1 && selectedIndex in dataPoints.indices) {
+            val point = dataPoints[selectedIndex]
+            val x = leftPadding + selectedIndex * spacing
+            val y = chartHeight - ((point.value - rangeBottom) / drawingRange * chartHeight)
+            drawLine(color = lineColor.copy(alpha = 0.5f), start = Offset(x, 0f), end = Offset(x, chartHeight), strokeWidth = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f))
+            drawCircle(color = lineColor, radius = 6.dp.toPx(), center = Offset(x, y))
+            drawCircle(color = Color.White, radius = 3.dp.toPx(), center = Offset(x, y))
+
+            val dateText = tooltipDateFormat.format(Date(point.timeMillis))
+            val amountText = String.format("%.0f", point.value)
+            val textWidth = tooltipTextPaint.measureText(dateText).coerceAtLeast(tooltipTextPaint.measureText(amountText)) + 24.dp.toPx()
+            val textHeight = 44.dp.toPx()
+            var tooltipX = x - textWidth / 2
+            if (tooltipX < 0) tooltipX = 0f
+            if (tooltipX + textWidth > width) tooltipX = width - textWidth
+            val tooltipY = if (y - textHeight - 12.dp.toPx() < 0) y + 12.dp.toPx() else y - textHeight - 12.dp.toPx()
+            drawRoundRect(color = lineColor, topLeft = Offset(tooltipX, tooltipY), size = Size(textWidth, textHeight), cornerRadius = CornerRadius(8.dp.toPx()))
+            drawContext.canvas.nativeCanvas.drawText(dateText, tooltipX + textWidth / 2, tooltipY + 16.dp.toPx(), tooltipTextPaint)
+            drawContext.canvas.nativeCanvas.drawText(amountText, tooltipX + textWidth / 2, tooltipY + 34.dp.toPx(), tooltipTextPaint)
+        }
     }
 }
 
@@ -1116,50 +952,88 @@ fun PieChart(data: Map<String, Long>) {
     }
 }
 
-private fun getCurrentGroupKey(mode: ChartMode): String {
+// --- 数据处理函数与类 ---
+
+private fun Float.MathRound(): Int = kotlin.math.round(this).toInt()
+
+fun prepareLineChartData(expenses: List<Expense>, chartMode: ChartMode, transactionType: TransactionType): List<LineChartPoint> {
+    if (expenses.isEmpty()) return emptyList()
+    val sampleDate = expenses.first().date
     val calendar = Calendar.getInstance()
-    return when (mode) {
-        ChartMode.WEEK -> "%04d-W%02d".format(calendar.get(Calendar.YEAR), calendar.get(Calendar.WEEK_OF_YEAR))
-        ChartMode.MONTH -> SimpleDateFormat("yyyy-MM", Locale.CHINA).format(calendar.time)
-        ChartMode.YEAR -> SimpleDateFormat("yyyy", Locale.CHINA).format(calendar.time)
+    calendar.time = sampleDate
+    val points = mutableListOf<LineChartPoint>()
+    val sumFunc: (List<Expense>) -> Float = { list ->
+        if (transactionType == TransactionType.BALANCE) list.sumOf { it.amount }.toFloat() else list.sumOf { abs(it.amount) }.toFloat()
+    }
+    when (chartMode) {
+        ChartMode.WEEK -> {
+            calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            if (calendar.firstDayOfWeek == Calendar.SUNDAY) calendar.add(Calendar.DAY_OF_MONTH, 1)
+            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+            for (i in 0 until 7) {
+                val dayStart = calendar.time
+                val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
+                val dayEnd = nextDayCal.time
+                val sum = sumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
+                val label = SimpleDateFormat("dd", Locale.CHINA).format(dayStart)
+                points.add(LineChartPoint(label, sum, dayStart.time))
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            }
+        }
+        ChartMode.MONTH -> {
+            calendar.set(Calendar.DAY_OF_MONTH, 1)
+            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+            val maxDays = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+            for (i in 1..maxDays) {
+                val dayStart = calendar.time
+                val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
+                val dayEnd = nextDayCal.time
+                val sum = sumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
+                points.add(LineChartPoint(i.toString(), sum, dayStart.time))
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            }
+        }
+        ChartMode.YEAR -> {
+            calendar.set(Calendar.DAY_OF_YEAR, 1)
+            calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+            for (i in 0 until 12) {
+                val monthStart = calendar.time
+                val nextMonthCal = Calendar.getInstance().apply { time = monthStart; add(Calendar.MONTH, 1) }
+                val monthEnd = nextMonthCal.time
+                val sum = sumFunc(expenses.filter { it.date >= monthStart && it.date < monthEnd })
+                points.add(LineChartPoint("${i + 1}月", sum, monthStart.time))
+                calendar.add(Calendar.MONTH, 1)
+            }
+        }
+    }
+    return points
+}
+
+fun generateBalanceReportItems(data: List<Expense>, chartMode: ChartMode): List<BalanceReportItem> {
+    val calendar = Calendar.getInstance()
+    val groupedByDate = data.groupBy { expense ->
+        calendar.time = expense.date
+        calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+        if (chartMode == ChartMode.YEAR) calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.timeInMillis
+    }
+    return groupedByDate.entries.sortedByDescending { it.key }.map { (timeMillis, expenses) ->
+        calendar.timeInMillis = timeMillis
+        val timeLabel = when (chartMode) {
+            ChartMode.WEEK, ChartMode.MONTH -> calendar.get(Calendar.DAY_OF_MONTH).toString() + "日"
+            ChartMode.YEAR -> (calendar.get(Calendar.MONTH) + 1).toString() + "月"
+        }
+        val income = expenses.filter { it.amount > 0 }.sumOf { it.amount }
+        val expense = expenses.filter { it.amount < 0 }.sumOf { abs(it.amount) }
+        val balance = income - expense
+        BalanceReportItem(timeLabel, income, expense, balance)
     }
 }
 
 private fun getChartColors(): List<Color> {
-    return listOf(
-        Color(0xFFF4B400), Color(0xFFFF7043), Color(0xFF29B6F6), Color(0xFF66BB6A),
-        Color(0xFFAB47BC), Color(0xFFFFCA28), Color(0xFFEC407A), Color(0xFF26A69A)
-    )
+    return listOf(Color(0xFFF4B400), Color(0xFFFF7043), Color(0xFF29B6F6), Color(0xFF66BB6A), Color(0xFFAB47BC), Color(0xFFFFCA28), Color(0xFFEC407A), Color(0xFF26A69A))
 }
 
-fun getDateRangeFromKey(key: String, mode: ChartMode): Pair<Long, Long> {
-    val calendar = Calendar.getInstance()
-    calendar.clear()
-    when (mode) {
-        ChartMode.WEEK -> {
-            val parts = key.split("-W")
-            if (parts.size == 2) {
-                calendar.set(Calendar.YEAR, parts[0].toInt()); calendar.set(Calendar.WEEK_OF_YEAR, parts[1].toInt()); calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                val start = calendar.timeInMillis; calendar.add(Calendar.DAY_OF_YEAR, 7); val end = calendar.timeInMillis - 1
-                return start to end
-            }
-        }
-        ChartMode.MONTH -> {
-            val parts = key.split("-")
-            if (parts.size == 2) {
-                calendar.set(Calendar.YEAR, parts[0].toInt()); calendar.set(Calendar.MONTH, parts[1].toInt() - 1); calendar.set(Calendar.DAY_OF_MONTH, 1)
-                val start = calendar.timeInMillis; calendar.add(Calendar.MONTH, 1); val end = calendar.timeInMillis - 1
-                return start to end
-            }
-        }
-        ChartMode.YEAR -> {
-            calendar.set(Calendar.YEAR, key.toInt()); calendar.set(Calendar.DAY_OF_YEAR, 1)
-            val start = calendar.timeInMillis; calendar.add(Calendar.YEAR, 1); val end = calendar.timeInMillis - 1
-            return start to end
-        }
-    }
-    return -1L to -1L
-}
-
+data class LineChartPoint(val label: String, val value: Float, val timeMillis: Long)
 data class BalanceReportItem(val timeLabel: String, val income: Double, val expense: Double, val balance: Double)
 private data class ChartData(val name: String, val value: Long, val color: Color)
