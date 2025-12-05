@@ -3,6 +3,7 @@ package com.example.myapplication
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge // 核心：启用边到边显示
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -11,8 +12,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.ExpenseRepository
 import com.example.myapplication.ui.screen.MainScreen
@@ -24,48 +23,52 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. 初始化数据库和 Repository
+        // 1. 开启 Edge-to-Edge (沉浸式)，让内容延伸到状态栏后面
+        enableEdgeToEdge()
+
         val database = AppDatabase.getDatabase(applicationContext)
         val repository = ExpenseRepository(
-            database.expenseDao(),
-            database.budgetDao(),
-            database.accountDao(),
-            applicationContext
+            expenseDao = database.expenseDao(),
+            budgetDao = database.budgetDao(),
+            accountDao = database.accountDao(),
+            context = applicationContext
         )
 
-        // 2. 初始化 ExpenseViewModel
         val expenseViewModelFactory = ExpenseViewModelFactory(repository)
         val expenseViewModel = ViewModelProvider(this, expenseViewModelFactory)[ExpenseViewModel::class.java]
-
-        // 3. 初始化 ThemeViewModel
         val themeViewModel = ThemeViewModel(applicationContext)
 
         setContent {
-            // 4. 监听主题颜色状态
             val themeColor by themeViewModel.themeColor.collectAsState()
             val isDarkTheme = isSystemInDarkTheme()
 
-            // 5. 动态构建 ColorScheme
+            // 定义颜色方案 (保持之前的高级灰调)
             val colorScheme = if (isDarkTheme) {
                 darkColorScheme(
                     primary = themeColor,
                     onPrimary = Color.White,
-                    primaryContainer = themeColor.copy(alpha = 0.3f), // 深色模式
-                    onPrimaryContainer = Color.White
+                    primaryContainer = themeColor.copy(alpha = 0.3f),
+                    onPrimaryContainer = Color.White,
+                    background = Color(0xFF121212),
+                    surface = Color(0xFF1E1E1E),
+                    surfaceContainerLow = Color(0xFF1E1E1E)
                 )
             } else {
                 lightColorScheme(
                     primary = themeColor,
                     onPrimary = Color.White,
-                    // (核心修复) 将透明度提升至 0.5f (50%)
-                    // 您的莫兰迪色系比较浅，必须用 50% 的浓度才能在白色背景上显出颜色
-                    // 这样“资产”、“预算”等卡片背景就会很清晰了
-                    primaryContainer = themeColor.copy(alpha = 0.5f),
-                    onPrimaryContainer = themeColor // 文字颜色直接用深色主题色，保证对比度
+                    primaryContainer = themeColor.copy(alpha = 0.15f),
+                    onPrimaryContainer = themeColor,
+                    background = Color(0xFFF8F9FA), // 极简灰白背景
+                    surface = Color.White,
+                    surfaceContainerLow = Color(0xFFF2F4F7),
+                    onSurface = Color(0xFF191C1E),
+                    onSurfaceVariant = Color(0xFF44474E),
+                    outline = Color(0xFF74777F),
+                    outlineVariant = Color(0xFFC4C7C5)
                 )
             }
 
-            // 6. 应用动态主题
             MaterialTheme(
                 colorScheme = colorScheme
             ) {
