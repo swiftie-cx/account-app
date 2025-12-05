@@ -54,8 +54,11 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 enum class ChartMode { WEEK, MONTH, YEAR }
 enum class TransactionType { INCOME, EXPENSE, BALANCE }
@@ -323,7 +326,6 @@ fun DashboardHeader(
         Spacer(modifier = Modifier.height(24.dp))
 
         // 3. 统计卡片选择器 (Stats Cards Selectors)
-        // 使用 Row + weight(1f) 均分
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -334,7 +336,7 @@ fun DashboardHeader(
                 title = "支出",
                 amount = totalExpense,
                 isSelected = transactionType == TransactionType.EXPENSE,
-                baseColor = Color(0xFFD02A25), // 红色
+                baseColor = Color(0xFFFA7070), // 柔和珊瑚红
                 onClick = { onTypeChange(TransactionType.EXPENSE) },
                 modifier = Modifier.weight(1f)
             )
@@ -343,7 +345,7 @@ fun DashboardHeader(
                 title = "收入",
                 amount = totalIncome,
                 isSelected = transactionType == TransactionType.INCOME,
-                baseColor = Color(0xFF43A047), // 绿色
+                baseColor = Color(0xFF7BC67E), // 清新薄荷绿
                 onClick = { onTypeChange(TransactionType.INCOME) },
                 modifier = Modifier.weight(1f)
             )
@@ -403,7 +405,7 @@ fun StatSelectionCard(
 
             // 自动缩小字体以适应金额长度
             Text(
-                text = String.format("%.0f", amount), // 取整显示更简洁，点击详情看小数
+                text = String.format("%.0f", amount), // 取整显示更简洁
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = contentColor,
@@ -411,50 +413,6 @@ fun StatSelectionCard(
             )
         }
     }
-}
-
-// --- 辅助逻辑 ---
-
-fun calculateDateRange(calendar: Calendar, mode: ChartMode): Pair<Long, Long> {
-    val cal = calendar.clone() as Calendar
-    // 设置为当天的开始
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-
-    val startMillis: Long
-    val endMillis: Long
-
-    when (mode) {
-        ChartMode.WEEK -> {
-            cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-            if (cal.firstDayOfWeek == Calendar.SUNDAY) {
-                cal.add(Calendar.DAY_OF_MONTH, 1)
-            }
-            startMillis = cal.timeInMillis
-            cal.add(Calendar.DAY_OF_YEAR, 6)
-            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
-            endMillis = cal.timeInMillis
-        }
-        ChartMode.MONTH -> {
-            cal.set(Calendar.DAY_OF_MONTH, 1)
-            startMillis = cal.timeInMillis
-            val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-            cal.set(Calendar.DAY_OF_MONTH, maxDay)
-            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
-            endMillis = cal.timeInMillis
-        }
-        ChartMode.YEAR -> {
-            cal.set(Calendar.DAY_OF_YEAR, 1)
-            startMillis = cal.timeInMillis
-            cal.set(Calendar.MONTH, 11) // 12月
-            cal.set(Calendar.DAY_OF_MONTH, 31)
-            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
-            endMillis = cal.timeInMillis
-        }
-    }
-    return startMillis to endMillis
 }
 
 // --- ChartPage 复用逻辑 ---
@@ -476,8 +434,6 @@ fun ChartPageContent(
     val sortedEntries = remember(categorySums) {
         categorySums.entries.sortedByDescending { it.value }
     }
-
-    val maxAmount = sortedEntries.maxOfOrNull { it.value }?.toFloat() ?: 0f
 
     val categoryIconMap = remember {
         (expenseCategories + incomeCategories).associate { it.title to it.icon }
@@ -512,8 +468,8 @@ fun ChartPageContent(
                             dataPoints = lineData,
                             modifier = Modifier.fillMaxSize(),
                             lineColor = when(transactionType) {
-                                TransactionType.EXPENSE -> Color(0xFFE53935)
-                                TransactionType.INCOME -> Color(0xFF43A047)
+                                TransactionType.EXPENSE -> Color(0xFFFA7070) // 柔和红
+                                TransactionType.INCOME -> Color(0xFF7BC67E)  // 柔和绿
                                 else -> MaterialTheme.colorScheme.primary
                             },
                             onPointClick = { point ->
@@ -564,8 +520,8 @@ fun ChartPageContent(
                         // 饼图
                         val pieTotal = sortedEntries.sumOf { it.value }.toFloat()
                         if (pieTotal > 0f) {
-                            Box(modifier = Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
-                                PieChart(categorySums)
+                            Box(modifier = Modifier.fillMaxWidth().height(260.dp), contentAlignment = Alignment.Center) {
+                                PieChart(categorySums, title = if(transactionType == TransactionType.EXPENSE) "总支出" else "总收入")
                             }
                         } else {
                             Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
@@ -580,7 +536,7 @@ fun ChartPageContent(
                             val amount = entry.value.toFloat()
                             val percentage = if (pieTotal > 0) amount / pieTotal * 100f else 0f
                             val color = colors[index % colors.size]
-                            val barRatio = if (maxAmount > 0) amount / maxAmount else 0f
+                            val barRatio = if (sortedEntries.isNotEmpty()) amount / sortedEntries.first().value.toFloat() else 0f
 
                             CategoryRankItem(
                                 name = entry.key,
@@ -720,8 +676,8 @@ fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(item.timeLabel, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
-                    Text(String.format("%.0f", item.income), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF4CAF50))
-                    Text(String.format("%.0f", item.expense), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFE53935))
+                    Text(String.format("%.0f", item.income), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF7BC67E)) // 柔和绿
+                    Text(String.format("%.0f", item.expense), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFA7070)) // 柔和红
                     Text(
                         String.format("%.0f", item.balance),
                         modifier = Modifier.weight(1f),
@@ -752,17 +708,17 @@ fun LineChart(
 
     val density = LocalDensity.current.density
     val textPaint = remember {
-        Paint().apply {
+        android.graphics.Paint().apply {
             color = android.graphics.Color.LTGRAY
             textSize = 10f * density
-            textAlign = Paint.Align.CENTER
+            textAlign = android.graphics.Paint.Align.CENTER
         }
     }
     val tooltipTextPaint = remember {
-        Paint().apply {
+        android.graphics.Paint().apply {
             color = android.graphics.Color.WHITE
             textSize = 12f * density
-            textAlign = Paint.Align.CENTER
+            textAlign = android.graphics.Paint.Align.CENTER
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
     }
@@ -774,13 +730,13 @@ fun LineChart(
         modifier = modifier
             .pointerInput(Unit) {
                 detectTapGestures(onTap = { offset ->
-                    val width = size.width
+                    val width = size.width.toFloat() // Fix: convert Int to Float
                     val leftPadding = 32.dp.toPx()
                     val chartWidth = width - leftPadding - 16.dp.toPx()
                     val spacing = chartWidth / (dataPoints.size - 1).coerceAtLeast(1)
                     if (selectedIndex != -1 && selectedIndex in dataPoints.indices) {
                         val point = dataPoints[selectedIndex]
-                        val chartHeight = size.height - 24.dp.toPx()
+                        val chartHeight = size.height.toFloat() - 24.dp.toPx() // Fix: convert Int to Float
                         val rangeTop = if (actualMax > 0) actualMax * 1.2f else 100f
                         val rangeBottom = if (actualMin < 0) actualMin * 1.2f else 0f
                         val drawingRange = (rangeTop - rangeBottom).coerceAtLeast(1f)
@@ -799,13 +755,13 @@ fun LineChart(
             .pointerInput(Unit) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
-                        val width = size.width
+                        val width = size.width.toFloat() // Fix
                         val leftPadding = 32.dp.toPx()
                         val spacing = (width - leftPadding - 16.dp.toPx()) / (dataPoints.size - 1).coerceAtLeast(1)
                         selectedIndex = ((offset.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
                     },
                     onDrag = { change, _ ->
-                        val width = size.width
+                        val width = size.width.toFloat() // Fix
                         val leftPadding = 32.dp.toPx()
                         val spacing = (width - leftPadding - 16.dp.toPx()) / (dataPoints.size - 1).coerceAtLeast(1)
                         selectedIndex = ((change.position.x - leftPadding) / spacing).MathRound().coerceIn(0, dataPoints.lastIndex)
@@ -890,12 +846,17 @@ fun LineChart(
     }
 }
 
+// ---------------------- 环形图 (PieChart) 交互版 ----------------------
+
 @Composable
-fun PieChart(data: Map<String, Long>) {
+fun PieChart(data: Map<String, Long>, title: String) {
     if (data.isEmpty()) return
+
+    // 1. 数据准备
     val chartData = remember(data) {
         val sorted = data.entries.sortedByDescending { it.value }
         val allColors = getChartColors()
+        // 这里简化颜色分配逻辑，确保和列表一致
         if (sorted.size <= 8) {
             sorted.mapIndexed { index, entry -> ChartData(entry.key, entry.value, allColors[index % allColors.size]) }
         } else {
@@ -907,52 +868,258 @@ fun PieChart(data: Map<String, Long>) {
     val total = chartData.sumOf { it.value }.toFloat()
     if (total <= 0f) return
 
+    // 2. 状态：选中的扇区索引
+    var selectedIndex by remember { mutableIntStateOf(-1) }
+
     val density = LocalDensity.current.density
-    val textPaint = remember { Paint().apply { textSize = 11f * density; typeface = Typeface.DEFAULT } }
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val center = Offset(size.width / 2, size.height / 2)
-        val radius = size.minDimension / 2 * 0.6f
-        val strokeWidth = radius * 0.5f
+    // 字体 Paint，使用 Android native paint
+    val labelTextPaint = remember {
+        android.graphics.Paint().apply {
+            textSize = 11f * density
+            color = android.graphics.Color.GRAY // 默认文字颜色
+            typeface = Typeface.DEFAULT
+        }
+    }
 
-        var startAngle = -90f
-        chartData.forEach { slice ->
-            val sweepAngle = 360f * (slice.value / total)
-            drawArc(
-                color = slice.color,
-                startAngle = startAngle,
-                sweepAngle = sweepAngle,
-                useCenter = false,
-                topLeft = Offset(center.x - radius, center.y - radius),
-                size = Size(radius * 2, radius * 2),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
-            )
+    val centerTitlePaint = remember {
+        android.graphics.Paint().apply {
+            textSize = 14f * density
+            textAlign = android.graphics.Paint.Align.CENTER
+            color = android.graphics.Color.GRAY
+        }
+    }
 
-            if (sweepAngle > 8f) {
-                val midAngle = startAngle + sweepAngle / 2
-                val midRad = Math.toRadians(midAngle.toDouble())
-                val outerRadius = radius + strokeWidth / 2
-                val lineStart = Offset((center.x + outerRadius * cos(midRad)).toFloat(), (center.y + outerRadius * sin(midRad)).toFloat())
-                val lineOffset = 15.dp.toPx()
-                val elbow = Offset((center.x + (outerRadius + lineOffset) * cos(midRad)).toFloat(), (center.y + (outerRadius + lineOffset) * sin(midRad)).toFloat())
-                val isRightSide = cos(midRad) > 0
-                val endX = if (isRightSide) elbow.x + 20.dp.toPx() else elbow.x - 20.dp.toPx()
-                val lineEnd = Offset(endX, elbow.y)
+    val centerValuePaint = remember {
+        android.graphics.Paint().apply {
+            textSize = 20f * density
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+            color = android.graphics.Color.BLACK // 默认
+        }
+    }
 
-                val path = Path().apply { moveTo(lineStart.x, lineStart.y); lineTo(elbow.x, elbow.y); lineTo(lineEnd.x, lineEnd.y) }
-                drawPath(path = path, color = slice.color, style = Stroke(width = 1.dp.toPx()))
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        // Fix: Convert IntSize to Float for Offset
+                        val canvasWidth = size.width.toFloat()
+                        val canvasHeight = size.height.toFloat()
+                        val center = Offset(canvasWidth / 2, canvasHeight / 2)
 
-                val percent = (slice.value / total * 100).toInt()
-                textPaint.color = slice.color.toArgb()
-                textPaint.textAlign = if (isRightSide) Paint.Align.LEFT else Paint.Align.RIGHT
-                drawIntoCanvas { canvas -> canvas.nativeCanvas.drawText("$percent%", if (isRightSide) endX + 8 else endX - 8, elbow.y + textPaint.textSize / 3, textPaint) }
+                        val vec = offset - center
+                        val dist = sqrt(vec.x.pow(2) + vec.y.pow(2))
+
+                        // 环形半径计算
+                        // Fix: Manually calculate minDimension as it is missing in IntSize
+                        val minDimension = kotlin.math.min(canvasWidth, canvasHeight)
+                        val radius = minDimension / 2 * 0.55f // 基础半径
+                        val strokeWidth = radius * 0.5f // 环宽
+
+                        // 简单的点击区域判定 (包含中心空洞和外围一点)
+                        val innerRadiusThreshold = radius - strokeWidth / 2 - 20 // 稍微宽容一点
+                        val outerRadiusThreshold = radius + strokeWidth / 2 + 40 // 稍微宽容一点
+
+                        if (dist in innerRadiusThreshold..outerRadiusThreshold) {
+                            // 计算点击角度 (标准坐标系 0度在3点钟，顺时针为正)
+                            var angle = Math.toDegrees(atan2(vec.y.toDouble(), vec.x.toDouble())).toFloat()
+                            if (angle < 0) angle += 360f
+
+                            // 我们的绘制是从 -90度(12点钟)开始的
+                            // 所以要把触摸角度校准到绘制的起始点
+                            // 触摸角度 270 (-90) 是绘制的 0
+                            var touchAngleRelativeToStart = angle + 90f
+                            if (touchAngleRelativeToStart >= 360f) touchAngleRelativeToStart -= 360f
+
+                            // 查找对应的扇区
+                            var currentStartAngle = 0f
+                            var foundIndex = -1
+
+                            for (i in chartData.indices) {
+                                val sweep = 360f * (chartData[i].value / total)
+                                if (touchAngleRelativeToStart >= currentStartAngle && touchAngleRelativeToStart < currentStartAngle + sweep) {
+                                    foundIndex = i
+                                    break
+                                }
+                                currentStartAngle += sweep
+                            }
+
+                            // 点击同一个则取消选择，否则选中新扇区
+                            selectedIndex = if (selectedIndex == foundIndex) -1 else foundIndex
+                        } else {
+                            // 点击中心或外部空白区域 -> 恢复默认
+                            selectedIndex = -1
+                        }
+                    }
+                }
+        ) {
+            val center = Offset(size.width / 2, size.height / 2)
+            // 调整半径，留出绘制外部折线标签的空间
+            val radius = size.minDimension / 2 * 0.55f
+            val strokeWidth = radius * 0.5f
+
+            var startAngle = -90f
+
+            chartData.forEachIndexed { index, slice ->
+                val sweepAngle = 360f * (slice.value / total)
+                val isSelected = index == selectedIndex
+
+                // 选中时放大一点 (通过增加 strokeWidth 或 半径)
+                val currentStrokeWidth = if (isSelected) strokeWidth * 1.15f else strokeWidth
+                // 选中时稍微往外爆开一点点效果 (可选，这里只改宽度也很明显)
+
+                drawArc(
+                    color = slice.color,
+                    startAngle = startAngle,
+                    sweepAngle = sweepAngle,
+                    useCenter = false,
+                    topLeft = Offset(center.x - radius, center.y - radius),
+                    size = Size(radius * 2, radius * 2),
+                    style = Stroke(width = currentStrokeWidth, cap = StrokeCap.Butt)
+                )
+
+                // --- 绘制折线标注 (标类名) ---
+                // 只有当扇区足够大时才绘制，避免拥挤
+                if (sweepAngle > 10f) {
+                    val midAngle = startAngle + sweepAngle / 2
+                    val midRad = Math.toRadians(midAngle.toDouble())
+
+                    // 线条起点：圆环外缘
+                    val outerRadius = radius + strokeWidth / 2
+                    val lineStart = Offset(
+                        (center.x + outerRadius * cos(midRad)).toFloat(),
+                        (center.y + outerRadius * sin(midRad)).toFloat()
+                    )
+
+                    // 拐点
+                    val lineOffset = 20.dp.toPx()
+                    val elbow = Offset(
+                        (center.x + (outerRadius + lineOffset) * cos(midRad)).toFloat(),
+                        (center.y + (outerRadius + lineOffset) * sin(midRad)).toFloat()
+                    )
+
+                    // 终点 (水平延伸)
+                    val isRightSide = cos(midRad) > 0
+                    val endLineLength = 25.dp.toPx()
+                    val endX = if (isRightSide) elbow.x + endLineLength else elbow.x - endLineLength
+                    val lineEnd = Offset(endX, elbow.y)
+
+                    // 绘制折线
+                    val path = Path().apply {
+                        moveTo(lineStart.x, lineStart.y)
+                        lineTo(elbow.x, elbow.y)
+                        lineTo(lineEnd.x, lineEnd.y)
+                    }
+                    drawPath(path = path, color = slice.color, style = Stroke(width = 1.dp.toPx()))
+
+                    // 绘制文字 (类名)
+                    labelTextPaint.color = slice.color.toArgb()
+                    labelTextPaint.textAlign = if (isRightSide) android.graphics.Paint.Align.LEFT else android.graphics.Paint.Align.RIGHT
+
+                    val textOffset = if (isRightSide) 5.dp.toPx() else -5.dp.toPx()
+                    drawIntoCanvas { canvas ->
+                        canvas.nativeCanvas.drawText(
+                            slice.name, // 改为显示类名
+                            endX + textOffset,
+                            elbow.y + labelTextPaint.textSize / 3,
+                            labelTextPaint
+                        )
+                    }
+                }
+
+                startAngle += sweepAngle
             }
-            startAngle += sweepAngle
+
+            // --- 绘制中心文字 ---
+            drawIntoCanvas { canvas ->
+                if (selectedIndex != -1) {
+                    val selectedSlice = chartData[selectedIndex]
+                    // 显示选中分类
+                    centerTitlePaint.color = selectedSlice.color.toArgb() // 字体颜色对应分类色
+                    centerValuePaint.color = android.graphics.Color.BLACK
+
+                    canvas.nativeCanvas.drawText(
+                        selectedSlice.name,
+                        center.x,
+                        center.y - 10.dp.toPx(),
+                        centerTitlePaint
+                    )
+                    canvas.nativeCanvas.drawText(
+                        selectedSlice.value.toString(),
+                        center.x,
+                        center.y + 16.dp.toPx(),
+                        centerValuePaint
+                    )
+                } else {
+                    // 显示总览
+                    centerTitlePaint.color = android.graphics.Color.GRAY
+                    centerValuePaint.color = android.graphics.Color.BLACK
+
+                    canvas.nativeCanvas.drawText(
+                        title, // "总支出" 或 "总收入"
+                        center.x,
+                        center.y - 10.dp.toPx(),
+                        centerTitlePaint
+                    )
+                    canvas.nativeCanvas.drawText(
+                        String.format("%.0f", total),
+                        center.x,
+                        center.y + 16.dp.toPx(),
+                        centerValuePaint
+                    )
+                }
+            }
         }
     }
 }
 
 // --- 数据处理函数与类 ---
+
+// (新增) 修复缺失的 calculateDateRange 函数
+fun calculateDateRange(calendar: Calendar, mode: ChartMode): Pair<Long, Long> {
+    val cal = calendar.clone() as Calendar
+    // 设置为当天的开始
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+
+    val startMillis: Long
+    val endMillis: Long
+
+    when (mode) {
+        ChartMode.WEEK -> {
+            cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            if (cal.firstDayOfWeek == Calendar.SUNDAY) {
+                cal.add(Calendar.DAY_OF_MONTH, 1)
+            }
+            startMillis = cal.timeInMillis
+            cal.add(Calendar.DAY_OF_YEAR, 6)
+            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
+            endMillis = cal.timeInMillis
+        }
+        ChartMode.MONTH -> {
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            startMillis = cal.timeInMillis
+            val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+            cal.set(Calendar.DAY_OF_MONTH, maxDay)
+            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
+            endMillis = cal.timeInMillis
+        }
+        ChartMode.YEAR -> {
+            cal.set(Calendar.DAY_OF_YEAR, 1)
+            startMillis = cal.timeInMillis
+            cal.set(Calendar.MONTH, 11) // 12月
+            cal.set(Calendar.DAY_OF_MONTH, 31)
+            cal.set(Calendar.HOUR_OF_DAY, 23); cal.set(Calendar.MINUTE, 59); cal.set(Calendar.SECOND, 59)
+            endMillis = cal.timeInMillis
+        }
+    }
+    return startMillis to endMillis
+}
 
 private fun Float.MathRound(): Int = kotlin.math.round(this).toInt()
 
