@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 
 @Composable
@@ -36,24 +35,26 @@ fun YearMonthPicker(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(28.dp), // 增加圆角，更符合 Material3
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh), // 使用稍微高层级的背景色
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier
-                .fillMaxWidth()
+                .width(300.dp)
                 .wrapContentHeight()
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                // 底部 padding 收紧到 8.dp，顶部保持 16.dp 呼吸感
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // 1. 顶部大标题
                 Text(
                     text = "${currentYear}年${currentMonth}月",
-                    style = MaterialTheme.typography.headlineSmall.copy(
+                    style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    // 进一步减小标题下方的留白
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
 
                 // 2. 控制栏：年份下拉 + 左右箭头
@@ -67,36 +68,44 @@ fun YearMonthPicker(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { isYearSelectionMode = !isYearSelectionMode }
-                            .padding(4.dp),
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "$currentYear",
                             style = MaterialTheme.typography.titleMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (isYearSelectionMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Bold
                             )
                         )
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = "切换模式",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isYearSelectionMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
                     // 右侧：翻页箭头
                     Row {
-                        IconButton(onClick = {
-                            if (isYearSelectionMode) currentYear -= 12 else currentYear--
-                        }) {
+                        IconButton(
+                            onClick = {
+                                if (isYearSelectionMode) currentYear -= 12 else currentYear--
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                 null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        IconButton(onClick = {
-                            if (isYearSelectionMode) currentYear += 12 else currentYear++
-                        }) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = {
+                                if (isYearSelectionMode) currentYear += 12 else currentYear++
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 null,
@@ -106,17 +115,20 @@ fun YearMonthPicker(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // 间距：控制栏与网格之间
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // 3. 网格内容区域
-                Box(modifier = Modifier.height(240.dp)) {
+                // 高度精确计算：4行 * 36dp + 3个间隙 * 8dp = 144 + 24 = 168dp
+                // 这样刚好容纳内容，没有任何多余垂直空白
+                Box(modifier = Modifier.height(168.dp)) {
                     if (isYearSelectionMode) {
                         YearGrid(
                             selectedYear = currentYear,
                             displayYearBase = currentYear,
                             onYearSelected = {
                                 currentYear = it
-                                isYearSelectionMode = false // 选完年自动跳回选月
+                                isYearSelectionMode = false
                             }
                         )
                     } else {
@@ -127,19 +139,29 @@ fun YearMonthPicker(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                // 间距：网格与按钮之间 (极度收紧)
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // 4. 底部按钮
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End // 按钮靠右
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("取消", color = MaterialTheme.colorScheme.primary)
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
+                    ) {
+                        Text("取消", style = MaterialTheme.typography.labelLarge)
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = { onConfirm(currentYear, currentMonth) }) {
-                        Text("确定", color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Button(
+                        onClick = { onConfirm(currentYear, currentMonth) },
+                        modifier = Modifier.height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp)
+                    ) {
+                        Text("确定", style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -152,27 +174,26 @@ fun MonthGrid(selectedMonth: Int, onMonthSelected: (Int) -> Unit) {
     val months = (1..12).toList()
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(months) { month ->
             val isSelected = month == selectedMonth
-            // 使用主题色：选中为主色(Purple)，未选中为透明
             val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-            // 文字颜色：选中为OnPrimary(White)，未选中为OnSurface(Black/DarkGrey)
             val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
 
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(20.dp)) // 胶囊/圆形
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(50))
                     .background(backgroundColor)
                     .clickable { onMonthSelected(month) }
             ) {
                 Text(
                     text = "${month}月",
                     color = textColor,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                 )
             }
@@ -182,32 +203,31 @@ fun MonthGrid(selectedMonth: Int, onMonthSelected: (Int) -> Unit) {
 
 @Composable
 fun YearGrid(selectedYear: Int, displayYearBase: Int, onYearSelected: (Int) -> Unit) {
-    // 动态计算年份范围，以当前年份为中心
     val base = displayYearBase - 4
     val years = (base until base + 12).toList()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(years) { year ->
             val isSelected = year == selectedYear
-            // 同上，使用主题色
             val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
             val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
 
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(50))
                     .background(backgroundColor)
                     .clickable { onYearSelected(year) }
             ) {
                 Text(
                     text = "$year",
                     color = textColor,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                 )
             }
