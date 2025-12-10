@@ -3,6 +3,7 @@ package com.example.myapplication.ui.screen
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.ui.navigation.Routes
@@ -23,14 +25,39 @@ import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// 1. 用户信息主菜单 (现在只显示已登录状态的内容)
+// --- 封装一个居中显示的 SnackbarHost ---
+@Composable
+fun CenteredSnackbarHost(hostState: SnackbarHostState) {
+    SnackbarHost(hostState) { data ->
+        Snackbar(
+            modifier = Modifier.padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.inverseSurface, // 默认深色背景
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface, // 默认浅色文字
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            // 关键：fillMaxWidth + TextAlign.Center 实现文字居中
+            Text(
+                text = data.visuals.message,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+// 1. 用户信息主菜单
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     val email by viewModel.userEmail.collectAsState()
-    val context = LocalContext.current
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        // 使用自定义的居中 SnackbarHost
+        snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("用户信息") },
@@ -49,7 +76,6 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 头像/邮箱展示
             Icon(
                 imageVector = Icons.Default.AccountCircle,
                 contentDescription = null,
@@ -60,7 +86,6 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
             Text(text = email, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(32.dp))
 
-            // 功能列表
             UserInfoItem(
                 icon = Icons.Default.LockReset,
                 title = "修改密码",
@@ -75,12 +100,11 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 退出登录
             Button(
                 onClick = {
                     viewModel.logout()
-                    Toast.makeText(context, "已退出登录", Toast.LENGTH_SHORT).show()
-                    navController.popBackStack() // 返回设置页
+                    scope.launch { snackbarHostState.showSnackbar("已退出登录") }
+                    navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -90,12 +114,11 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 注销账号
             Button(
                 onClick = {
                     viewModel.deleteUserAccount()
-                    Toast.makeText(context, "账号已注销", Toast.LENGTH_SHORT).show()
-                    navController.popBackStack() // 返回设置页
+                    scope.launch { snackbarHostState.showSnackbar("账号已注销") }
+                    navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)
@@ -112,9 +135,12 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
 fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val context = LocalContext.current
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("登录") },
@@ -140,7 +166,6 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
                 singleLine = true
             )
 
-            // 忘记密码链接
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 TextButton(onClick = { navController.navigate(Routes.FORGOT_PASSWORD) }) {
                     Text("忘记密码？")
@@ -150,14 +175,13 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
             Spacer(Modifier.weight(1f))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                // 登录按钮
                 Button(
                     onClick = {
                         if (viewModel.login(email, password)) {
-                            Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
-                            navController.popBackStack() // 返回设置页
+                            // 登录成功，直接返回
+                            navController.popBackStack()
                         } else {
-                            Toast.makeText(context, "账号或密码错误", Toast.LENGTH_SHORT).show()
+                            scope.launch { snackbarHostState.showSnackbar("账号或密码错误") }
                         }
                     },
                     modifier = Modifier.weight(1f).height(50.dp),
@@ -166,7 +190,6 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
                     Text("登录")
                 }
 
-                // 注册按钮入口
                 OutlinedButton(
                     onClick = { navController.navigate(Routes.REGISTER) },
                     modifier = Modifier.weight(1f).height(50.dp)
@@ -178,7 +201,7 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     }
 }
 
-// 3. 注册界面 (原 RegisterScreen)
+// 3. 注册界面 (修复导航 + 即时反馈 + 居中提示)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
@@ -191,10 +214,12 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
     var countdown by remember { mutableIntStateOf(60) }
     var emailError by remember { mutableStateOf<String?>(null) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     Scaffold(
+        // 使用居中显示的 Snackbar
+        snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("注册账号") },
@@ -203,7 +228,6 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
-            // 邮箱
             OutlinedTextField(
                 value = email,
                 onValueChange = {
@@ -218,7 +242,6 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
             )
             Spacer(Modifier.height(16.dp))
 
-            // 密码
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -229,7 +252,6 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
             )
             Spacer(Modifier.height(16.dp))
 
-            // 确认密码
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
@@ -240,7 +262,6 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
             )
             Spacer(Modifier.height(16.dp))
 
-            // 验证码
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = code,
@@ -251,20 +272,39 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 Spacer(Modifier.width(8.dp))
+
+                // 获取验证码按钮
                 Button(
                     onClick = {
                         if (email.isBlank()) {
-                            Toast.makeText(context, "请输入邮箱", Toast.LENGTH_SHORT).show()
+                            scope.launch { snackbarHostState.showSnackbar("请输入邮箱") }
                         } else if (viewModel.isEmailRegistered(email)) {
                             emailError = "该邮箱已注册，请直接登录"
                         } else {
+                            // 1. 立即开始倒计时 (UI 优先)
                             isCountingDown = true
-                            Toast.makeText(context, "验证码已发送: 123456", Toast.LENGTH_LONG).show()
                             scope.launch {
                                 countdown = 60
-                                while (countdown > 0) { delay(1000); countdown-- }
+                                while (countdown > 0 && isCountingDown) {
+                                    delay(1000)
+                                    countdown--
+                                }
                                 isCountingDown = false
+                                countdown = 60
                             }
+
+                            // 2. 发送邮件
+                            viewModel.sendCodeToEmail(
+                                email = email,
+                                onSuccess = {
+                                    scope.launch { snackbarHostState.showSnackbar("验证码已发送至邮箱") }
+                                },
+                                onError = { msg ->
+                                    // 3. 失败回滚
+                                    isCountingDown = false
+                                    scope.launch { snackbarHostState.showSnackbar(msg) }
+                                }
+                            )
                         }
                     },
                     enabled = !isCountingDown && email.isNotBlank() && emailError == null
@@ -278,19 +318,19 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
             Button(
                 onClick = {
                     if (password.isBlank()) {
-                        Toast.makeText(context, "请设置密码", Toast.LENGTH_SHORT).show()
+                        scope.launch { snackbarHostState.showSnackbar("请设置密码") }
                     } else if (password != confirmPassword) {
-                        Toast.makeText(context, "两次密码不一致", Toast.LENGTH_SHORT).show()
-                    } else if (code != "123456") {
-                        Toast.makeText(context, "验证码错误", Toast.LENGTH_SHORT).show()
+                        scope.launch { snackbarHostState.showSnackbar("两次密码不一致") }
+                    } else if (code.isBlank()) {
+                        scope.launch { snackbarHostState.showSnackbar("请输入验证码") }
                     } else {
-                        viewModel.register(email, password)
-                        Toast.makeText(context, "注册成功并已登录", Toast.LENGTH_SHORT).show()
-                        // 注册成功后，先回到登录页(被pop了)，再回到设置页。
-                        // 或者这里直接 popBackStack() 回到上一层(可能是登录页)，
-                        // 所以推荐在 Login 页 navigate 到 Register，这样 Register pop 就回 Login。
-                        // 如果是从 Settings 直接来的，就回 Settings。
-                        navController.popBackStack()
+                        if (viewModel.verifyCode(email, code)) {
+                            viewModel.register(email, password)
+                            // 注册成功后，直接回到设置页，跳过登录页
+                            navController.popBackStack(Routes.LOGIN, inclusive = true)
+                        } else {
+                            scope.launch { snackbarHostState.showSnackbar("验证码错误") }
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -310,9 +350,12 @@ fun ChangePasswordScreen(navController: NavHostController, viewModel: ExpenseVie
     var oldPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    val context = LocalContext.current
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("修改密码") },
@@ -338,7 +381,7 @@ fun ChangePasswordScreen(navController: NavHostController, viewModel: ExpenseVie
                         if (viewModel.verifyUserPassword(oldPassword)) {
                             step = 2
                         } else {
-                            Toast.makeText(context, "旧密码错误", Toast.LENGTH_SHORT).show()
+                            scope.launch { snackbarHostState.showSnackbar("旧密码错误") }
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -370,10 +413,10 @@ fun ChangePasswordScreen(navController: NavHostController, viewModel: ExpenseVie
                     onClick = {
                         if (newPassword.isNotBlank() && newPassword == confirmPassword) {
                             viewModel.saveUserPassword(newPassword)
-                            Toast.makeText(context, "密码修改成功", Toast.LENGTH_SHORT).show()
+                            scope.launch { snackbarHostState.showSnackbar("密码修改成功") }
                             navController.popBackStack()
                         } else {
-                            Toast.makeText(context, "两次密码不一致或为空", Toast.LENGTH_SHORT).show()
+                            scope.launch { snackbarHostState.showSnackbar("两次密码不一致或为空") }
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -397,8 +440,9 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
 
     var isCountingDown by remember { mutableStateOf(false) }
     var countdown by remember { mutableIntStateOf(60) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     val boundEmail by viewModel.userEmail.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
@@ -409,6 +453,7 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
     }
 
     Scaffold(
+        snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("重置密码") },
@@ -439,22 +484,37 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     Spacer(Modifier.width(8.dp))
+
                     Button(
                         onClick = {
                             if (email.isNotBlank()) {
                                 if (viewModel.isEmailRegistered(email)) {
                                     isCountingDown = true
-                                    Toast.makeText(context, "验证码已发送: 123456", Toast.LENGTH_LONG).show()
                                     scope.launch {
                                         countdown = 60
-                                        while (countdown > 0) { delay(1000); countdown-- }
+                                        while (countdown > 0 && isCountingDown) {
+                                            delay(1000)
+                                            countdown--
+                                        }
                                         isCountingDown = false
+                                        countdown = 60
                                     }
+
+                                    viewModel.sendCodeToEmail(
+                                        email = email,
+                                        onSuccess = {
+                                            scope.launch { snackbarHostState.showSnackbar("验证码已发送") }
+                                        },
+                                        onError = { msg ->
+                                            isCountingDown = false
+                                            scope.launch { snackbarHostState.showSnackbar(msg) }
+                                        }
+                                    )
                                 } else {
-                                    Toast.makeText(context, "该邮箱未注册", Toast.LENGTH_SHORT).show()
+                                    scope.launch { snackbarHostState.showSnackbar("该邮箱未注册") }
                                 }
                             } else {
-                                Toast.makeText(context, "请输入邮箱", Toast.LENGTH_SHORT).show()
+                                scope.launch { snackbarHostState.showSnackbar("请输入邮箱") }
                             }
                         },
                         enabled = !isCountingDown && email.isNotBlank()
@@ -465,10 +525,10 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
                 Spacer(Modifier.weight(1f))
                 Button(
                     onClick = {
-                        if (code == "123456") {
+                        if (viewModel.verifyCode(email, code)) {
                             step = 2
                         } else {
-                            Toast.makeText(context, "验证码错误", Toast.LENGTH_SHORT).show()
+                            scope.launch { snackbarHostState.showSnackbar("验证码错误") }
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -501,10 +561,10 @@ fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseVie
                     onClick = {
                         if (newPassword.isNotBlank() && newPassword == confirmPassword) {
                             viewModel.saveUserPassword(newPassword)
-                            Toast.makeText(context, "密码重置成功", Toast.LENGTH_SHORT).show()
+                            scope.launch { snackbarHostState.showSnackbar("密码重置成功") }
                             navController.popBackStack()
                         } else {
-                            Toast.makeText(context, "两次密码不一致或为空", Toast.LENGTH_SHORT).show()
+                            scope.launch { snackbarHostState.showSnackbar("两次密码不一致或为空") }
                         }
                     },
                     modifier = Modifier.fillMaxWidth()

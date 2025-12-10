@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screen
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -12,11 +11,11 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.MarkEmailRead
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,16 +28,17 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+
 @Composable
 fun LockScreen(
     viewModel: ExpenseViewModel,
     onUnlockSuccess: () -> Unit
 ) {
-    // --- 保持不变的部分 ---
     val privacyType = viewModel.getPrivacyType()
     var inputPin by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf("") }
+
+    // 控制弹窗显示
     var showEmailUnlockDialog by remember { mutableStateOf(false) }
 
     Surface(
@@ -70,6 +70,7 @@ fun LockScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 错误提示区
             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.Center) {
                 if (errorMsg.isNotEmpty()) {
                     Text(text = errorMsg, color = MaterialTheme.colorScheme.error)
@@ -78,6 +79,7 @@ fun LockScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
+            // --- 锁屏逻辑 (PIN / Pattern) ---
             if (privacyType == "PIN") {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
@@ -137,11 +139,11 @@ fun LockScreen(
                 Spacer(modifier = Modifier.weight(0.5f))
             }
 
+            // --- 底部忘记密码按钮 ---
             Spacer(modifier = Modifier.height(20.dp))
-            // 使用 OutlinedButton 让它看起来稍微正式一点，但又不抢主视觉
             OutlinedButton(
                 onClick = { showEmailUnlockDialog = true },
-                border = null // 移除边框，只保留点击效果和文字颜色
+                border = null
             ) {
                 Text("忘记密码？使用账号验证")
             }
@@ -155,6 +157,7 @@ fun LockScreen(
             viewModel = viewModel,
             onDismiss = { showEmailUnlockDialog = false },
             onUnlockSuccess = {
+                // 验证成功：重置锁并进入 App
                 viewModel.setPrivacyType("NONE")
                 viewModel.setBiometricEnabled(false)
                 onUnlockSuccess()
@@ -164,7 +167,7 @@ fun LockScreen(
 }
 
 /**
- * 全新设计的现代化验证弹窗
+ * 现代化的验证弹窗
  */
 @Composable
 fun UnlockByEmailDialog(
@@ -185,33 +188,31 @@ fun UnlockByEmailDialog(
     var countdown by remember { mutableIntStateOf(60) }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // 使用 Dialog 代替 AlertDialog 以获得完全自定义的布局能力
+    // 用状态来控制显示的错误信息，替代 Toast
+    var uiMessage by remember { mutableStateOf<String?>(null) }
+    var isError by remember { mutableStateOf(false) }
+
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false) // 允许自定义宽度
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        // 外层容器，提供圆角和背景
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.92f) // 宽度占屏幕的 92%
+                .fillMaxWidth(0.92f)
                 .wrapContentHeight(),
-            shape = MaterialTheme.shapes.extraLarge, // 更大的圆角
-            tonalElevation = 6.dp, // 增加一点层级感
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp,
             color = MaterialTheme.colorScheme.surface
         ) {
             Column(
-                modifier = Modifier
-                    .padding(24.dp), // 增加整体内边距
+                modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // --- 头部图标和标题 ---
+                // 头部图标
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            CircleShape
-                        ),
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -229,16 +230,17 @@ fun UnlockByEmailDialog(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // --- 自定义 Tab 栏 ---
+                // Tab栏
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     indicator = { tabPositions ->
-                        TabRowDefaults.Indicator(
-                            Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                            color = MaterialTheme.colorScheme.primary,
-                            height = 3.dp
-                        )
+                        if (selectedTab < tabPositions.size) {
+                            TabRowDefaults.SecondaryIndicator(
+                                Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     },
                     divider = {},
                     modifier = Modifier.clip(MaterialTheme.shapes.medium)
@@ -246,7 +248,10 @@ fun UnlockByEmailDialog(
                     tabs.forEachIndexed { index, (icon, title) ->
                         Tab(
                             selected = selectedTab == index,
-                            onClick = { selectedTab = index },
+                            onClick = {
+                                selectedTab = index
+                                uiMessage = null // 切换 Tab 清除错误
+                            },
                             text = { Text(title) },
                             icon = { Icon(imageVector = icon, contentDescription = null) },
                             selectedContentColor = MaterialTheme.colorScheme.primary,
@@ -257,12 +262,15 @@ fun UnlockByEmailDialog(
 
                 Spacer(Modifier.height(24.dp))
 
-                // --- 表单内容区域 ---
+                // 表单内容
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // 邮箱输入框 (通用)
+                    // 邮箱输入框
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
+                        onValueChange = {
+                            email = it
+                            uiMessage = null
+                        },
                         label = { Text("注册邮箱") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -270,10 +278,13 @@ fun UnlockByEmailDialog(
                     )
 
                     if (selectedTab == 0) {
-                        // --- 密码模式 ---
+                        // 密码模式
                         OutlinedTextField(
                             value = password,
-                            onValueChange = { password = it },
+                            onValueChange = {
+                                password = it
+                                uiMessage = null
+                            },
                             label = { Text("登录密码") },
                             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
@@ -287,7 +298,7 @@ fun UnlockByEmailDialog(
                             shape = MaterialTheme.shapes.medium
                         )
                     } else {
-                        // --- 验证码模式 ---
+                        // 验证码模式
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -295,37 +306,53 @@ fun UnlockByEmailDialog(
                         ) {
                             OutlinedTextField(
                                 value = code,
-                                onValueChange = { code = it },
+                                onValueChange = {
+                                    code = it
+                                    uiMessage = null
+                                },
                                 label = { Text("验证码") },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 shape = MaterialTheme.shapes.medium
                             )
-                            // 获取按钮
+                            // 获取验证码按钮
                             Button(
                                 onClick = {
                                     if (email.isBlank()) {
-                                        Toast.makeText(context, "请输入邮箱", Toast.LENGTH_SHORT).show()
+                                        uiMessage = "请输入邮箱"; isError = true
                                     } else if (!viewModel.isEmailRegistered(email)) {
-                                        Toast.makeText(context, "该邮箱未注册", Toast.LENGTH_SHORT).show()
+                                        uiMessage = "该邮箱未注册"; isError = true
                                     } else {
+                                        // 立即倒计时
                                         isCountingDown = true
-                                        // 模拟发送验证码
-                                        Toast.makeText(context, "验证码: 123456", Toast.LENGTH_LONG).show()
+                                        uiMessage = null // 清除旧错误
                                         scope.launch {
                                             countdown = 60
-                                            while (countdown > 0) {
+                                            while (countdown > 0 && isCountingDown) {
                                                 delay(1000)
                                                 countdown--
                                             }
                                             isCountingDown = false
+                                            countdown = 60
                                         }
+
+                                        // 发送邮件
+                                        viewModel.sendCodeToEmail(
+                                            email = email,
+                                            onSuccess = {
+                                                uiMessage = "验证码已发送"; isError = false
+                                            },
+                                            onError = { msg ->
+                                                isCountingDown = false
+                                                uiMessage = msg; isError = true
+                                            }
+                                        )
                                     }
                                 },
                                 enabled = !isCountingDown && email.isNotBlank(),
                                 shape = MaterialTheme.shapes.medium,
-                                modifier = Modifier.height(OutlinedTextFieldDefaults.MinHeight) // 让按钮高度与输入框一致
+                                modifier = Modifier.height(OutlinedTextFieldDefaults.MinHeight)
                             ) {
                                 Text(if (isCountingDown) "${countdown}s" else "获取")
                             }
@@ -333,36 +360,53 @@ fun UnlockByEmailDialog(
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // --- 提示信息 ---
+                // --- 消息提示区域 (替代 Toast) ---
+                // 这里用一个 Text 占位，显示错误或成功信息
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (uiMessage != null) {
+                        Text(
+                            text = uiMessage!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // 提示文案
                 Text(
                     text = "为保障账户安全，验证通过后将重置应用锁设置。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(24.dp))
 
-                // --- 操作按钮区域 ---
-                // 确认按钮 (主要操作，全宽)
+                // 操作按钮
                 Button(
                     onClick = {
                         if (selectedTab == 0) {
+                            // 账号密码验证
                             if (viewModel.login(email, password)) {
-                                Toast.makeText(context, "验证成功，应用锁已移除", Toast.LENGTH_SHORT).show()
                                 onUnlockSuccess()
                             } else {
-                                Toast.makeText(context, "账号或密码错误", Toast.LENGTH_SHORT).show()
+                                uiMessage = "账号或密码错误"; isError = true
                             }
                         } else {
-                            if (code == "123456" && viewModel.isEmailRegistered(email)) {
-                                Toast.makeText(context, "验证成功，应用锁已移除", Toast.LENGTH_SHORT).show()
+                            // 验证码验证
+                            if (viewModel.verifyCode(email, code)) {
                                 onUnlockSuccess()
                             } else {
-                                Toast.makeText(context, "验证码错误或邮箱不匹配", Toast.LENGTH_SHORT).show()
+                                uiMessage = "验证码错误或邮箱不匹配"; isError = true
                             }
                         }
                     },
@@ -374,7 +418,6 @@ fun UnlockByEmailDialog(
 
                 Spacer(Modifier.height(12.dp))
 
-                // 取消按钮 (次要操作，文本按钮)
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),

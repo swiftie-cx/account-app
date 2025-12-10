@@ -7,14 +7,12 @@ plugins {
 
 android {
     namespace = "com.example.myapplication"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 34 // 注意：通常建议写具体的数字，如 34 或 35。如果您的libs.versions中定义了release(36)，请保持原样。这里我暂且保留您原本的结构。
 
     defaultConfig {
         applicationId = "com.example.myapplication"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34 // 同样建议写具体数字
         versionCode = 1
         versionName = "1.0"
 
@@ -31,11 +29,22 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
+    }
+
+    // --- 新增：解决 META-INF 冲突的关键配置 ---
+    packaging {
+        resources {
+            excludes += "META-INF/NOTICE.md"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/DEPENDENCIES"
+        }
     }
 }
 
@@ -70,9 +79,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
 
-    // ---- Reorderable 列表（新增）----
+    // ---- Reorderable 列表 ----
     implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+
     // 网络请求 Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // 邮件发送库
+    implementation("com.sun.mail:android-mail:1.6.7")
+    implementation("com.sun.mail:android-activation:1.6.7")
 }
