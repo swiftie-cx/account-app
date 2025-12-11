@@ -17,13 +17,17 @@ data class PeriodicTransaction(
     val frequency: Int, // 0:每天, 1:每周, 2:每月, 3:每年
     val startDate: Date, // 生效日期
 
-    // --- 结束规则 (新增) ---
+    // --- 结束规则 ---
+    val nextExecutionDate: Date, // 下次执行时间 (必须有)
+
     val endMode: Int = 0, // 0:永不, 1:按日期, 2:按次数
-    val endDate: Date? = null, // 按日期结束时有效
-    val endCount: Int? = null, // 按次数结束时有效 (例如: 重复 12 次)
+    val endDate: Date? = null,
+    val endCount: Int? = null,
 
     // --- 其他选项 ---
     val remark: String? = null,
+
+    // 错就是因为缺了下面这两行
     val excludeFromStats: Boolean = false, // 不计入收支
     val excludeFromBudget: Boolean = false // 不计入预算
 )

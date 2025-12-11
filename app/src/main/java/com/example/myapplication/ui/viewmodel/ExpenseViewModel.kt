@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Budget
-import com.example.myapplication.data.EmailSender // 确保您已经创建了 EmailSender.kt
+import com.example.myapplication.data.EmailSender
 import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.data.Expense
 import com.example.myapplication.data.ExpenseRepository
@@ -39,9 +39,16 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     private val budgetUpdateMutex = Mutex()
 
     init {
-        // 初始化时更新汇率 (在 IO 线程)
+        // 1. 初始化时更新汇率 (在 IO 线程)
         viewModelScope.launch(Dispatchers.IO) {
             ExchangeRates.updateRates()
+        }
+
+        // 2. 【关键】启动时检查周期记账
+        // 只要 App 一打开，立刻检查是否有到期的任务并自动执行
+        // (注意：如果这里爆红，说明 ExpenseRepository.kt 还没更新 checkAndExecutePeriodicTransactions 方法)
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.checkAndExecutePeriodicTransactions()
         }
     }
 
@@ -85,30 +92,21 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun deleteUserAccount() = repository.deleteUserAccount()
 
     // ===========================
-    // 2. 邮箱验证码功能 (新增核心)
+    // 2. 邮箱验证码功能
     // ===========================
 
     // 临时存储验证码 (Key: 邮箱, Value: 验证码)
-    // 注意：App完全关闭后内存会清空，这对于验证码场景是安全的
     private val verificationCodes = mutableMapOf<String, String>()
 
     /**
      * 发送验证码到指定邮箱
-     * @param email 目标邮箱
-     * @param onSuccess 发送成功回调
-     * @param onError 发送失败回调 (带错误信息)
      */
     fun sendCodeToEmail(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            // 1. 生成6位随机数字验证码
             val code = (100000..999999).random().toString()
-
-            // 2. 调用 EmailSender 工具类发送邮件
-            // 请确保 EmailSender.kt 已正确配置了 SMTP 信息
             val isSuccess = EmailSender.sendVerificationCode(email, code)
 
             if (isSuccess) {
-                // 3. 发送成功，将验证码保存到内存中用于后续校验
                 verificationCodes[email] = code
                 onSuccess()
             } else {
@@ -119,14 +117,9 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     /**
      * 校验用户输入的验证码
-     * @param email 用户邮箱
-     * @param inputCode 用户输入的验证码
-     * @return true 表示验证通过
      */
     fun verifyCode(email: String, inputCode: String): Boolean {
-        // 获取内存中保存的正确验证码
         val correctCode = verificationCodes[email]
-        // 比对是否一致
         return correctCode != null && correctCode == inputCode
     }
 
@@ -156,7 +149,7 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         repository.saveAccountOrder(newOrder)
     }
 
-    // 清除所有数据 (危险操作)
+    // 清除所有数据
     fun clearAllData() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.clearAllData()
@@ -173,7 +166,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     private val _incomeCategories = MutableStateFlow(incomeCategories)
     val incomeCategoriesState: StateFlow<List<Category>> = _incomeCategories.asStateFlow()
 
-    // 添加自定义分类
     fun addCategory(name: String, icon: ImageVector, type: CategoryType) {
         val newCategory = Category(name, icon)
         if (type == CategoryType.EXPENSE) {
@@ -183,7 +175,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         }
     }
 
-    // 删除分类
     fun deleteCategory(category: Category, type: CategoryType) {
         if (type == CategoryType.EXPENSE) {
             _expenseCategories.value = _expenseCategories.value.filter { it.title != category.title }
@@ -192,7 +183,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         }
     }
 
-    // 分类重排序
     fun reorderCategories(categories: List<Category>, type: CategoryType) {
         if (type == CategoryType.EXPENSE) {
             _expenseCategories.value = categories
@@ -205,14 +195,12 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     // 5. 账单操作 (CRUD)
     // ===========================
 
-    // 插入一笔账单
     fun insert(expense: Expense) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.insert(expense)
         }
     }
 
-    // 创建转账记录 (同时生成一笔支出和一笔收入)
     fun createTransfer(fromAccountId: Long, toAccountId: Long, fromAmount: Double, toAmount: Double, date: Date) {
         viewModelScope.launch(Dispatchers.IO) {
             val expenseOut = Expense(
@@ -233,21 +221,18 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         }
     }
 
-    // 插入账户
     fun insertAccount(account: Account) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.insertAccount(account)
         }
     }
 
-    // 删除账单
     fun deleteExpense(expense: Expense) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.deleteExpense(expense)
         }
     }
 
-    // 更新账单
     fun updateExpense(expense: Expense) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateExpense(expense)
@@ -267,17 +252,14 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     private val _selectedCategoryFilter = MutableStateFlow<String?>("全部")
     val selectedCategoryFilter: StateFlow<String?> = _selectedCategoryFilter
 
-    // 组合筛选结果流
     val filteredExpenses: StateFlow<List<Expense>> = combine(
         allExpenses, _searchText, _selectedTypeFilter, _selectedCategoryFilter
     ) { expenses, text, type, category ->
         expenses.filter { expense ->
-            // 1. 文本搜索 (备注或分类名)
             val matchesSearchText = text.isBlank() ||
                     (expense.remark?.contains(text, ignoreCase = true) ?: false) ||
                     expense.category.contains(text, ignoreCase = true)
 
-            // 2. 类型筛选
             val matchesType = when (type) {
                 ExpenseTypeFilter.ALL -> true
                 ExpenseTypeFilter.EXPENSE -> expense.amount < 0 && !expense.category.startsWith("转账")
@@ -285,7 +267,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
                 ExpenseTypeFilter.TRANSFER -> expense.category.startsWith("转账")
             }
 
-            // 3. 分类筛选
             val matchesCategory = category == "全部" || expense.category == category
 
             matchesSearchText && matchesType && matchesCategory
@@ -308,7 +289,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         viewModelScope.launch(Dispatchers.IO) {
             budgetUpdateMutex.withLock {
                 repository.upsertBudget(budget)
-                // 如果修改的是子分类预算，自动更新总预算以确保总预算 >= 所有子预算之和
                 if (budget.category != "总预算") {
                     val allBudgets = repository.getBudgetsForMonth(budget.year, budget.month).first()
                     val calculatedSum = allBudgets.filter { it.category in allCategoryTitles }.sumOf { it.amount }
@@ -329,7 +309,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         }
     }
 
-    // 同步预算：如果本月没有预算，尝试从最近的一个月复制过来
     fun syncBudgetsFor(year: Int, month: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val targetMonthBudgets = getBudgetsForMonth(year, month).first()
@@ -355,29 +334,39 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     // ===========================
 
     fun getPrivacyType(): String = repository.getPrivacyType()
-
-    // 设置隐私锁类型 (PIN, PATTERN, NONE)
     fun setPrivacyType(type: String) = repository.savePrivacyType(type)
-
     fun savePin(pin: String) = repository.savePin(pin)
     fun verifyPin(pin: String): Boolean = repository.verifyPin(pin)
-
     fun savePattern(pattern: List<Int>) = repository.savePattern(pattern)
     fun verifyPattern(pattern: List<Int>): Boolean = repository.verifyPattern(pattern)
-
     fun setBiometricEnabled(enabled: Boolean) = repository.setBiometricEnabled(enabled)
     fun isBiometricEnabled(): Boolean = repository.isBiometricEnabled()
 
-    // --- Periodic Transactions (新增) ---
+    // ===========================
+    // 9. 周期记账 (Periodic)
+    // ===========================
+
     val allPeriodicTransactions: StateFlow<List<PeriodicTransaction>> = repository.allPeriodicTransactions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // 新增规则
     fun insertPeriodic(transaction: PeriodicTransaction) {
-        viewModelScope.launch(Dispatchers.IO) { repository.insertPeriodic(transaction) }
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. 保存
+            repository.insertPeriodic(transaction)
+            // 2. 【关键】保存后立即检查是否需要今天执行，给用户即时反馈
+            repository.checkAndExecutePeriodicTransactions()
+        }
     }
 
+    // 修改规则
     fun updatePeriodic(transaction: PeriodicTransaction) {
-        viewModelScope.launch(Dispatchers.IO) { repository.updatePeriodic(transaction) }
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. 更新
+            repository.updatePeriodic(transaction)
+            // 2. 【关键】更新后也立即检查 (万一用户把时间改到了今天之前)
+            repository.checkAndExecutePeriodicTransactions()
+        }
     }
 
     fun deletePeriodic(transaction: PeriodicTransaction) {

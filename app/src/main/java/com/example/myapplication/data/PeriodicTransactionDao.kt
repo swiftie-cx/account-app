@@ -22,6 +22,10 @@ interface PeriodicTransactionDao {
     @Query("SELECT * FROM periodic_transactions ORDER BY id DESC")
     fun getAll(): Flow<List<PeriodicTransaction>>
 
+    // 【关键新增】供后台任务和启动检查使用的同步查询方法 (非 Flow)
+    @Query("SELECT * FROM periodic_transactions")
+    suspend fun getAllSync(): List<PeriodicTransaction>
+
     @Query("SELECT * FROM periodic_transactions WHERE id = :id")
     suspend fun getById(id: Long): PeriodicTransaction?
 }

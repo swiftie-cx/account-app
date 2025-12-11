@@ -5,7 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CircleShape // 确保导入了这个
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -41,7 +41,6 @@ fun PeriodicBookkeepingScreen(
     val allCategories = expenseCategories + incomeCategories
     val categoryIconMap = remember { allCategories.associate { it.title to it.icon } }
 
-    // 控制底部选择类型的弹窗
     var showTypeSheet by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -56,7 +55,13 @@ fun PeriodicBookkeepingScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showTypeSheet = true }) {
+            // 【关键修改】添加样式参数，使其变成圆形且颜色一致
+            FloatingActionButton(
+                onClick = { showTypeSheet = true },
+                shape = CircleShape, // 变成圆形
+                containerColor = MaterialTheme.colorScheme.primary, // 使用主题紫色
+                contentColor = MaterialTheme.colorScheme.onPrimary // 图标变白
+            ) {
                 Icon(Icons.Default.Add, "添加")
             }
         }
@@ -77,14 +82,12 @@ fun PeriodicBookkeepingScreen(
             ) {
                 items(periodicList) { item ->
                     PeriodicItem(item, categoryIconMap[item.category], onDelete = { viewModel.deletePeriodic(item) }) {
-                        // 编辑模式：传递ID和类型
                         navController.navigate("add_periodic_transaction?id=${item.id}&type=${item.type}")
                     }
                 }
             }
         }
 
-        // --- 底部类型选择弹窗 ---
         if (showTypeSheet) {
             ModalBottomSheet(onDismissRequest = { showTypeSheet = false }) {
                 Column(modifier = Modifier.padding(bottom = 32.dp)) {
@@ -145,11 +148,10 @@ fun PeriodicItem(
         else -> ""
     }
 
-    // 新增：显示结束规则
     val endStr = when(item.endMode) {
         1 -> " · 至 " + java.text.SimpleDateFormat("MM-dd", Locale.getDefault()).format(item.endDate!!)
         2 -> " · 余 ${item.endCount} 次"
-        else -> "" // 永不结束不显示额外文字
+        else -> ""
     }
 
     val color = when(item.type) {
@@ -182,7 +184,6 @@ fun PeriodicItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.category, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                // 拼接显示：每月 · 支出 · 余 5 次
                 Text("$frequencyStr · $typeStr$endStr", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 

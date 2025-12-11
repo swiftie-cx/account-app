@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 // (修改) 增加 PeriodicTransaction，版本号升级为 2
-@Database(entities = [Expense::class, Budget::class, Account::class, PeriodicTransaction::class], version = 2, exportSchema = false)
+@Database(entities = [Expense::class, Budget::class, Account::class, PeriodicTransaction::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao

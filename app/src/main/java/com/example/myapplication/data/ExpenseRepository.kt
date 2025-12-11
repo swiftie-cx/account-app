@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import java.util.Calendar
+import java.util.Date
+import kotlin.math.abs
 
 class ExpenseRepository(
     private val expenseDao: ExpenseDao,
@@ -20,32 +23,25 @@ class ExpenseRepository(
     private val gson = Gson()
 
     // --- 用户认证逻辑 (模拟) ---
-
-    // 1. 监听登录状态
     private val _isLoggedIn = MutableStateFlow(prefs.getBoolean("is_logged_in", false))
     val isLoggedIn = _isLoggedIn.asStateFlow()
 
-    // 2. 监听当前用户邮箱 (仅用于显示)
     private val _userEmail = MutableStateFlow(prefs.getString("user_email", "") ?: "")
     val userEmail = _userEmail.asStateFlow()
 
-    // 注册 (保存账号信息 + 自动登录)
     fun register(email: String, password: String) {
         prefs.edit()
             .putString("user_email", email)
             .putString("user_password", password)
-            .putBoolean("is_logged_in", true) // 注册后自动登录
+            .putBoolean("is_logged_in", true)
             .apply()
         _userEmail.value = email
         _isLoggedIn.value = true
     }
 
-    // 登录 (校验账号信息)
     fun login(email: String, password: String): Boolean {
         val savedEmail = prefs.getString("user_email", "")
         val savedPassword = prefs.getString("user_password", "")
-
-        // 简单模拟：如果输入的账号密码和本地存的一致
         if (savedEmail == email && savedPassword == password) {
             prefs.edit().putBoolean("is_logged_in", true).apply()
             _isLoggedIn.value = true
@@ -54,13 +50,11 @@ class ExpenseRepository(
         return false
     }
 
-    // 退出登录 (只改状态，不删数据)
     fun logout() {
         prefs.edit().putBoolean("is_logged_in", false).apply()
         _isLoggedIn.value = false
     }
 
-    // 注销账号 (删数据 + 退出)
     fun deleteUserAccount() {
         prefs.edit()
             .remove("user_email")
@@ -71,13 +65,11 @@ class ExpenseRepository(
         _isLoggedIn.value = false
     }
 
-    // 检查邮箱是否被注册 (模拟：检查是否和本地存储的一样)
     fun isEmailRegistered(email: String): Boolean {
         val savedEmail = prefs.getString("user_email", "")
         return savedEmail == email
     }
 
-    // 保存新密码 (修改密码/重置密码用)
     fun saveUserPassword(password: String) {
         prefs.edit().putString("user_password", password).apply()
     }
@@ -87,11 +79,10 @@ class ExpenseRepository(
         return saved == password
     }
 
-    // 1. 默认账户 ID (StateFlow)
+    // --- 账户状态 ---
     private val _defaultAccountId = MutableStateFlow(prefs.getLong("default_account_id", -1L))
     val defaultAccountId = _defaultAccountId.asStateFlow()
 
-    // 2. 账户排序 (存储 ID 列表)
     private val _accountOrder = MutableStateFlow<List<Long>>(loadAccountOrder())
 
     private fun loadAccountOrder(): List<Long> {
@@ -119,7 +110,6 @@ class ExpenseRepository(
             if (order.isEmpty()) {
                 accounts
             } else {
-                // 根据 order 列表中的 ID 顺序对 accounts 进行排序
                 accounts.sortedBy { account ->
                     val index = order.indexOf(account.id)
                     if (index == -1) Int.MAX_VALUE else index
@@ -131,15 +121,12 @@ class ExpenseRepository(
     suspend fun updateAccount(account: Account) = accountDao.update(account)
     suspend fun deleteAccount(account: Account) = accountDao.delete(account)
 
-    // --- 新增功能方法 ---
-
-    // 保存默认账户ID
+    // --- Helper methods ---
     fun saveDefaultAccountId(id: Long) {
         prefs.edit().putLong("default_account_id", id).apply()
         _defaultAccountId.value = id
     }
 
-    // 保存账户排序顺序
     fun saveAccountOrder(accounts: List<Account>) {
         val ids = accounts.map { it.id }
         val json = gson.toJson(ids)
@@ -147,64 +134,127 @@ class ExpenseRepository(
         _accountOrder.value = ids
     }
 
-    // 清除所有数据逻辑
     suspend fun clearAllData() {
-        // 1. 清空数据库表
         expenseDao.deleteAll()
         budgetDao.deleteAll()
         accountDao.deleteAll()
-
-        // 2. 清空偏好设置
         prefs.edit().clear().apply()
-
-        // 3. 重置内存中的状态
         _defaultAccountId.value = -1L
         _accountOrder.value = emptyList()
         _userEmail.value = ""
         _isLoggedIn.value = false
     }
 
-    // --- 隐私设置 ---
-    fun getPrivacyType(): String {
-        return prefs.getString("privacy_type", "NONE") ?: "NONE"
-    }
+    // --- Privacy ---
+    fun getPrivacyType(): String = prefs.getString("privacy_type", "NONE") ?: "NONE"
+    fun savePrivacyType(type: String) = prefs.edit().putString("privacy_type", type).apply()
+    fun savePin(pin: String) = prefs.edit().putString("privacy_pin", pin).apply()
+    fun verifyPin(inputPin: String): Boolean = prefs.getString("privacy_pin", "") == inputPin
+    fun savePattern(pattern: List<Int>) = prefs.edit().putString("privacy_pattern", pattern.joinToString(",")).apply()
+    fun verifyPattern(inputPattern: List<Int>): Boolean = prefs.getString("privacy_pattern", "") == inputPattern.joinToString(",")
+    fun isBiometricEnabled(): Boolean = prefs.getBoolean("privacy_biometric", false)
+    fun setBiometricEnabled(enabled: Boolean) = prefs.edit().putBoolean("privacy_biometric", enabled).apply()
 
-    fun savePrivacyType(type: String) {
-        prefs.edit().putString("privacy_type", type).apply()
-    }
-
-    fun savePin(pin: String) {
-        prefs.edit().putString("privacy_pin", pin).apply()
-    }
-
-    fun verifyPin(inputPin: String): Boolean {
-        val savedPin = prefs.getString("privacy_pin", "")
-        return savedPin == inputPin
-    }
-
-    fun savePattern(pattern: List<Int>) {
-        val patternStr = pattern.joinToString(",")
-        prefs.edit().putString("privacy_pattern", patternStr).apply()
-    }
-
-    fun verifyPattern(inputPattern: List<Int>): Boolean {
-        val savedStr = prefs.getString("privacy_pattern", "")
-        val inputStr = inputPattern.joinToString(",")
-        return savedStr == inputStr
-    }
-
-    fun isBiometricEnabled(): Boolean {
-        return prefs.getBoolean("privacy_biometric", false)
-    }
-
-    fun setBiometricEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("privacy_biometric", enabled).apply()
-    }
-
-    // --- Periodic Transaction Methods (新增) ---
+    // --- Periodic Transaction Methods ---
     val allPeriodicTransactions: Flow<List<PeriodicTransaction>> = periodicDao.getAll()
     suspend fun insertPeriodic(transaction: PeriodicTransaction) = periodicDao.insert(transaction)
     suspend fun updatePeriodic(transaction: PeriodicTransaction) = periodicDao.update(transaction)
     suspend fun deletePeriodic(transaction: PeriodicTransaction) = periodicDao.delete(transaction)
     suspend fun getPeriodicById(id: Long) = periodicDao.getById(id)
+
+    // =========================================================
+    //               核心逻辑：检查并执行周期记账 (修改版)
+    // =========================================================
+
+    suspend fun checkAndExecutePeriodicTransactions() {
+        // 【关键逻辑】获取"今天结束"的时间点 (23:59:59.999)
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endOfToday = calendar.time
+
+        // 获取所有规则
+        val allRules = periodicDao.getAllSync()
+
+        allRules.forEach { rule ->
+            // 如果 "下次执行时间" <= "今天结束"，说明它属于今天（或之前的漏单），立即执行
+            if (rule.nextExecutionDate.time <= endOfToday.time) {
+                executeRule(rule)
+            }
+        }
+    }
+
+    private suspend fun executeRule(rule: PeriodicTransaction) {
+        // A. 检查是否已结束
+        if (rule.endMode == 1 && rule.endDate != null && rule.nextExecutionDate.after(rule.endDate)) {
+            return
+        }
+        if (rule.endMode == 2 && rule.endCount != null && rule.endCount <= 0) {
+            return
+        }
+
+        // B. 生成真实账单
+        // 注意：这里生成的账单，date 用的是 rule.nextExecutionDate (比如今天 11:00)
+        // 而不是 Date() (现在时间 06:00)。
+        // 这样就保证了时间排序的正确性。
+        if (rule.type == 2 && rule.targetAccountId != null) {
+            val expenseOut = Expense(
+                accountId = rule.accountId,
+                category = "转账 (转出)",
+                amount = -abs(rule.amount),
+                date = rule.nextExecutionDate,
+                remark = rule.remark ?: "周期转账"
+            )
+            val expenseIn = Expense(
+                accountId = rule.targetAccountId,
+                category = "转账 (转入)",
+                amount = abs(rule.amount),
+                date = rule.nextExecutionDate,
+                remark = rule.remark ?: "周期转账"
+            )
+            expenseDao.insertTransfer(expenseOut, expenseIn)
+        } else {
+            val finalAmount = if (rule.type == 0) -abs(rule.amount) else abs(rule.amount)
+            val expense = Expense(
+                category = rule.category,
+                amount = finalAmount,
+                date = rule.nextExecutionDate,
+                accountId = rule.accountId,
+                remark = rule.remark ?: "周期自动记账"
+            )
+            expenseDao.insertExpense(expense)
+        }
+
+        // C. 计算下一次执行时间
+        val calendar = Calendar.getInstance()
+        calendar.time = rule.nextExecutionDate
+
+        when (rule.frequency) {
+            0 -> calendar.add(Calendar.DAY_OF_YEAR, 1) // 每天
+            1 -> calendar.add(Calendar.WEEK_OF_YEAR, 1) // 每周
+            2 -> calendar.add(Calendar.MONTH, 1)       // 每月
+            3 -> calendar.add(Calendar.YEAR, 1)        // 每年
+        }
+        val newNextDate = calendar.time
+
+        // D. 更新规则
+        val newEndCount = if (rule.endMode == 2 && rule.endCount != null) rule.endCount - 1 else rule.endCount
+
+        val updatedRule = rule.copy(
+            nextExecutionDate = newNextDate,
+            endCount = newEndCount
+        )
+
+        periodicDao.update(updatedRule)
+
+        // E. 递归检查 (可选)：如果这个规则是每天执行，且上次漏了好几天，
+        // 执行完这一笔后，nextExecutionDate 可能还在“今天”之前。
+        // 为了补齐所有漏单，可以递归调用：
+        // if (updatedRule.nextExecutionDate.time <= Calendar.getInstance().apply { ...Set to End of Today... }.time.time) {
+        //     executeRule(updatedRule)
+        // }
+        // 但为了稳妥起见，暂不开启递归，每次启动补一笔即可。
+    }
 }

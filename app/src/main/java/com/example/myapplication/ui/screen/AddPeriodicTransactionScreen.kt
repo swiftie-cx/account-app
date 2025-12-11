@@ -1,22 +1,32 @@
 package com.example.myapplication.ui.screen
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import android.content.DialogInterface
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,9 +37,8 @@ import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
-import com.example.myapplication.ui.screen.CustomDateRangePicker
 import java.text.SimpleDateFormat
-import java.util.Calendar // 【已补全】这里之前漏掉了
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -46,6 +55,13 @@ fun AddPeriodicTransactionScreen(
     periodicId: Long? = null,
     initialType: Int = 0
 ) {
+    val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    // --- 准备按钮颜色 ---
+    val positiveColor = MaterialTheme.colorScheme.primary.toArgb()
+    val negativeColor = MaterialTheme.colorScheme.outline.toArgb()
+
     // --- 状态定义 ---
     var transactionType by remember { mutableIntStateOf(initialType) }
 
@@ -60,6 +76,9 @@ fun AddPeriodicTransactionScreen(
 
     // 账单详情
     var amount by remember { mutableStateOf("") }
+    // 焦点请求器
+    val amountFocusRequester = remember { FocusRequester() }
+
     var remark by remember { mutableStateOf("") }
     var excludeFromStats by remember { mutableStateOf(false) }
     var excludeFromBudget by remember { mutableStateOf(false) }
@@ -78,9 +97,66 @@ fun AddPeriodicTransactionScreen(
     var showAccountPickerFor by remember { mutableStateOf<String?>(null) }
     var showCategorySheet by remember { mutableStateOf(false) }
 
-    // --- 日期选择器状态 ---
-    var showStartDatePicker by remember { mutableStateOf(false) }
-    var showEndDatePicker by remember { mutableStateOf(false) }
+    // --- 日期和时间选择器 ---
+    val calendar = Calendar.getInstance()
+
+    // 1. 生效日期选择器
+    val startDatePicker = DatePickerDialog(
+        context,
+        { _, year, month, day ->
+            val cal = Calendar.getInstance().apply { time = startDate }
+            cal.set(Calendar.YEAR, year)
+            cal.set(Calendar.MONTH, month)
+            cal.set(Calendar.DAY_OF_MONTH, day)
+            startDate = cal.time
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+    startDatePicker.setOnShowListener {
+        startDatePicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(positiveColor)
+        startDatePicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(negativeColor)
+    }
+
+    // 2. 账单时间选择器
+    val timePicker = TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            val cal = Calendar.getInstance().apply { time = startDate }
+            cal.set(Calendar.HOUR_OF_DAY, hourOfDay)
+            cal.set(Calendar.MINUTE, minute)
+            startDate = cal.time
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true
+    )
+    timePicker.setOnShowListener {
+        timePicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(positiveColor)
+        timePicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(negativeColor)
+    }
+
+    // 3. 结束日期选择器
+    val endDatePicker = DatePickerDialog(
+        context,
+        { _, year, month, day ->
+            val cal = Calendar.getInstance()
+            cal.set(year, month, day)
+            endDate = cal.time
+            endMode = END_MODE_DATE
+            endCount = null
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    ).apply {
+        datePicker.minDate = System.currentTimeMillis()
+    }
+    endDatePicker.setOnShowListener {
+        endDatePicker.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(positiveColor)
+        endDatePicker.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(negativeColor)
+    }
 
     // --- 加载数据 ---
     val periodicList by viewModel.allPeriodicTransactions.collectAsState()
@@ -127,6 +203,13 @@ fun AddPeriodicTransactionScreen(
         val amountVal = amount.toDoubleOrNull() ?: 0.0
         if (amountVal <= 0) return
 
+        // 强制将秒和毫秒清零
+        val cal = Calendar.getInstance()
+        cal.time = startDate
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        val cleanStartDate = cal.time
+
         val transaction = PeriodicTransaction(
             id = if (periodicId != null && periodicId != -1L) periodicId else 0,
             type = transactionType,
@@ -135,7 +218,11 @@ fun AddPeriodicTransactionScreen(
             accountId = if(transactionType == 2) (fromAccount?.id ?: 0) else (selectedAccount?.id ?: 0),
             targetAccountId = if(transactionType == 2) toAccount?.id else null,
             frequency = frequency,
-            startDate = startDate,
+            startDate = cleanStartDate,
+
+            // 下次执行时间初始值
+            nextExecutionDate = cleanStartDate,
+
             endMode = endMode,
             endDate = if (endMode == END_MODE_DATE) endDate else null,
             endCount = if (endMode == END_MODE_COUNT) endCount else null,
@@ -190,7 +277,6 @@ fun AddPeriodicTransactionScreen(
                     FormItem(label = "重复周期", value = freqLabel, onClick = { showFrequencySheet = true })
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 
-                    // 结束重复逻辑
                     val endLabel = when(endMode) {
                         END_MODE_NEVER -> "永不结束"
                         END_MODE_DATE -> endDate?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it) } ?: "选择日期"
@@ -200,9 +286,12 @@ fun AddPeriodicTransactionScreen(
                     FormItem(label = "结束重复", value = endLabel, onClick = { showEndRepeatSheet = true })
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 
-                    // 生效日期 (点击设置 true，弹出 CustomDateRangePicker)
                     val startLabel = if (isToday(startDate)) "今天" else SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(startDate)
-                    FormItem(label = "生效日期", value = startLabel, onClick = { showStartDatePicker = true })
+                    FormItem(label = "生效日期", value = startLabel, onClick = { startDatePicker.show() })
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+
+                    val timeLabel = SimpleDateFormat("HH:mm", Locale.getDefault()).format(startDate)
+                    FormItem(label = "账单时间", value = timeLabel, onClick = { timePicker.show() })
                 }
             }
 
@@ -219,25 +308,59 @@ fun AddPeriodicTransactionScreen(
                         HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
                     }
 
+                    // --- 金额输入框 ---
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                amountFocusRequester.requestFocus()
+                                keyboardController?.show()
+                            }
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("金额", style = MaterialTheme.typography.bodyLarge)
-                        OutlinedTextField(
+                        Text(
+                            text = "金额",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        BasicTextField(
                             value = amount,
-                            onValueChange = { amount = it },
-                            placeholder = { Text("0.00") },
-                            textStyle = MaterialTheme.typography.titleMedium.copy(textAlign = TextAlign.End),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent
+                            onValueChange = { input ->
+                                if (input.isEmpty() || input.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                    amount = input
+                                }
+                            },
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                textAlign = TextAlign.End,
+                                color = MaterialTheme.colorScheme.onSurface
                             ),
-                            modifier = Modifier.width(150.dp)
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Done
+                            ),
+                            singleLine = true,
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier
+                                .width(150.dp)
+                                .focusRequester(amountFocusRequester),
+                            decorationBox = { innerTextField ->
+                                Box(contentAlignment = Alignment.CenterEnd) {
+                                    if (amount.isEmpty()) {
+                                        Text(
+                                            text = "0.00",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.End
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
                         )
                     }
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
@@ -254,21 +377,34 @@ fun AddPeriodicTransactionScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("备注", style = MaterialTheme.typography.bodyLarge)
-                        OutlinedTextField(
+                        Spacer(Modifier.width(16.dp))
+                        BasicTextField(
                             value = remark,
                             onValueChange = { remark = it },
-                            placeholder = { Text("输入备注") },
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.End),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                textAlign = TextAlign.End,
+                                color = MaterialTheme.colorScheme.onSurface
                             ),
-                            modifier = Modifier.weight(1f)
+                            singleLine = true,
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.weight(1f),
+                            decorationBox = { innerTextField ->
+                                Box(contentAlignment = Alignment.CenterEnd) {
+                                    if (remark.isEmpty()) {
+                                        Text(
+                                            text = "输入备注",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.End
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
                         )
                     }
                 }
@@ -285,9 +421,8 @@ fun AddPeriodicTransactionScreen(
             }
         }
 
-        // --- 弹窗组件集合 ---
+        // --- 弹窗组件 ---
 
-        // 1. 频率选择
         if (showFrequencySheet) {
             ModalBottomSheet(onDismissRequest = { showFrequencySheet = false }) {
                 Column(Modifier.padding(bottom = 32.dp)) {
@@ -302,7 +437,6 @@ fun AddPeriodicTransactionScreen(
             }
         }
 
-        // 2. 结束重复选择
         if (showEndRepeatSheet) {
             ModalBottomSheet(onDismissRequest = { showEndRepeatSheet = false }) {
                 Column(Modifier.padding(bottom = 32.dp)) {
@@ -319,7 +453,7 @@ fun AddPeriodicTransactionScreen(
                         trailingContent = { if (endMode == END_MODE_DATE) Icon(Icons.Default.Check, null) },
                         modifier = Modifier.clickable {
                             showEndRepeatSheet = false
-                            showEndDatePicker = true // 弹出自定义选择器
+                            endDatePicker.show()
                         }
                     )
                     ListItem(
@@ -334,7 +468,6 @@ fun AddPeriodicTransactionScreen(
             }
         }
 
-        // 3. 次数输入 Dialog
         if (showCountInputDialog) {
             var tempCount by remember { mutableStateOf("") }
             AlertDialog(
@@ -365,7 +498,6 @@ fun AddPeriodicTransactionScreen(
             )
         }
 
-        // 4. 账户选择
         if (showAccountPickerFor != null) {
             AccountPickerDialog(
                 accounts = accounts,
@@ -382,7 +514,6 @@ fun AddPeriodicTransactionScreen(
             )
         }
 
-        // 5. 分类选择
         if (showCategorySheet) {
             ModalBottomSheet(onDismissRequest = { showCategorySheet = false }) {
                 val cats = if (transactionType == 0) expenseCategories else incomeCategories
@@ -398,40 +529,6 @@ fun AddPeriodicTransactionScreen(
                 }
             }
         }
-
-        // --- 6. 自定义日期选择器 (复用 CustomDateRangePicker) ---
-
-        // 生效日期
-        if (showStartDatePicker) {
-            CustomDateRangePicker(
-                initialStartDate = startDate.time,
-                initialEndDate = null,
-                isSingleSelection = true,
-                onConfirm = { start, _ ->
-                    if (start != null) startDate = Date(start)
-                    showStartDatePicker = false
-                },
-                onDismiss = { showStartDatePicker = false }
-            )
-        }
-
-        // 结束日期
-        if (showEndDatePicker) {
-            CustomDateRangePicker(
-                initialStartDate = endDate?.time ?: System.currentTimeMillis(),
-                initialEndDate = null,
-                isSingleSelection = true,
-                onConfirm = { start, _ ->
-                    if (start != null) {
-                        endDate = Date(start)
-                        endMode = END_MODE_DATE // 选中日期后自动切换模式
-                        endCount = null
-                    }
-                    showEndDatePicker = false
-                },
-                onDismiss = { showEndDatePicker = false }
-            )
-        }
     }
 }
 
@@ -442,6 +539,7 @@ fun isToday(date: Date): Boolean {
             cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }
 
+// 【关键修改】去掉了右侧的小箭头图标代码
 @Composable
 fun FormItem(label: String, value: String, icon: ImageVector? = null, onClick: () -> Unit) {
     Row(
@@ -457,8 +555,7 @@ fun FormItem(label: String, value: String, icon: ImageVector? = null, onClick: (
             Spacer(Modifier.width(8.dp))
         }
         Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(4.dp))
-        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.outlineVariant)
+        // 删除了这里的 Spacer 和 Icon(ArrowForwardIos)
     }
 }
 
