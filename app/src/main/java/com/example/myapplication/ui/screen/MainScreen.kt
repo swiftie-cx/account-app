@@ -1,9 +1,7 @@
 package com.example.myapplication.ui.screen
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
@@ -22,7 +20,6 @@ import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -53,10 +50,10 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // (修改) 在此处添加 Routes.SEARCH 到隐藏列表
-    // 当当前路由是 LOCK, ADD_TRANSACTION 或 SEARCH 时，不显示主 Scaffold (即不显示底部导航栏)
+    // 当处于 锁屏、添加交易、搜索、周期记账编辑 等页面时，隐藏底部导航栏
     val showScaffold = currentRoute != Routes.LOCK &&
             currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true &&
+            currentRoute?.startsWith("add_periodic_transaction") != true && // 隐藏周期编辑页的底部栏
             currentRoute != Routes.SEARCH
 
     if (showScaffold) {
@@ -125,7 +122,8 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
         BottomNavItem.Details,
         BottomNavItem.Chart,
         BottomNavItem.Budget,
-        BottomNavItem.Assets
+        BottomNavItem.Assets,
+        BottomNavItem.Mine // “我的”
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -154,7 +152,7 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
                             saveState = true
                         }
                         launchSingleTop = true
-                        restoreState = (item.route != BottomNavItem.Details.route)
+                        restoreState = true
                     }
                 }
             )
@@ -179,6 +177,7 @@ fun NavigationGraph(
 
     NavHost(navController, startDestination = startDestination, modifier = modifier) {
 
+        // --- 核心页面 ---
         composable(Routes.LOCK) {
             LockScreen(
                 viewModel = expenseViewModel,
@@ -205,6 +204,17 @@ fun NavigationGraph(
         composable(BottomNavItem.Assets.route) {
             AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
+
+        // “我的”页面
+        composable(BottomNavItem.Mine.route) {
+            SettingsScreen(
+                navController = navController,
+                defaultCurrency = defaultCurrency,
+                viewModel = expenseViewModel
+            )
+        }
+
+        // --- 功能页面 ---
 
         composable(
             route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}",
@@ -253,6 +263,7 @@ fun NavigationGraph(
             }
         }
 
+        // 保留 Routes.SETTINGS 兼容
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 navController = navController,
@@ -261,18 +272,13 @@ fun NavigationGraph(
             )
         }
 
+        // --- 设置相关 ---
         composable(Routes.PRIVACY_SETTINGS) {
-            PrivacySettingsScreen(
-                navController = navController,
-                viewModel = expenseViewModel
-            )
+            PrivacySettingsScreen(navController = navController, viewModel = expenseViewModel)
         }
 
         composable(Routes.THEME_SETTINGS) {
-            ThemeSettingsScreen(
-                navController = navController,
-                themeViewModel = themeViewModel
-            )
+            ThemeSettingsScreen(navController = navController, themeViewModel = themeViewModel)
         }
 
         composable(Routes.CURRENCY_SELECTION) {
@@ -319,7 +325,33 @@ fun NavigationGraph(
             )
         }
 
-        // --- 用户信息相关路由 ---
+        // --- 周期记账相关 (新增) ---
+
+        // 1. 周期列表页
+        composable(Routes.PERIODIC_BOOKKEEPING) {
+            PeriodicBookkeepingScreen(navController = navController, viewModel = expenseViewModel)
+        }
+
+        // 2. 周期编辑/添加页 (带 type 参数)
+        composable(
+            route = "add_periodic_transaction?id={id}&type={type}",
+            arguments = listOf(
+                navArgument("id") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("type") { type = NavType.IntType; defaultValue = 0 }
+            )
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getLong("id")
+            val type = backStackEntry.arguments?.getInt("type") ?: 0
+
+            AddPeriodicTransactionScreen(
+                navController = navController,
+                viewModel = expenseViewModel,
+                periodicId = if (id == -1L) null else id,
+                initialType = type
+            )
+        }
+
+        // --- 用户信息相关 ---
         composable(Routes.USER_INFO) {
             UserInfoScreen(navController = navController, viewModel = expenseViewModel)
         }
@@ -335,12 +367,5 @@ fun NavigationGraph(
         composable(Routes.FORGOT_PASSWORD) {
             ForgotPasswordScreen(navController = navController, viewModel = expenseViewModel)
         }
-    }
-}
-
-@Composable
-fun PlaceholderScreen(screenName: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "$screenName Screen")
     }
 }

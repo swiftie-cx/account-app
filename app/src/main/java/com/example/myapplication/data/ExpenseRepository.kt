@@ -12,6 +12,7 @@ class ExpenseRepository(
     private val expenseDao: ExpenseDao,
     private val budgetDao: BudgetDao,
     private val accountDao: AccountDao,
+    private val periodicDao: PeriodicTransactionDao,
     context: Context
 ) {
     // --- 偏好设置 (SharedPreferences) ---
@@ -199,4 +200,11 @@ class ExpenseRepository(
     fun setBiometricEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("privacy_biometric", enabled).apply()
     }
+
+    // --- Periodic Transaction Methods (新增) ---
+    val allPeriodicTransactions: Flow<List<PeriodicTransaction>> = periodicDao.getAll()
+    suspend fun insertPeriodic(transaction: PeriodicTransaction) = periodicDao.insert(transaction)
+    suspend fun updatePeriodic(transaction: PeriodicTransaction) = periodicDao.update(transaction)
+    suspend fun deletePeriodic(transaction: PeriodicTransaction) = periodicDao.delete(transaction)
+    suspend fun getPeriodicById(id: Long) = periodicDao.getById(id)
 }

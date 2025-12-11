@@ -14,14 +14,12 @@ import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,6 +29,7 @@ import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.data.Expense
+import com.example.myapplication.ui.screen.DisplayTransferItem
 import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
@@ -148,10 +147,9 @@ fun DetailsScreen(
 
     // --- 6. UI 结构 ---
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background, // 使用清爽背景
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             DetailsTopAppBar(
-                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
                 onSearchClick = { navController.navigate(Routes.SEARCH) },
                 onCalendarClick = { navController.navigate(Routes.CALENDAR) }
             )
@@ -163,7 +161,6 @@ fun DetailsScreen(
                 .fillMaxSize(),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            // 头部统计卡片作为列表的第一项
             item {
                 SummaryHeader(
                     year = selectedYear,
@@ -205,11 +202,10 @@ fun DetailsScreen(
     }
 }
 
-// --- 顶部应用栏 (透明/极简) ---
+// --- 顶部应用栏 (移除了设置图标) ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DetailsTopAppBar(
-    onSettingsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onCalendarClick: () -> Unit
 ) {
@@ -221,11 +217,6 @@ private fun DetailsTopAppBar(
                 style = MaterialTheme.typography.titleLarge
             )
         },
-        navigationIcon = {
-            IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Default.Settings, "设置", tint = MaterialTheme.colorScheme.onSurface)
-            }
-        },
         actions = {
             IconButton(onClick = onSearchClick) {
                 Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurface)
@@ -235,13 +226,12 @@ private fun DetailsTopAppBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent, // 透明背景，让界面更通透
+            containerColor = Color.Transparent,
             scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
         )
     )
 }
 
-// --- 顶部统计卡片 (现代设计：卡片悬浮 + 渐变) ---
 @Composable
 private fun SummaryHeader(
     year: Int, month: Int, expense: Double, income: Double, balance: Double, onMonthClick: () -> Unit
@@ -254,20 +244,17 @@ private fun SummaryHeader(
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .shadow(8.dp, RoundedCornerShape(24.dp), ambientColor = themeColor.copy(alpha = 0.3f), spotColor = themeColor.copy(alpha = 0.3f)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // 卡片底色白
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Box(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // 背景装饰：可以用纯色或上面定义的渐变，这里使用更干净的纯色+Container，或者使用渐变作为装饰
-            // 为了高级感，我们使用主题色的 Container 作为底色，文字用深色
             Column(
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 第一行：月份切换 (胶囊样式)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -291,7 +278,6 @@ private fun SummaryHeader(
                     )
                 }
 
-                // 第二行：结余大字
                 Column {
                     Text(
                         text = "本月结余",
@@ -308,7 +294,6 @@ private fun SummaryHeader(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                // 第三行：收支详情
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -344,10 +329,9 @@ private fun SummaryHeader(
     }
 }
 
-// --- 日期分割头 (更轻量) ---
 @Composable
 fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
-    val displayFormat = remember { SimpleDateFormat("dd日", Locale.CHINESE) } // 只显示日期，更简洁
+    val displayFormat = remember { SimpleDateFormat("dd日", Locale.CHINESE) }
     val weekFormat = remember { SimpleDateFormat("EEE", Locale.CHINESE) }
     val originalFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val dateObj = originalFormat.parse(dateStr)
@@ -355,10 +339,9 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
     val dayStr = dateObj?.let { displayFormat.format(it) } ?: dateStr
     val weekStr = dateObj?.let { weekFormat.format(it) } ?: ""
 
-    // 透明背景，不干扰视线
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background // 与背景同色
+        color = MaterialTheme.colorScheme.background
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
@@ -398,31 +381,29 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
     }
 }
 
-// --- 转账列表项 ---
 @Composable
 private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
-    val transferColor = MaterialTheme.colorScheme.primary // 使用主题色
+    val transferColor = MaterialTheme.colorScheme.primary
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp), // 调整间距
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 图标容器
         Box(
             modifier = Modifier
-                .size(44.dp) // 稍微调小，显得精致
+                .size(44.dp)
                 .clip(CircleShape)
-                .background(transferColor.copy(alpha = 0.1f)), // 主题色淡背景
+                .background(transferColor.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.CompareArrows,
                 contentDescription = "转账",
-                modifier = Modifier.size(22.dp), // 图标大小适配
-                tint = transferColor // 主题色图标
+                modifier = Modifier.size(22.dp),
+                tint = transferColor
             )
         }
 
@@ -432,11 +413,10 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
             Text(
                 text = "内部转账",
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold, // 加粗标题
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(2.dp))
-            // 使用更直观的箭头显示账户流向
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = item.fromAccount.name,
@@ -467,13 +447,12 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
             text = String.format("%.2f", item.toAmount),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp, // 更大的金额字体
+            fontSize = 18.sp,
             color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
 
-// --- 支出/收入列表项 (核心优化：图标容器 + 排版) ---
 @Composable
 private fun ExpenseItem(
     expense: Expense,
@@ -483,14 +462,12 @@ private fun ExpenseItem(
     onClick: () -> Unit
 ) {
     val isExpense = expense.amount < 0
-    // 定义更现代、柔和的颜色
-    val incomeColor = Color(0xFF4CAF50) // 绿色
-    val expenseColor = Color(0xFFE53935) // 红色
+    val incomeColor = Color(0xFF4CAF50)
+    val expenseColor = Color(0xFFE53935)
     val amountColor = if (isExpense) expenseColor else incomeColor
 
-    // 图标背景色和图标颜色
     val iconContainerColor = if (isExpense) {
-        expenseColor.copy(alpha = 0.1f) // 更淡的背景
+        expenseColor.copy(alpha = 0.1f)
     } else {
         incomeColor.copy(alpha = 0.1f)
     }
@@ -501,13 +478,12 @@ private fun ExpenseItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp), // 调整间距
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 1. 图标 (增加底色容器)
         Box(
             modifier = Modifier
-                .size(44.dp) // 稍微调小，显得精致
+                .size(44.dp)
                 .clip(CircleShape)
                 .background(if (icon != null) iconContainerColor else Color.Transparent),
             contentAlignment = Alignment.Center
@@ -517,19 +493,18 @@ private fun ExpenseItem(
                     imageVector = icon,
                     contentDescription = expense.category,
                     tint = iconTintColor,
-                    modifier = Modifier.size(22.dp) // 图标大小适配
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
 
         Spacer(Modifier.size(16.dp))
 
-        // 2. 中间信息 (类别 + 备注/账户)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = expense.category,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold, // 加粗标题
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             val subText = if (!expense.remark.isNullOrBlank()) expense.remark else account?.name ?: ""
@@ -538,25 +513,22 @@ private fun ExpenseItem(
                 Text(
                     text = subText,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f), // 颜色更淡
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis // 增加省略号
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
-        // 3. 金额
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                // 收入显示加号
                 text = if (isExpense) String.format("%.2f", expense.amount) else "+${String.format("%.2f", expense.amount)}",
                 color = amountColor,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp // 更大的金额字体
+                fontSize = 18.sp
             )
 
-            // 汇率换算显示
             if (account != null && account.currency != defaultCurrency) {
                 val convertedAmount = ExchangeRates.convert(abs(expense.amount), account.currency, defaultCurrency)
                 Text(

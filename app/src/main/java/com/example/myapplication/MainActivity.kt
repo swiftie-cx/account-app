@@ -31,7 +31,8 @@ class MainActivity : ComponentActivity() {
             expenseDao = database.expenseDao(),
             budgetDao = database.budgetDao(),
             accountDao = database.accountDao(),
-            context = applicationContext
+            periodicDao = database.periodicDao(), // (新增) 传入 periodicDao
+            context = applicationContext,
         )
 
         val expenseViewModelFactory = ExpenseViewModelFactory(repository)

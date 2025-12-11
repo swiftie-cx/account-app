@@ -46,4 +46,9 @@ object Routes {
     const val REGISTER = "register"    // 新增：注册 (替代原来的 bind_email)
     const val CHANGE_PASSWORD = "change_password"
     const val FORGOT_PASSWORD = "forgot_password"
+
+    // 周期记账相关
+    const val PERIODIC_BOOKKEEPING = "periodic_bookkeeping"
+    const val ADD_PERIODIC_TRANSACTION = "add_periodic_transaction?id={id}"
+    fun addPeriodicTransactionRoute(id: Long? = null) = "add_periodic_transaction?id=${id ?: -1L}"
 }

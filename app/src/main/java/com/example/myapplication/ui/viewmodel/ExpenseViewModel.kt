@@ -9,6 +9,7 @@ import com.example.myapplication.data.EmailSender // 确保您已经创建了 Em
 import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.data.Expense
 import com.example.myapplication.data.ExpenseRepository
+import com.example.myapplication.data.PeriodicTransaction
 import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
@@ -366,4 +367,20 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     fun setBiometricEnabled(enabled: Boolean) = repository.setBiometricEnabled(enabled)
     fun isBiometricEnabled(): Boolean = repository.isBiometricEnabled()
+
+    // --- Periodic Transactions (新增) ---
+    val allPeriodicTransactions: StateFlow<List<PeriodicTransaction>> = repository.allPeriodicTransactions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun insertPeriodic(transaction: PeriodicTransaction) {
+        viewModelScope.launch(Dispatchers.IO) { repository.insertPeriodic(transaction) }
+    }
+
+    fun updatePeriodic(transaction: PeriodicTransaction) {
+        viewModelScope.launch(Dispatchers.IO) { repository.updatePeriodic(transaction) }
+    }
+
+    fun deletePeriodic(transaction: PeriodicTransaction) {
+        viewModelScope.launch(Dispatchers.IO) { repository.deletePeriodic(transaction) }
+    }
 }

@@ -33,29 +33,23 @@ fun SettingsScreen(
     defaultCurrency: String,
     viewModel: ExpenseViewModel
 ) {
-    // 监听登录状态和用户信息
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
     val userEmail by viewModel.userEmail.collectAsState()
     val context = LocalContext.current
 
-    // 状态：控制警告弹窗
     var showWarningDialog by remember { mutableStateOf(false) }
     var showFinalConfirmDialog by remember { mutableStateOf(false) }
     var confirmationInput by remember { mutableStateOf("") }
     val targetPhrase = "确认清除全部数据"
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow, // 使用浅灰背景
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("设置", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
+                title = { Text("我的", fontWeight = FontWeight.Bold) },
+                // navigationIcon 移除
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow // 顶栏同色
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 )
             )
         }
@@ -68,11 +62,10 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- 顶部：用户状态卡片 (独立卡片) ---
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(0.dp) // 平面卡片
+                elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 UserStatusHeader(
                     isLoggedIn = isLoggedIn,
@@ -87,12 +80,17 @@ fun SettingsScreen(
                 )
             }
 
-            // --- 分组 1: 常规设置 ---
             SettingsGroup(title = "常规") {
                 SettingsItem(
                     icon = Icons.Default.Category,
                     title = "类别设置",
                     onClick = { navController.navigate(Routes.CATEGORY_SETTINGS) }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                SettingsItem(
+                    icon = Icons.Default.Repeat, // 使用 Repeat 图标
+                    title = "周期记账",
+                    onClick = { navController.navigate(Routes.PERIODIC_BOOKKEEPING) }
                 )
                 HorizontalDivider(modifier = Modifier.padding(start = 56.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 SettingsItem(
@@ -109,7 +107,6 @@ fun SettingsScreen(
                 )
             }
 
-            // --- 分组 2: 安全与隐私 ---
             SettingsGroup(title = "安全") {
                 SettingsItem(
                     icon = Icons.Default.Lock,
@@ -124,7 +121,6 @@ fun SettingsScreen(
                 )
             }
 
-            // --- 分组 3: 数据管理 ---
             SettingsGroup(title = "数据") {
                 SettingsItem(
                     icon = Icons.Default.DeleteForever,
@@ -138,7 +134,6 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // 底部版本号 (可选)
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
                     text = "Version 1.0.0",
@@ -150,7 +145,6 @@ fun SettingsScreen(
         }
     }
 
-    // --- 弹窗逻辑保持不变 ---
     if (showWarningDialog) {
         AlertDialog(
             onDismissRequest = { showWarningDialog = false },
@@ -200,7 +194,6 @@ fun SettingsScreen(
     }
 }
 
-// --- 辅助组件：设置分组容器 ---
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column {
@@ -222,7 +215,6 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-// 顶部用户状态组件
 @Composable
 fun UserStatusHeader(
     isLoggedIn: Boolean,
@@ -236,7 +228,6 @@ fun UserStatusHeader(
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 头像
         Box(
             modifier = Modifier
                 .size(60.dp)
@@ -254,7 +245,6 @@ fun UserStatusHeader(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // 文字信息
         Column(modifier = Modifier.weight(1f)) {
             if (isLoggedIn) {
                 Text(
@@ -308,7 +298,6 @@ fun SettingsItem(
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 图标稍微做小一点，更精致
         Icon(imageVector = icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(16.dp))
         Text(text = title, style = MaterialTheme.typography.bodyLarge, color = titleColor, modifier = Modifier.weight(1f))

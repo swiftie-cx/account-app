@@ -6,7 +6,7 @@ import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.ui.graphics.vector.ImageVector
-
+import androidx.compose.material.icons.filled.Person
 sealed class BottomNavItem(
     val route: String,
     val title: String,
@@ -36,5 +36,11 @@ sealed class BottomNavItem(
         route = "assets", // (修改) route
         title = "资产",    // (修改) title
         icon = Icons.Default.AccountBalanceWallet // (修改) icon
+    )
+
+    data object Mine : BottomNavItem(
+        route = "mine",
+        title = "我的",
+        icon = Icons.Default.Person
     )
 }
