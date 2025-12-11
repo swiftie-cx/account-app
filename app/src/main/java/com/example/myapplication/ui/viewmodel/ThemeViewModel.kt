@@ -1,80 +1,68 @@
 package com.example.myapplication.ui.viewmodel
 
 import android.content.Context
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.toArgb // 【关键】确保这个导入存在
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-// 1. 定义主题数据模型
-data class ThemeOption(val name: String, val color: Color)
-
-// 2. 定义 32 款精选配色 (融合莫兰迪、大地色与经典色)
-val AppThemeOptions = listOf(
-    ThemeOption("柔豆沙红", Color(0xFFB67A74)),
-    ThemeOption("玫瑰黯红", Color(0xFF9C5F5A)),
-    ThemeOption("枣泥红", Color(0xFF814443)),
-    ThemeOption("深勃艮第", Color(0xFF5A2C2C)),
-
-    ThemeOption("复古橘", Color(0xFFD09363)),
-    ThemeOption("暖土橙", Color(0xFFB97A4A)),
-    ThemeOption("焦糖橙", Color(0xFF9A6038)),
-    ThemeOption("陶土棕", Color(0xFF704933)),
-
-    ThemeOption("复古芥末黄", Color(0xFFC5A544)),
-    ThemeOption("暗金黄", Color(0xFFA5872E)),
-    ThemeOption("赭黄", Color(0xFF8A6E26)),
-    ThemeOption("深黄铜", Color(0xFF6A571E)),
-
-    ThemeOption("鼠尾草绿", Color(0xFF8A9C84)),
-    ThemeOption("灰苔绿", Color(0xFF6F7F6A)),
-    ThemeOption("黛绿灰", Color(0xFF556354)),
-    ThemeOption("深柏木绿", Color(0xFF3D493B)),
-
-    ThemeOption("深松石青", Color(0xFF5F807C)),
-    ThemeOption("灰蓝绿", Color(0xFF4C6B68)),
-    ThemeOption("海青灰", Color(0xFF3D5554)),
-    ThemeOption("深黛青", Color(0xFF2E4241)),
-
-    ThemeOption("灰天青", Color(0xFF8192A4)),
-    ThemeOption("钢蓝灰", Color(0xFF5F7284)),
-    ThemeOption("深夜蓝", Color(0xFF3B4755)),
-    ThemeOption("碳蓝灰", Color(0xFF2C333D)),
-
-    ThemeOption("灰梅紫", Color(0xFF9C8A9E)),
-    ThemeOption("葡萄紫灰", Color(0xFF79667C)),
-    ThemeOption("深暮紫", Color(0xFF574A5A)),
-    ThemeOption("暗紫灰", Color(0xFF3E3644)),
-
-    ThemeOption("石英灰", Color(0xFF9B9B9B)),
-    ThemeOption("玄岩灰", Color(0xFF6C6C6C)),
-    ThemeOption("铁灰", Color(0xFF4A4A4A)),
-    ThemeOption("极夜黑", Color(0xFF1F1F1F)),
-
-    )
+// 定义主题颜色选项的数据结构
+data class ThemeColorOption(val name: String, val color: Color)
 
 class ThemeViewModel(context: Context) : ViewModel() {
-    private val prefs = context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
 
-    // 默认使用罗兰紫
-    private val _themeColor = MutableStateFlow(loadColor())
-    val themeColor: StateFlow<Color> = _themeColor.asStateFlow()
+    private val prefs = context.getSharedPreferences("app_theme_prefs", Context.MODE_PRIVATE)
 
-    fun setThemeColor(color: Color) {
+    // 主题颜色列表
+    val themeOptions = listOf(
+        ThemeColorOption("默认紫", Color(0xFF6750A4)), // App 默认紫色
+        ThemeColorOption("柔豆沙红", Color(0xFFC08886)),
+        ThemeColorOption("玫瑰黯红", Color(0xFFA85656)),
+        ThemeColorOption("枣泥红", Color(0xFF8E4444)),
+        ThemeColorOption("深勃艮第", Color(0xFF5D2E2E)),
+        ThemeColorOption("复古橘", Color(0xFFD69E68)),
+        ThemeColorOption("暖土橙", Color(0xFFC48648)),
+        ThemeColorOption("焦糖橙", Color(0xFFA66933)),
+        ThemeColorOption("陶土棕", Color(0xFF754C24)),
+        ThemeColorOption("复古芥末黄", Color(0xFFD6C047)),
+        ThemeColorOption("暗金黄", Color(0xFFB59C24)),
+        ThemeColorOption("赭黄", Color(0xFF8F7A1D)),
+        ThemeColorOption("深黄铜", Color(0xFF615213)),
+        ThemeColorOption("森林绿", Color(0xFF4CAF50)),
+        ThemeColorOption("深海蓝", Color(0xFF2196F3)),
+        ThemeColorOption("极致黑", Color(0xFF000000))
+    )
+
+    // 当前选中的主题颜色 (StateFlow 供 Compose 监听)
+    private val _themeColor = MutableStateFlow(loadThemeColor())
+    val themeColor = _themeColor.asStateFlow()
+
+    // 也就是 Compose 中的 state，方便某些非 Flow 场景读取
+    var isDarkTheme = mutableStateOf(false)
+        private set
+
+    // 切换并保存颜色
+    fun updateThemeColor(color: Color) {
         _themeColor.value = color
-        saveColor(color)
+        saveThemeColor(color)
     }
 
-    private fun saveColor(color: Color) {
+    // --- 内部持久化逻辑 ---
+
+    private fun saveThemeColor(color: Color) {
+        // 【修复】直接调用官方的 toArgb() 方法
         prefs.edit().putInt("theme_color_int", color.toArgb()).apply()
     }
 
-    private fun loadColor(): Color {
-        val defaultColorInt = AppThemeOptions.find { it.name == "罗兰紫" }?.color?.toArgb()
-            ?: Color(0xFF6750A4).toArgb()
-        val savedColorInt = prefs.getInt("theme_color_int", defaultColorInt)
-        return Color(savedColorInt)
+    private fun loadThemeColor(): Color {
+        // 读取存储的颜色，如果没有，默认返回列表里的第一个（默认紫）
+        val savedColorInt = prefs.getInt("theme_color_int", -1)
+        return if (savedColorInt != -1) {
+            Color(savedColorInt)
+        } else {
+            themeOptions.first().color // 默认使用列表第一个颜色
+        }
     }
 }

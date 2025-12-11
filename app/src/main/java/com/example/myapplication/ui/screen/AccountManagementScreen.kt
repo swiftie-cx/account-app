@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -22,8 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.ui.navigation.IconMapper
-import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import com.example.myapplication.ui.navigation.Routes
+import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
@@ -31,24 +33,34 @@ import org.burnoutcrew.reorderable.reorderable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
+fun AccountManagementScreen(
+    viewModel: ExpenseViewModel,
+    navController: NavHostController
+) {
     // 获取账户列表和默认ID
     val accounts by viewModel.allAccounts.collectAsState()
     val defaultAccountId by viewModel.defaultAccountId.collectAsState()
 
+    // 本地状态用于拖拽排序
     var listData by remember(accounts) { mutableStateOf(accounts) }
 
     // 拖拽状态管理
-    val state = rememberReorderableLazyListState(onMove = { from, to ->
-        listData = listData.toMutableList().apply {
-            add(to.index, removeAt(from.index))
+    val state = rememberReorderableLazyListState(
+        onMove = { from, to ->
+            listData = listData.toMutableList().apply {
+                add(to.index, removeAt(from.index))
+            }
+        },
+        onDragEnd = { _, _ ->
+            viewModel.reorderAccounts(listData) // 拖拽结束保存顺序到数据库
         }
-    }, onDragEnd = { _, _ ->
-        viewModel.reorderAccounts(listData) // 拖拽结束保存顺序
-    })
+    )
 
+    // 当数据库数据更新时（例如新增了账户），同步更新列表
     LaunchedEffect(accounts) {
-        listData = accounts
+        if (listData.size != accounts.size || listData.toSet() != accounts.toSet()) {
+            listData = accounts
+        }
     }
 
     Scaffold(
@@ -63,29 +75,26 @@ fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostC
             )
         },
         floatingActionButton = {
-            // (修改) 确保 FAB 样式正确，并添加 padding 防止贴边过近被系统手势或圆角遮挡
             FloatingActionButton(
-                onClick = { navController.navigate(Routes.addAccountRoute()) },
-                containerColor = MaterialTheme.colorScheme.primary, // 显式设置颜色
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.padding(16.dp) // 增加额外的 padding 确保不贴边
+                onClick = { navController.navigate(Routes.ADD_ACCOUNT) },
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "添加账户")
             }
-        },
-        // (可选) 显式指定 FAB 位置，通常默认为 End，这里再次确认
-        floatingActionButtonPosition = FabPosition.End
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
+                .fillMaxSize()
         ) {
             Text(
                 "长按拖拽排序，点击圆圈设为默认",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(16.dp)
             )
 
             LazyColumn(
@@ -94,8 +103,8 @@ fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostC
                     .fillMaxSize()
                     .reorderable(state)
                     .detectReorderAfterLongPress(state),
-                // (关键) 给底部留出空间，防止 FAB 遮挡最后一个列表项
-                contentPadding = PaddingValues(bottom = 88.dp)
+                contentPadding = PaddingValues(bottom = 88.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(listData, key = { it.id }) { account ->
                     ReorderableItem(state, key = account.id) { isDragging ->
@@ -105,9 +114,12 @@ fun AccountManagementScreen(viewModel: ExpenseViewModel, navController: NavHostC
                             account = account,
                             isDefault = (account.id == defaultAccountId),
                             onSetDefault = { viewModel.setDefaultAccount(account.id) },
-                            onClick = { navController.navigate(Routes.addAccountRoute(account.id)) },
+                            onClick = {
+                                navController.navigate("${Routes.ADD_ACCOUNT}?accountId=${account.id}")
+                            },
                             modifier = Modifier
-                                .shadow(elevation.value)
+                                .padding(horizontal = 16.dp)
+                                .shadow(elevation.value, RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.surface)
                         )
                     }
@@ -128,8 +140,9 @@ fun AccountItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -145,18 +158,35 @@ fun AccountItem(
             }
 
             val icon = IconMapper.getIcon(account.iconName)
-            Icon(icon, contentDescription = account.name, modifier = Modifier.padding(end = 16.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = account.name,
+                modifier = Modifier.size(24.dp),
+                tint = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
 
+            Spacer(Modifier.width(16.dp))
+
+            // 账户信息
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = account.name, style = MaterialTheme.typography.titleMedium)
-                Text(text = "${account.currency} - ${account.type}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = account.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                // 【关键修复】删除了 initialAmount 和 currency，改用 type
+                Text(
+                    text = account.type,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             // 拖拽把手图标
             Icon(
                 Icons.Default.DragHandle,
                 contentDescription = "排序",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
             )
         }
     }
