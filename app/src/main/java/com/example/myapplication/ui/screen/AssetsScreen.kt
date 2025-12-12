@@ -9,19 +9,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.ExchangeRates
@@ -64,7 +58,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
-        // 移除默认 TopAppBar，改为在内容中自定义标题区域，风格更现代
     ) { padding ->
         Column(
             modifier = Modifier
@@ -92,8 +85,8 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         account = account,
                         currentBalance = currentBalance,
                         onClick = {
-                            // 预留：导航到账户详情或编辑
-                            navController.navigate(Routes.addAccountRoute(account.id))
+                            // 【修改】跳转到详情页
+                            navController.navigate(Routes.accountDetailRoute(account.id))
                         }
                     )
                 }
@@ -113,7 +106,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        // (修改) 使用 primaryContainer，与顶部卡片统一颜色
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
@@ -129,7 +121,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        // (修改) 使用 primaryContainer，与顶部卡片统一颜色
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
@@ -166,7 +157,6 @@ private fun AssetHeaderSection(
         // 总览卡片
         Card(
             shape = RoundedCornerShape(24.dp),
-            // (修改) 关键改动：使用 primaryContainer 替代 surfaceContainerHigh，确保颜色跟随主题
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             elevation = CardDefaults.cardElevation(0.dp),
             modifier = Modifier.fillMaxWidth()
@@ -177,7 +167,6 @@ private fun AssetHeaderSection(
                 Text(
                     text = "净资产",
                     style = MaterialTheme.typography.labelMedium,
-                    // (修改) 文字颜色适配 primaryContainer
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -185,7 +174,6 @@ private fun AssetHeaderSection(
                     text = "$currency ${String.format(Locale.US, "%.2f", netAssets)}",
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
-                    // (修改) 使用 onPrimaryContainer
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
 
@@ -242,7 +230,7 @@ fun AssetAccountItem(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(0.5.dp) // 轻微阴影
+        elevation = CardDefaults.cardElevation(0.5.dp)
     ) {
         Row(
             modifier = Modifier
@@ -255,14 +243,13 @@ fun AssetAccountItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    // (修改) 使用 primaryContainer，确保与顶部卡片色调一致
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = IconMapper.getIcon(account.iconName),
                     contentDescription = account.name,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer, // 图标颜色适配容器
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(24.dp)
                 )
             }

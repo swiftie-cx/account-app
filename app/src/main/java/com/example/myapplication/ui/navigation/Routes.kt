@@ -24,6 +24,10 @@ object Routes {
     const val ADD_ACCOUNT = "add_account?accountId={accountId}"
     fun addAccountRoute(accountId: Long? = null) = "add_account?accountId=${accountId ?: -1L}"
 
+    // 【新增】账户详情页路由
+    const val ACCOUNT_DETAIL = "account_detail/{accountId}"
+    fun accountDetailRoute(accountId: Long) = "account_detail/$accountId"
+
     // 其他功能页面
     const val CALENDAR = "calendar"
     const val DAILY_DETAILS = "daily_details/{dateMillis}"

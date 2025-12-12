@@ -2,19 +2,22 @@ package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.ExchangeRates
+import com.example.myapplication.data.Expense
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
@@ -34,12 +37,10 @@ fun TransactionDetailScreen(
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val accountMap = remember(accounts) { accounts.associateBy { it.id } }
 
-    // 1. 获取当前点击的记录
     val currentExpense = remember(expenses, expenseId) {
         expenses.find { it.id == expenseId }
     }
 
-    // 2. 判断是否为转账，如果是，尝试寻找另一半记录 (同一时间、不同ID、也是转账类别)
     val relatedTransferExpense = remember(currentExpense, expenses) {
         if (currentExpense?.category?.startsWith("转账") == true) {
             expenses.find {
@@ -52,7 +53,6 @@ fun TransactionDetailScreen(
         }
     }
 
-    // 3. 确定转出方(Out)和转入方(In)
     val (transferOut, transferIn) = remember(currentExpense, relatedTransferExpense) {
         if (currentExpense != null && relatedTransferExpense != null) {
             if (currentExpense.amount < 0) {
@@ -65,23 +65,41 @@ fun TransactionDetailScreen(
         }
     }
 
-    // 4. 计算手续费 (转出绝对值 - 转入绝对值)
     val transactionFee = remember(transferOut, transferIn) {
         if (transferOut != null && transferIn != null) {
-            val fee = abs(transferOut.amount) - abs(transferIn.amount)
-            // 解决浮点数精度问题，若小于 0.01 则视为 0
-            if (fee < 0.01) 0.0 else fee
+            val accOut = accountMap[transferOut.accountId]
+            val accIn = accountMap[transferIn.accountId]
+            if (accOut?.currency == accIn?.currency) {
+                val fee = abs(transferOut.amount) - abs(transferIn.amount)
+                if (fee > 0.01) fee else 0.0
+            } else {
+                0.0
+            }
         } else {
             0.0
         }
     }
 
-    // UI 资源准备
+    val outAccountBalance = remember(expenses, transferOut) {
+        if (transferOut != null) {
+            val account = accountMap[transferOut.accountId]
+            val sum = expenses.filter { it.accountId == transferOut.accountId }.sumOf { it.amount }
+            (account?.initialBalance ?: 0.0) + sum
+        } else 0.0
+    }
+
+    val inAccountBalance = remember(expenses, transferIn) {
+        if (transferIn != null) {
+            val account = accountMap[transferIn.accountId]
+            val sum = expenses.filter { it.accountId == transferIn.accountId }.sumOf { it.amount }
+            (account?.initialBalance ?: 0.0) + sum
+        } else 0.0
+    }
+
     val categoryIconMap = remember {
         (expenseCategories + incomeCategories).associate { it.title to it.icon }
     }
 
-    // 如果是转账，使用双向箭头图标；否则使用分类图标
     val icon = if (transferOut != null) {
         Icons.AutoMirrored.Filled.CompareArrows
     } else {
@@ -103,7 +121,6 @@ fun TransactionDetailScreen(
             )
         },
         bottomBar = {
-            // 底部操作栏
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -113,7 +130,6 @@ fun TransactionDetailScreen(
                 Button(
                     onClick = {
                         currentExpense?.let {
-                            // 编辑时，如果是转账，把 ID 传过去，AddTransactionScreen 会自动识别并进入转账模式
                             navController.navigate("add_transaction?expenseId=${it.id}")
                         }
                     },
@@ -123,7 +139,6 @@ fun TransactionDetailScreen(
                 }
                 Button(
                     onClick = {
-                        // 删除逻辑：如果是转账，应该把两条都删了
                         if (transferOut != null && transferIn != null) {
                             viewModel.deleteExpense(transferOut)
                             viewModel.deleteExpense(transferIn)
@@ -149,10 +164,10 @@ fun TransactionDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // --- 顶部大图标 ---
                 if (icon != null) {
                     Box(
                         modifier = Modifier
@@ -176,55 +191,58 @@ fun TransactionDetailScreen(
                     Spacer(Modifier.height(24.dp))
                 }
 
-                // --- 详细列表 ---
                 Column(modifier = Modifier.fillMaxWidth()) {
 
                     if (transferOut != null && transferIn != null) {
-                        // === 转账特定 UI ===
                         val accountOut = accountMap[transferOut.accountId]
                         val accountIn = accountMap[transferIn.accountId]
 
                         DetailRow(label = "类型", value = "转账")
 
-                        // 显示账户流向
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("账户", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(80.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(accountOut?.name ?: "未知", style = MaterialTheme.typography.bodyLarge)
-                                Spacer(Modifier.width(8.dp))
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.width(8.dp))
-                                Text(accountIn?.name ?: "未知", style = MaterialTheme.typography.bodyLarge)
-                            }
-                        }
+                        // 转出详情 (统一风格)
+                        DetailRow(
+                            label = "转出",
+                            value = "${accountOut?.currency ?: ""} ${String.format("%.2f", abs(transferOut.amount))}",
+                            valueColor = Color(0xFFE53935) // 红色
+                        )
+                        // 余额小字
+                        DetailRow(
+                            label = "",
+                            value = "${accountOut?.name} (余额: ${String.format("%.2f", outAccountBalance)})",
+                            isSubText = true
+                        )
 
-                        // 显示金额 (显示实际到账金额)
-                        DetailRow(label = "到账金额", value = "${accountIn?.currency ?: ""} ${String.format("%.2f", transferIn.amount)}")
+                        // 转入详情 (统一风格)
+                        DetailRow(
+                            label = "转入",
+                            value = "${accountIn?.currency ?: ""} ${String.format("%.2f", abs(transferIn.amount))}",
+                            valueColor = Color(0xFF4CAF50) // 绿色
+                        )
+                        // 余额小字
+                        DetailRow(
+                            label = "",
+                            value = "${accountIn?.name} (余额: ${String.format("%.2f", inAccountBalance)})",
+                            isSubText = true
+                        )
 
-                        // 【关键】显示手续费 (如果有)
                         if (transactionFee > 0) {
                             DetailRow(
                                 label = "手续费",
                                 value = "${accountOut?.currency ?: ""} ${String.format("%.2f", transactionFee)}",
-                                valueColor = MaterialTheme.colorScheme.error // 红色高亮手续费
+                                valueColor = MaterialTheme.colorScheme.error
                             )
                         }
 
                     } else {
-                        // === 普通收支 UI ===
                         val account = accountMap[currentExpense.accountId]
                         DetailRow(label = "类型", value = if (currentExpense.amount < 0) "支出" else "收入")
 
                         DetailRow(
                             label = "金额",
                             value = "${account?.currency ?: ""} ${abs(currentExpense.amount)}",
-                            valueColor = if(currentExpense.amount > 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
+                            valueColor = if (currentExpense.amount > 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
                         )
 
-                        // 汇率折算
                         if (account != null && account.currency != defaultCurrency) {
                             val converted = ExchangeRates.convert(abs(currentExpense.amount), account.currency, defaultCurrency)
                             DetailRow(
@@ -236,10 +254,8 @@ fun TransactionDetailScreen(
                         DetailRow(label = "账户", value = account?.name ?: "未知账户")
                     }
 
-                    // --- 通用信息 ---
                     DetailRow(label = "日期", value = shortDateFormat.format(currentExpense.date))
 
-                    // 备注：转账时优先显示转出方的备注
                     val remark = if (transferOut != null) transferOut.remark else currentExpense.remark
                     if (!remark.isNullOrBlank()) {
                         DetailRow(label = "备注", value = remark)
@@ -258,23 +274,36 @@ fun TransactionDetailScreen(
 }
 
 @Composable
-private fun DetailRow(label: String, value: String, valueColor: Color = MaterialTheme.colorScheme.onSurface) {
+private fun DetailRow(
+    label: String,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    isSubText: Boolean = false // 新增参数，用于显示从属信息（如余额）
+) {
+    // 如果是 SubText，垂直间距缩小，标签不占位，内容颜色变淡
+    val verticalPadding = if (isSubText) 0.dp else 12.dp
+    val labelText = if (isSubText) "" else label
+    val finalValueColor = if (isSubText) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f) else valueColor
+    val valueStyle = if (isSubText) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = verticalPadding),
         verticalAlignment = Alignment.Top
     ) {
+        // 标签列固定宽度，保持对齐
         Text(
-            text = label,
+            text = labelText,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(80.dp)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = valueColor
+            style = valueStyle,
+            color = finalValueColor,
+            fontWeight = if (!isSubText && valueColor != MaterialTheme.colorScheme.onSurface) FontWeight.Bold else FontWeight.Normal
         )
     }
 }

@@ -44,9 +44,7 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
             ExchangeRates.updateRates()
         }
 
-        // 2. 【关键】启动时检查周期记账
-        // 只要 App 一打开，立刻检查是否有到期的任务并自动执行
-        // (注意：如果这里爆红，说明 ExpenseRepository.kt 还没更新 checkAndExecutePeriodicTransactions 方法)
+        // 2. 启动时检查周期记账
         viewModelScope.launch(Dispatchers.IO) {
             repository.checkAndExecutePeriodicTransactions()
         }
@@ -56,51 +54,35 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     // 1. 用户认证与账号信息相关
     // ===========================
 
-    // 监听登录状态
     val isLoggedIn: StateFlow<Boolean> = repository.isLoggedIn
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    // 监听当前用户邮箱
     val userEmail: StateFlow<String> = repository.userEmail
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-    // 注册账号
     fun register(email: String, password: String) {
         repository.register(email, password)
     }
 
-    // 登录
     fun login(email: String, password: String): Boolean {
         return repository.login(email, password)
     }
 
-    // 检查邮箱是否已被注册
     fun isEmailRegistered(email: String): Boolean {
         return repository.isEmailRegistered(email)
     }
 
-    // 验证旧密码
     fun verifyUserPassword(password: String) = repository.verifyUserPassword(password)
-
-    // 保存新密码
     fun saveUserPassword(password: String) = repository.saveUserPassword(password)
-
-    // 退出登录
     fun logout() = repository.logout()
-
-    // 注销/删除账号
     fun deleteUserAccount() = repository.deleteUserAccount()
 
     // ===========================
     // 2. 邮箱验证码功能
     // ===========================
 
-    // 临时存储验证码 (Key: 邮箱, Value: 验证码)
     private val verificationCodes = mutableMapOf<String, String>()
 
-    /**
-     * 发送验证码到指定邮箱
-     */
     fun sendCodeToEmail(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val code = (100000..999999).random().toString()
@@ -115,9 +97,6 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         }
     }
 
-    /**
-     * 校验用户输入的验证码
-     */
     fun verifyCode(email: String, inputCode: String): Boolean {
         val correctCode = verificationCodes[email]
         return correctCode != null && correctCode == inputCode
@@ -127,29 +106,23 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     // 3. 账单与账户数据流
     // ===========================
 
-    // 所有账单列表
     val allExpenses: StateFlow<List<Expense>> = repository.allExpenses
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 所有账户列表
     val allAccounts: StateFlow<List<Account>> = repository.allAccounts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 默认账户 ID
     val defaultAccountId: StateFlow<Long> = repository.defaultAccountId
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), -1L)
 
-    // 设置默认账户
     fun setDefaultAccount(id: Long) {
         repository.saveDefaultAccountId(id)
     }
 
-    // 重新排序账户
     fun reorderAccounts(newOrder: List<Account>) {
         repository.saveAccountOrder(newOrder)
     }
 
-    // 清除所有数据
     fun clearAllData() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.clearAllData()
@@ -224,6 +197,26 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun insertAccount(account: Account) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.insertAccount(account)
+        }
+    }
+
+    // 【新增】根据新的“当前余额”更新账户
+    // 原理：NewInitialBalance = NewCurrentBalance - (Sum of all transactions for this account)
+    fun updateAccountWithNewBalance(account: Account, newCurrentBalance: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. 获取当前所有账单快照
+            val transactions = repository.allExpenses.first()
+            // 2. 计算该账户所有历史流水总和
+            val transactionSum = transactions
+                .filter { it.accountId == account.id }
+                .sumOf { it.amount }
+
+            // 3. 反推新的初始余额
+            val newInitialBalance = newCurrentBalance - transactionSum
+
+            // 4. 更新账户
+            val updatedAccount = account.copy(initialBalance = newInitialBalance)
+            repository.updateAccount(updatedAccount)
         }
     }
 
@@ -349,22 +342,16 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     val allPeriodicTransactions: StateFlow<List<PeriodicTransaction>> = repository.allPeriodicTransactions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 新增规则
     fun insertPeriodic(transaction: PeriodicTransaction) {
         viewModelScope.launch(Dispatchers.IO) {
-            // 1. 保存
             repository.insertPeriodic(transaction)
-            // 2. 【关键】保存后立即检查是否需要今天执行，给用户即时反馈
             repository.checkAndExecutePeriodicTransactions()
         }
     }
 
-    // 修改规则
     fun updatePeriodic(transaction: PeriodicTransaction) {
         viewModelScope.launch(Dispatchers.IO) {
-            // 1. 更新
             repository.updatePeriodic(transaction)
-            // 2. 【关键】更新后也立即检查 (万一用户把时间改到了今天之前)
             repository.checkAndExecutePeriodicTransactions()
         }
     }

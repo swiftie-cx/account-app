@@ -50,6 +50,7 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // 当处于 锁屏、添加交易、搜索、周期记账编辑 等页面时，隐藏底部导航栏
     val showScaffold = currentRoute != Routes.LOCK &&
             currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true &&
             currentRoute?.startsWith("add_periodic_transaction") != true &&
@@ -214,13 +215,12 @@ fun NavigationGraph(
 
         // --- 功能页面 ---
 
-        // 【修改】添加 type 参数
         composable(
             route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}&type={type}",
             arguments = listOf(
                 navArgument("expenseId") { type = NavType.LongType; defaultValue = -1L },
                 navArgument("dateMillis") { type = NavType.LongType; defaultValue = -1L },
-                navArgument("type") { type = NavType.IntType; defaultValue = 0 } // 默认 0 (支出)
+                navArgument("type") { type = NavType.IntType; defaultValue = 0 }
             )
         ) { backStackEntry ->
             val expenseId = backStackEntry.arguments?.getLong("expenseId")
@@ -232,7 +232,7 @@ fun NavigationGraph(
                 viewModel = expenseViewModel,
                 expenseId = if (expenseId == -1L) null else expenseId,
                 dateMillis = if (dateMillis == -1L) null else dateMillis,
-                initialTab = type // 传递初始 Tab
+                initialTab = type
             )
         }
 
@@ -255,6 +255,22 @@ fun NavigationGraph(
         ) { backStackEntry ->
             val accountId = backStackEntry.arguments?.getLong("accountId")
             AddAccountScreen(viewModel = expenseViewModel, navController = navController, accountId = if (accountId == -1L) null else accountId)
+        }
+
+        // 【新增】账户详情页面路由
+        composable(
+            route = Routes.ACCOUNT_DETAIL,
+            arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
+            if (accountId != -1L) {
+                AccountDetailScreen(
+                    viewModel = expenseViewModel,
+                    navController = navController,
+                    accountId = accountId,
+                    defaultCurrency = defaultCurrency
+                )
+            }
         }
 
         composable(Routes.CALENDAR) {

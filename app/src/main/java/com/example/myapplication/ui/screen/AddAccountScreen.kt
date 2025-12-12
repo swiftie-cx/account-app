@@ -31,14 +31,15 @@ fun AddAccountScreen(
     viewModel: ExpenseViewModel,
     accountId: Long? = null
 ) {
-    // 获取所有账户数据，用于查找回填
+    // 获取所有账户和账单数据，用于计算当前余额
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+    val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
     // --- 状态管理 ---
     var accountName by remember { mutableStateOf("") }
 
-    // 初始值设为空字符串
-    var initialAmount by remember { mutableStateOf("") }
+    // 【修改】这里存储的是“当前余额”的输入值
+    var balanceInput by remember { mutableStateOf("") }
 
     val accountTypes = listOf("默认", "现金", "银行卡", "信用卡", "投资", "电子钱包")
     var selectedType by remember { mutableStateOf(accountTypes[0]) }
@@ -54,23 +55,33 @@ fun AddAccountScreen(
     val icons = IconMapper.allIcons
     var selectedIcon by remember { mutableStateOf<String?>(null) }
 
-    // 如果是编辑模式，回填数据
-    LaunchedEffect(accountId, allAccounts) {
-        if (accountId != null) {
+    // 标记是否已加载初始数据
+    var isDataLoaded by remember { mutableStateOf(false) }
+
+    // 回填数据逻辑
+    LaunchedEffect(accountId, allAccounts, allExpenses) {
+        if (accountId != null && !isDataLoaded && allAccounts.isNotEmpty()) {
             val accountToEdit = allAccounts.find { it.id == accountId }
             if (accountToEdit != null) {
                 accountName = accountToEdit.name
 
-                // 【关键修改】处理金额显示逻辑
-                initialAmount = when {
-                    accountToEdit.initialBalance == 0.0 -> "" // 0 -> 空
-                    accountToEdit.initialBalance % 1.0 == 0.0 -> accountToEdit.initialBalance.toLong().toString() // 10000.0 -> 10000
-                    else -> accountToEdit.initialBalance.toString() // 100.5 -> 100.5
+                // 【关键修改】计算当前余额用于显示
+                val transactionSum = allExpenses
+                    .filter { it.accountId == accountToEdit.id }
+                    .sumOf { it.amount }
+                val currentBalance = accountToEdit.initialBalance + transactionSum
+
+                // 格式化显示：如果是整数去掉 .0，如果是 0 显示空方便输入
+                balanceInput = when {
+                    currentBalance == 0.0 -> ""
+                    currentBalance % 1.0 == 0.0 -> currentBalance.toLong().toString()
+                    else -> currentBalance.toString()
                 }
 
                 selectedType = accountToEdit.type
                 selectedCurrency = accountToEdit.currency
                 selectedIcon = accountToEdit.iconName
+                isDataLoaded = true
             }
         }
     }
@@ -131,15 +142,20 @@ fun AddAccountScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            // 4. 金额
+            // 4. 金额 (显示为"当前余额")
             OutlinedTextField(
-                value = initialAmount,
-                onValueChange = { initialAmount = it },
-                label = { Text("初始余额") },
+                value = balanceInput,
+                onValueChange = { balanceInput = it },
+                label = { Text("当前余额") }, // 【修改】标签改为当前余额
                 placeholder = { Text("0.0") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                singleLine = true
+                singleLine = true,
+                supportingText = {
+                    if (accountId != null) {
+                        Text("修改此数值将自动调整账户初始余额以匹配流水")
+                    }
+                }
             )
             Spacer(Modifier.height(24.dp))
 
@@ -156,23 +172,32 @@ fun AddAccountScreen(
             Button(
                 onClick = {
                     val name = accountName.trim()
-                    val amount = initialAmount.toDoubleOrNull() ?: 0.0
+                    val newBalanceVal = balanceInput.toDoubleOrNull() ?: 0.0
 
                     if (name.isNotBlank() && selectedIcon != null) {
-                        val account = Account(
-                            id = accountId ?: 0,
-                            name = name,
-                            type = selectedType,
-                            currency = selectedCurrency,
-                            initialBalance = amount,
-                            iconName = selectedIcon!!,
-                            isLiability = (selectedType == "信用卡")
-                        )
-
                         if (accountId == null) {
+                            // 新增模式：初始余额 = 输入的当前余额 (因为还没有流水)
+                            val account = Account(
+                                name = name,
+                                type = selectedType,
+                                currency = selectedCurrency,
+                                initialBalance = newBalanceVal,
+                                iconName = selectedIcon!!,
+                                isLiability = (selectedType == "信用卡")
+                            )
                             viewModel.insertAccount(account)
                         } else {
-                            viewModel.insertAccount(account)
+                            // 编辑模式：调用特殊方法反算初始余额
+                            val accountToUpdate = Account(
+                                id = accountId,
+                                name = name,
+                                type = selectedType,
+                                currency = selectedCurrency,
+                                initialBalance = 0.0, // 占位，会被 recalculate 覆盖
+                                iconName = selectedIcon!!,
+                                isLiability = (selectedType == "信用卡")
+                            )
+                            viewModel.updateAccountWithNewBalance(accountToUpdate, newBalanceVal)
                         }
 
                         navController.popBackStack()
@@ -188,6 +213,7 @@ fun AddAccountScreen(
     }
 }
 
+// ... DropdownInput 和 IconSelector 保持不变 ...
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropdownInput(
