@@ -86,12 +86,18 @@ fun DetailsScreen(
                 val toAccount = accountMap[inTx.accountId]
                 if (fromAccount == null || toAccount == null) return@mapNotNull null
 
+                // 【修改】计算手续费 = |转出| - |转入|
+                val feeRaw = abs(outTx.amount) - abs(inTx.amount)
+                val fee = if (feeRaw < 0.01) 0.0 else feeRaw
+
                 DisplayTransferItem(
+                    expenseId = outTx.id,
                     date = outTx.date,
                     fromAccount = fromAccount,
                     toAccount = toAccount,
                     fromAmount = outTx.amount,
-                    toAmount = inTx.amount
+                    toAmount = inTx.amount,
+                    fee = fee // 传入手续费
                 )
             }
 
@@ -193,7 +199,9 @@ fun DetailsScreen(
                         }
                         is DisplayTransferItem -> TransferItem(
                             item = item,
-                            onClick = { /* TODO */ }
+                            onClick = {
+                                navController.navigate(Routes.transactionDetailRoute(item.expenseId))
+                            }
                         )
                     }
                 }
@@ -202,7 +210,102 @@ fun DetailsScreen(
     }
 }
 
-// --- 顶部应用栏 (移除了设置图标) ---
+// ... SummaryHeader, DateHeader, DetailsTopAppBar, ExpenseItem 保持不变 ...
+
+@Composable
+private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
+    val transferColor = MaterialTheme.colorScheme.primary
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(transferColor.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.CompareArrows,
+                contentDescription = "转账",
+                modifier = Modifier.size(22.dp),
+                tint = transferColor
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            // 【修改】标题栏：增加手续费标签
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "内部转账",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (item.fee > 0.01) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), // 浅色背景
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "手续费 ${String.format("%.2f", item.fee)}",
+                            style = MaterialTheme.typography.labelSmall, // 小字体
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(2.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = item.fromAccount.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = item.toAccount.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // 显示的是到账金额
+        Text(
+            text = String.format("%.2f", item.toAmount),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+// ... ExpenseItem 等辅助组件保持不变 ...
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DetailsTopAppBar(
@@ -382,78 +485,6 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
 }
 
 @Composable
-private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
-    val transferColor = MaterialTheme.colorScheme.primary
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(transferColor.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.CompareArrows,
-                contentDescription = "转账",
-                modifier = Modifier.size(22.dp),
-                tint = transferColor
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "内部转账",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = item.fromAccount.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = item.toAccount.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        Text(
-            text = String.format("%.2f", item.toAmount),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
 private fun ExpenseItem(
     expense: Expense,
     icon: androidx.compose.ui.graphics.vector.ImageVector?,
@@ -473,6 +504,8 @@ private fun ExpenseItem(
     }
 
     val iconTintColor = if (isExpense) expenseColor else incomeColor
+
+    val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.CHINA) }
 
     Row(
         modifier = Modifier
@@ -507,17 +540,24 @@ private fun ExpenseItem(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            val subText = if (!expense.remark.isNullOrBlank()) expense.remark else account?.name ?: ""
-            if (subText.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            Spacer(Modifier.height(2.dp))
+            val subText = buildString {
+                append(dateFormat.format(expense.date))
+                if (!expense.remark.isNullOrBlank()) {
+                    append(" · ")
+                    append(expense.remark)
+                } else if (account != null) {
+                    append(" · ")
+                    append(account.name)
+                }
             }
+            Text(
+                text = subText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
         Column(horizontalAlignment = Alignment.End) {

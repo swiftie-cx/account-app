@@ -36,7 +36,8 @@ fun AddAccountScreen(
 
     // --- 状态管理 ---
     var accountName by remember { mutableStateOf("") }
-    // (修改) 初始值改为空字符串，方便用户直接输入
+
+    // 初始值设为空字符串
     var initialAmount by remember { mutableStateOf("") }
 
     val accountTypes = listOf("默认", "现金", "银行卡", "信用卡", "投资", "电子钱包")
@@ -59,8 +60,14 @@ fun AddAccountScreen(
             val accountToEdit = allAccounts.find { it.id == accountId }
             if (accountToEdit != null) {
                 accountName = accountToEdit.name
-                // 编辑时依然显示原有金额
-                initialAmount = accountToEdit.initialBalance.toString()
+
+                // 【关键修改】处理金额显示逻辑
+                initialAmount = when {
+                    accountToEdit.initialBalance == 0.0 -> "" // 0 -> 空
+                    accountToEdit.initialBalance % 1.0 == 0.0 -> accountToEdit.initialBalance.toLong().toString() // 10000.0 -> 10000
+                    else -> accountToEdit.initialBalance.toString() // 100.5 -> 100.5
+                }
+
                 selectedType = accountToEdit.type
                 selectedCurrency = accountToEdit.currency
                 selectedIcon = accountToEdit.iconName
@@ -129,9 +136,9 @@ fun AddAccountScreen(
                 value = initialAmount,
                 onValueChange = { initialAmount = it },
                 label = { Text("初始余额") },
-                placeholder = { Text("0.0") }, // 添加占位符提示
+                placeholder = { Text("0.0") },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true
             )
             Spacer(Modifier.height(24.dp))
@@ -149,7 +156,6 @@ fun AddAccountScreen(
             Button(
                 onClick = {
                     val name = accountName.trim()
-                    // 如果为空字符串，保存为 0.0
                     val amount = initialAmount.toDoubleOrNull() ?: 0.0
 
                     if (name.isNotBlank() && selectedIcon != null) {
@@ -182,7 +188,6 @@ fun AddAccountScreen(
     }
 }
 
-// ... DropdownInput 和 IconSelector 保持不变 ...
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropdownInput(

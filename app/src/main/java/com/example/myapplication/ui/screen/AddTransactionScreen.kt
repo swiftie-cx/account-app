@@ -4,22 +4,20 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Note
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,6 +43,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+// 转账手续费模式枚举
+enum class TransferFeeMode {
+    INCLUDE, // 扣款 = 输入值 (到账 = 输入 - 手续费)
+    EXTRA    // 到账 = 输入值 (扣款 = 输入 + 手续费)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,15 +58,19 @@ fun AddTransactionScreen(
     viewModel: ExpenseViewModel,
     expenseId: Long? = null,
     dateMillis: Long? = null,
-    initialTab: Int = 0 // 【修改】新增：初始Tab页 (0支出, 1收入, 2转账)
+    initialTab: Int = 0
 ) {
-    // 【修改】使用 initialTab 初始化 selectedTab
+    // 初始Tab
     var selectedTab by remember { mutableIntStateOf(initialTab) }
     val tabs = listOf("支出", "收入", "转账")
 
+    // --- 状态管理 ---
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
-    var amount by remember { mutableStateOf("0") }
+    var amount by remember { mutableStateOf("0") } // 在转账模式下，这代表“输入的主金额”
     var selectedDate by remember { mutableLongStateOf(dateMillis ?: System.currentTimeMillis()) }
+
+    // 备注改为列表，分别对应 [支出, 收入, 转账]
+    val remarks = remember { mutableStateListOf("", "", "") }
 
     val defaultAccountId by viewModel.defaultAccountId.collectAsState()
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
@@ -69,48 +78,30 @@ fun AddTransactionScreen(
     var selectedAccount by remember { mutableStateOf<Account?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
-
-    var remark by remember { mutableStateOf("") }
     var showRemarkDialog by remember { mutableStateOf(false) }
 
+    // --- 转账专用状态 ---
     var fromAccount by remember { mutableStateOf<Account?>(null) }
     var toAccount by remember { mutableStateOf<Account?>(null) }
-    var fromAmount by remember { mutableStateOf("0") }
-    var toAmount by remember { mutableStateOf("0") }
-    var focusedAmountField by remember { mutableStateOf("fromAmount") }
+    var transferFee by remember { mutableStateOf("0") } // 手续费
+    // 新增：手续费计算模式
+    var feeMode by remember { mutableStateOf(TransferFeeMode.INCLUDE) }
+
+    // 焦点控制：支持 "amount" (主金额), "fee" (手续费)
+    // 注意：转账模式下，我们复用 `amount` 作为主输入框的值，不再区分 fromAmount/toAmount 字符串，而是通过逻辑计算
+    var focusedField by remember { mutableStateOf("amount") }
+
     var showAccountPickerFor by remember { mutableStateOf<String?>(null) }
 
-    val isSameCurrency = remember(fromAccount, toAccount) {
-        val from = fromAccount
-        val to = toAccount
-        from != null && to != null && from.currency == to.currency
-    }
-
-    LaunchedEffect(fromAccount, toAccount) {
-        if (fromAccount != null && toAccount != null && fromAccount != toAccount && !isSameCurrency) {
-            if (toAmount == "0" || toAmount == "") {
-                focusedAmountField = "toAmount"
-            }
-        }
-    }
-
-    val isCalculation = remember(selectedTab, amount, fromAmount, toAmount, focusedAmountField, isSameCurrency) {
-        when (selectedTab) {
-            0, 1 -> amount.contains("+") || amount.contains("-")
-            2 -> {
-                if (isSameCurrency) {
-                    fromAmount.contains("+") || fromAmount.contains("-")
-                } else {
-                    val targetAmount = if (focusedAmountField == "fromAmount") fromAmount else toAmount
-                    targetAmount.contains("+") || targetAmount.contains("-")
-                }
-            }
-            else -> false
-        }
+    // 计算逻辑判断
+    val isCalculation = remember(selectedTab, amount, transferFee, focusedField) {
+        val targetAmount = if (focusedField == "fee") transferFee else amount
+        targetAmount.contains("+") || targetAmount.contains("-")
     }
 
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
+    // 编辑模式回填数据
     LaunchedEffect(key1 = expenseId, key2 = expenses, key3 = accounts) {
         if (expenseId != null) {
             val expenseToEdit = expenses.find { it.id == expenseId }
@@ -121,12 +112,13 @@ fun AddTransactionScreen(
                     amount = abs(expenseToEdit.amount).toString()
                     selectedDate = expenseToEdit.date.time
                     selectedAccount = accounts.find { it.id == expenseToEdit.accountId }
-                    remark = expenseToEdit.remark ?: ""
+                    remarks[selectedTab] = expenseToEdit.remark ?: ""
                 }
             }
         }
     }
 
+    // 默认账户初始化
     LaunchedEffect(accounts, defaultAccountId) {
         if (selectedAccount == null) {
             if (expenseId == null) {
@@ -134,58 +126,43 @@ fun AddTransactionScreen(
                 selectedAccount = defaultAcc ?: accounts.firstOrNull()
             }
         }
-
         if (expenseId == null && fromAccount == null && accounts.isNotEmpty()) {
             val defaultAcc = accounts.find { it.id == defaultAccountId }
             fromAccount = defaultAcc ?: accounts.firstOrNull()
+            // 尝试找一个不同的账户作为接收方，如果没有则为空
+            toAccount = accounts.firstOrNull { it.id != defaultAcc?.id }
         }
     }
 
+    // Tab 切换重置逻辑
     LaunchedEffect(selectedTab) {
         if (expenseId == null) {
             val currentList = if (selectedTab == 0) expenseCategories else incomeCategories
-            // 每次切换 tab 时，如果没有预设 category，则重置
-            // 注意：这里需要确保初始化进入时，selectedCategory 能正确赋值
             if (selectedCategory == null || selectedCategory !in currentList) {
                 selectedCategory = currentList.firstOrNull()
             }
-
-            if (amount == "0") amount = "0" // 保持金额逻辑
-
-            // 确保账户有值
+            if (amount == "0") amount = "0"
             if (selectedAccount == null) {
                 val defaultAcc = accounts.find { it.id == defaultAccountId }
                 selectedAccount = defaultAcc ?: accounts.firstOrNull()
             }
+            // 转账模式默认焦点在主金额
+            if (selectedTab == 2) {
+                focusedField = "amount"
+            }
         }
     }
 
+    // --- 输入处理 ---
     fun handleInput(transform: (String) -> String) {
-        if (selectedTab == 2) {
-            if (isSameCurrency) {
-                fromAmount = transform(fromAmount)
-            } else {
-                if (focusedAmountField == "fromAmount") {
-                    fromAmount = transform(fromAmount)
-                } else {
-                    val newToAmount = transform(toAmount)
-                    toAmount = newToAmount
-                    try {
-                        val toValue = evaluateExpression(newToAmount)
-                        if (toValue > 0 && fromAccount != null && toAccount != null) {
-                            val converted = ExchangeRates.convert(toValue, toAccount!!.currency, fromAccount!!.currency)
-                            fromAmount = String.format(Locale.US, "%.2f", converted)
-                        } else if (toValue == 0.0) {
-                            fromAmount = "0"
-                        }
-                    } catch (e: Exception) { }
-                }
-            }
+        if (selectedTab == 2 && focusedField == "fee") {
+            transferFee = transform(transferFee)
         } else {
             amount = transform(amount)
         }
     }
 
+    // --- 保存逻辑 ---
     fun saveExpense(shouldFinish: Boolean) {
         if (selectedCategory != null && selectedAccount != null && amount != "0") {
             val finalAmountStr = try { evaluateExpression(amount).toString() } catch(e: Exception) { amount }
@@ -200,7 +177,7 @@ fun AddTransactionScreen(
                 amount = finalAmount,
                 date = Date(selectedDate),
                 accountId = selectedAccount!!.id,
-                remark = remark.takeIf { it.isNotBlank() }
+                remark = remarks[selectedTab].takeIf { it.isNotBlank() }
             )
 
             if (expenseId != null && shouldFinish) {
@@ -213,28 +190,36 @@ fun AddTransactionScreen(
                 navController.popBackStack()
             } else {
                 amount = "0"
-                remark = ""
+                remarks[selectedTab] = ""
             }
         }
     }
 
+    // 转账完成逻辑
     val onTransferDoneClick: () -> Unit = {
-        val finalFromStr = try { evaluateExpression(fromAmount).toString() } catch(e: Exception) { fromAmount }
-        val finalToStr = try { evaluateExpression(toAmount).toString() } catch(e: Exception) { toAmount }
-        val fromAmountValue = finalFromStr.toDoubleOrNull() ?: 0.0
-        val toAmountValue = if (isSameCurrency) fromAmountValue else (finalToStr.toDoubleOrNull() ?: 0.0)
+        val inputValStr = try { evaluateExpression(amount).toString() } catch(e: Exception) { amount }
+        val feeValStr = try { evaluateExpression(transferFee).toString() } catch(e: Exception) { transferFee }
 
-        if (fromAccount != null && toAccount != null && fromAmountValue > 0 && toAmountValue > 0 && fromAccount != toAccount) {
+        val inputValue = inputValStr.toDoubleOrNull() ?: 0.0
+        val feeValue = feeValStr.toDoubleOrNull() ?: 0.0
+
+        // 根据模式计算最终的转出和转入金额
+        val finalFromAmount = if (feeMode == TransferFeeMode.INCLUDE) inputValue else inputValue + feeValue
+        val finalToAmount = if (feeMode == TransferFeeMode.INCLUDE) inputValue - feeValue else inputValue
+
+        if (fromAccount != null && toAccount != null && finalFromAmount > 0 && finalToAmount >= 0 && fromAccount != toAccount) {
             viewModel.createTransfer(
                 fromAccountId = fromAccount!!.id,
                 toAccountId = toAccount!!.id,
-                fromAmount = fromAmountValue,
-                toAmount = toAmountValue,
+                fromAmount = finalFromAmount,
+                toAmount = finalToAmount,
                 date = Date(selectedDate)
             )
             navController.popBackStack()
         }
     }
+
+    // --- 弹窗组件 ---
 
     if (showAccountPickerFor != null) {
         AccountPickerDialog(
@@ -263,9 +248,7 @@ fun AddTransactionScreen(
             initialEndDate = null,
             isSingleSelection = true,
             onConfirm = { startDate, _ ->
-                if (startDate != null) {
-                    selectedDate = startDate
-                }
+                if (startDate != null) selectedDate = startDate
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false }
@@ -274,9 +257,9 @@ fun AddTransactionScreen(
 
     if (showRemarkDialog) {
         RemarkInputDialog(
-            initialRemark = remark,
+            initialRemark = remarks[selectedTab],
             onConfirm = { newRemark ->
-                remark = newRemark
+                remarks[selectedTab] = newRemark
                 showRemarkDialog = false
             },
             onDismiss = { showRemarkDialog = false }
@@ -300,14 +283,10 @@ fun AddTransactionScreen(
                 }
             }
 
-            val categoriesToShow = when (selectedTab) {
-                0 -> expenseCategories
-                1 -> incomeCategories
-                else -> emptyList()
-            }
-
             when (selectedTab) {
-                0, 1 -> {
+                0, 1 -> { // 支出 和 收入
+                    val categoriesToShow = if (selectedTab == 0) expenseCategories else incomeCategories
+
                     Column(modifier = Modifier.fillMaxSize()) {
                         NewAmountDisplay(
                             category = selectedCategory,
@@ -322,11 +301,12 @@ fun AddTransactionScreen(
                         )
 
                         KeyboardActionToolbar(
-                            account = selectedAccount,
+                            button1Icon = if (selectedAccount != null) IconMapper.getIcon(selectedAccount!!.iconName) else Icons.Default.CalendarToday,
+                            button1Text = selectedAccount?.name ?: "选择账户",
+                            button1OnClick = { showAccountPicker = true },
                             dateMillis = selectedDate,
-                            remark = remark,
-                            onAccountClick = { showAccountPicker = true },
                             onDateClick = { showDatePicker = true },
+                            remark = remarks[selectedTab],
                             onRemarkClick = { showRemarkDialog = true }
                         )
 
@@ -348,43 +328,100 @@ fun AddTransactionScreen(
                         )
                     }
                 }
-                2 -> {
+                2 -> { // 转账
+                    // 计算显示的数值
+                    val inputVal = try { evaluateExpression(amount) } catch(e: Exception) { 0.0 }
+                    val feeVal = try { evaluateExpression(transferFee) } catch(e: Exception) { 0.0 }
+
+                    val displayFrom = if (feeMode == TransferFeeMode.INCLUDE) inputVal else inputVal + feeVal
+                    val displayTo = if (feeMode == TransferFeeMode.INCLUDE) inputVal - feeVal else inputVal
+
                     Column(modifier = Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier
                                 .weight(1f)
                                 .verticalScroll(rememberScrollState())
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp) // 增加间距
                         ) {
-                            TransferScreenContent(
-                                fromAccount = fromAccount,
-                                toAccount = toAccount,
-                                fromAmount = fromAmount,
-                                toAmount = toAmount,
-                                isSameCurrency = isSameCurrency,
-                                focusedField = focusedAmountField,
-                                onFromAccountClick = { showAccountPickerFor = "from" },
-                                onToAccountClick = { showAccountPickerFor = "to" },
-                                onFromAmountClick = { focusedAmountField = "fromAmount" },
-                                onToAmountClick = { focusedAmountField = "toAmount" }
+                            // 1. 转出账户卡片
+                            TransferAccountCard(
+                                account = fromAccount,
+                                label = "转出",
+                                amount = -displayFrom, // 显示负数
+                                amountColor = Color(0xFFE53935), // 红色
+                                onClick = { showAccountPickerFor = "from" },
+                                isFocused = focusedField == "amount"
                             )
 
-                            OutlinedTextField(
-                                value = remark,
-                                onValueChange = { remark = it },
-                                label = { Text("备注 (可选)") },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                singleLine = true
+                            // 交换箭头 (居中)
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.SwapVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+
+                            // 2. 转入账户卡片
+                            TransferAccountCard(
+                                account = toAccount,
+                                label = "转入",
+                                amount = displayTo, // 显示正数
+                                amountColor = Color(0xFF4CAF50), // 绿色
+                                onClick = { showAccountPickerFor = "to" },
+                                isFocused = false // 转入卡片不直接接受焦点，只显示结果
                             )
+
+                            Spacer(Modifier.height(8.dp))
+
+                            // 3. 手续费逻辑选择
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // 模式 A: 扣款(Total) = 到账 + 手续费
+                                // 也就是：扣款金额由 到账+手续费 决定。此时输入的是“扣款金额”。
+                                // 按照图片逻辑：
+                                // 选项1：扣款(505) = 到账(500) + 手续费(5) -> 输入的是到账金额
+                                // 选项2：扣款(500) = 到账(495) + 手续费(5) -> 输入的是扣款金额
+
+                                val format = "%.0f" // 简化显示，去除多余小数
+
+                                // 选项 A: 扣款金额固定 (输入值)
+                                FeeOptionRow(
+                                    selected = feeMode == TransferFeeMode.INCLUDE,
+                                    onClick = { feeMode = TransferFeeMode.INCLUDE },
+                                    text = "扣款(${String.format(format, inputVal)}) = 到账(${String.format(format, inputVal - feeVal)}) + 手续费(${String.format(format, feeVal)})"
+                                )
+
+                                // 选项 B: 到账金额固定 (输入值)
+                                FeeOptionRow(
+                                    selected = feeMode == TransferFeeMode.EXTRA,
+                                    onClick = { feeMode = TransferFeeMode.EXTRA },
+                                    text = "扣款(${String.format(format, inputVal + feeVal)}) = 到账(${String.format(format, inputVal)}) + 手续费(${String.format(format, feeVal)})"
+                                )
+                            }
                         }
 
                         if (fromAccount != null && toAccount != null) {
+                            // 转账页面的键盘工具栏
+                            // 这里点击主金额区域（上方的卡片），focusedField 变回 "amount"
+                            // 点击手续费区域，focusedField 变为 "fee"
+                            KeyboardActionToolbar(
+                                button1Icon = Icons.Default.AttachMoney,
+                                button1Text = "手续费: $transferFee",
+                                button1OnClick = { focusedField = "fee" },
+                                button1Highlight = focusedField == "fee",
+                                dateMillis = selectedDate,
+                                onDateClick = { showDatePicker = true },
+                                remark = remarks[selectedTab],
+                                onRemarkClick = { showRemarkDialog = true }
+                            )
+
+                            // 当焦点不在手续费时，键盘输入给主金额
+                            if (focusedField != "fee" && focusedField != "amount") {
+                                focusedField = "amount"
+                            }
+
                             NumericKeyboard(
                                 onNumberClick = { num -> handleInput { if (it == "0") num else it + num } },
                                 onOperatorClick = { op -> handleInput { it + " $op " } },
                                 onBackspaceClick = { handleInput { if (it.length > 1) it.dropLast(1) else "0" } },
-                                onAgainClick = { },
+                                onAgainClick = null, // 去掉“再记”
                                 onDoneClick = onTransferDoneClick,
                                 onEqualsClick = {
                                     handleInput {
@@ -404,7 +441,103 @@ fun AddTransactionScreen(
     }
 }
 
-// 辅助组件保留
+// --- 新增转账 UI 组件 ---
+
+@Composable
+fun TransferAccountCard(
+    account: Account?,
+    label: String,
+    amount: Double,
+    amountColor: Color,
+    onClick: () -> Unit,
+    isFocused: Boolean
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        border = if (isFocused) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 左侧：图标
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center
+            ) {
+                if (account != null) {
+                    Icon(
+                        imageVector = IconMapper.getIcon(account.iconName),
+                        contentDescription = null,
+                        tint = amountColor, // 图标颜色跟随金额颜色
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Icon(Icons.Default.CalendarToday, null, tint = Color.Gray)
+                }
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            // 中间：账户名
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = account?.name ?: "选择账户",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                // 这里可以显示余额，如果已有数据的话
+                if (account != null) {
+                    // 简单显示初始余额，或者如果不准确可以隐藏
+                    // Text("余额: ${account.currency} ...", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                }
+            }
+
+            // 右侧：金额
+            Text(
+                text = String.format("%.2f", amount),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = amountColor
+            )
+        }
+    }
+}
+
+@Composable
+fun FeeOptionRow(selected: Boolean, onClick: () -> Unit, text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp)
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+// --- 辅助组件 ---
+
 @Composable
 fun NewAmountDisplay(category: Category?, amount: String) {
     val cardColor = MaterialTheme.colorScheme.primary
@@ -460,11 +593,13 @@ fun NewAmountDisplay(category: Category?, amount: String) {
 
 @Composable
 fun KeyboardActionToolbar(
-    account: Account?,
+    button1Icon: ImageVector,
+    button1Text: String,
+    button1OnClick: () -> Unit,
+    button1Highlight: Boolean = false,
     dateMillis: Long,
-    remark: String,
-    onAccountClick: () -> Unit,
     onDateClick: () -> Unit,
+    remark: String,
     onRemarkClick: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("MM月dd日", Locale.getDefault()) }
@@ -477,10 +612,11 @@ fun KeyboardActionToolbar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         ActionChipItem(
-            icon = if (account != null) IconMapper.getIcon(account.iconName) else Icons.Default.CalendarToday,
-            text = account?.name ?: "选择账户",
-            onClick = onAccountClick,
-            modifier = Modifier.weight(1f)
+            icon = button1Icon,
+            text = button1Text,
+            onClick = button1OnClick,
+            modifier = Modifier.weight(1f),
+            isHighlight = button1Highlight
         )
         ActionChipItem(
             icon = Icons.Default.CalendarToday,
@@ -521,14 +657,14 @@ fun ActionChipItem(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = if (isHighlight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
-                color = MaterialTheme.colorScheme.onSurface
+                color = if (isHighlight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -588,27 +724,6 @@ fun CategoryItem(category: Category, isSelected: Boolean, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun TransferScreenContent( fromAccount: Account?, toAccount: Account?, fromAmount: String, toAmount: String, isSameCurrency: Boolean, focusedField: String, onFromAccountClick: () -> Unit, onToAccountClick: () -> Unit, onFromAmountClick: () -> Unit, onToAmountClick: () -> Unit ) {
-    Column(Modifier.padding(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            AccountSelectorBox( modifier = Modifier.weight(1f), account = fromAccount, onClick = onFromAccountClick )
-            Icon( Icons.Default.ArrowForward, contentDescription = "转账", modifier = Modifier.padding(horizontal = 8.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant )
-            AccountSelectorBox( modifier = Modifier.weight(1f), account = toAccount, onClick = onToAccountClick )
-        }
-        Spacer(Modifier.height(16.dp))
-        if (isSameCurrency) {
-            AmountInputBox( amount = fromAmount, currency = fromAccount?.currency ?: "---", label = "转账金额", isFocused = true, onClick = {} )
-        } else {
-            AmountInputBox( amount = fromAmount, currency = fromAccount?.currency ?: "---", label = "转出金额", isFocused = focusedField == "fromAmount", onClick = onFromAmountClick )
-            Spacer(Modifier.height(8.dp))
-            AmountInputBox( amount = toAmount, currency = toAccount?.currency ?: "---", label = "转入金额", isFocused = focusedField == "toAmount", onClick = onToAmountClick )
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountSelectorBox( modifier: Modifier = Modifier, account: Account?, onClick: () -> Unit ) {
@@ -624,25 +739,6 @@ fun AccountSelectorBox( modifier: Modifier = Modifier, account: Account?, onClic
             } else {
                 Text("选择账户", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AmountInputBox( amount: String, currency: String, label: String, isFocused: Boolean, onClick: () -> Unit ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        border = if (isFocused) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Row( modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.labelMedium)
-                Text(amount, style = MaterialTheme.typography.headlineSmall)
-            }
-            Text(currency, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

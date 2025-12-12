@@ -76,7 +76,8 @@ fun AccountManagementScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate(Routes.ADD_ACCOUNT) },
+                // 添加按钮：不需要传 ID，使用默认参数
+                onClick = { navController.navigate(Routes.addAccountRoute()) },
                 shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -115,7 +116,9 @@ fun AccountManagementScreen(
                             isDefault = (account.id == defaultAccountId),
                             onSetDefault = { viewModel.setDefaultAccount(account.id) },
                             onClick = {
-                                navController.navigate("${Routes.ADD_ACCOUNT}?accountId=${account.id}")
+                                // 【关键修复】使用 helper 函数，而不是拼接字符串
+                                // 之前错误的写法: "${Routes.ADD_ACCOUNT}?accountId=${account.id}"
+                                navController.navigate(Routes.addAccountRoute(account.id))
                             },
                             modifier = Modifier
                                 .padding(horizontal = 16.dp)
@@ -174,7 +177,6 @@ fun AccountItem(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                // 【关键修复】删除了 initialAmount 和 currency，改用 type
                 Text(
                     text = account.type,
                     style = MaterialTheme.typography.bodyMedium,

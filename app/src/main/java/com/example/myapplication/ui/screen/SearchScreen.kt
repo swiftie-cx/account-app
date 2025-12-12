@@ -114,22 +114,13 @@ fun SearchScreen(
             val m2 = c2.get(Calendar.MONTH)
             val d2 = c2.get(Calendar.DAY_OF_MONTH)
 
-            // 1. 同一天 (yyyy年MM月dd日)
             if (y1 == y2 && m1 == m2 && d1 == d2) {
                 sb.append(formatFullDay.format(Date(start)))
-            }
-            // 2. 整月 (yyyy年MM月)
-            else if (y1 == y2 && m1 == m2 && d1 == 1 && d2 == c2.getActualMaximum(Calendar.DAY_OF_MONTH)) {
+            } else if (y1 == y2 && m1 == m2 && d1 == 1 && d2 == c2.getActualMaximum(Calendar.DAY_OF_MONTH)) {
                 sb.append(formatMonth.format(Date(start)))
-            }
-            // 3. 整年 (yyyy年)
-            else if (y1 == y2 &&
-                m1 == Calendar.JANUARY && d1 == 1 &&
-                m2 == Calendar.DECEMBER && d2 == 31) {
+            } else if (y1 == y2 && m1 == Calendar.JANUARY && d1 == 1 && m2 == Calendar.DECEMBER && d2 == 31) {
                 sb.append(formatYear.format(Date(start)))
-            }
-            // 4. 其他范围
-            else {
+            } else {
                 sb.append("${formatFullDay.format(Date(start))}~${formatFullDay.format(Date(end))}")
             }
         }
@@ -194,12 +185,19 @@ fun SearchScreen(
                 val fromAccount = accountMap[outTx.accountId]
                 val toAccount = accountMap[inTx.accountId]
                 if (fromAccount == null || toAccount == null) return@mapNotNull null
+
+                // 【修改】计算手续费
+                val feeRaw = abs(outTx.amount) - abs(inTx.amount)
+                val fee = if (feeRaw < 0.01) 0.0 else feeRaw
+
                 DisplayTransferItem(
+                    expenseId = outTx.id,
                     date = outTx.date,
                     fromAccount = fromAccount,
                     toAccount = toAccount,
                     fromAmount = outTx.amount,
-                    toAmount = inTx.amount
+                    toAmount = inTx.amount,
+                    fee = fee // 传入手续费
                 )
             }
 
@@ -278,22 +276,14 @@ fun SearchScreen(
                 )
             )
         },
-        // 【关键修改】新增悬浮按钮
         floatingActionButton = {
             if (isFromChart) {
                 FloatingActionButton(
                     onClick = {
-                        // 映射逻辑：
-                        // SearchScreen Type: 0=全部/结余, 1=支出, 2=收入
-                        // AddTransactionScreen Tab: 0=支出, 1=收入, 2=转账
-
-                        // 如果当前是收入(2)，跳转去收入Tab(1)
-                        // 如果当前是支出(1)或结余(0)，跳转去支出Tab(0)
                         val targetTab = if (initialType == 2) 1 else 0
-
                         navController.navigate(
                             Routes.addTransactionRoute(
-                                dateMillis = initialStartDate, // 使用进入该页面的筛选日期
+                                dateMillis = initialStartDate,
                                 type = targetTab
                             )
                         )
@@ -347,7 +337,6 @@ fun SearchScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            // 筛选区域 (白色背景卡片)
             if (!isFromChart) {
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
@@ -356,7 +345,6 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        // 搜索框
                         OutlinedTextField(
                             value = localSearchText,
                             onValueChange = { localSearchText = it },
@@ -414,10 +402,9 @@ fun SearchScreen(
                 }
             }
 
-            // 结果列表
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp) // 增加底部边距，防止FAB遮挡
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 if (displayItems.isEmpty()) {
                     item {
@@ -442,16 +429,23 @@ fun SearchScreen(
                                 onClick = { navController.navigate(Routes.transactionDetailRoute(item.id)) }
                             )
                         }
-                        is DisplayTransferItem -> TransferItem(
-                            item = item,
-                            onClick = { /* TODO */ }
-                        )
+                        is DisplayTransferItem -> {
+                            // 调用 TransferItem
+                            TransferItem(
+                                item = item,
+                                onClick = {
+                                    navController.navigate(Routes.transactionDetailRoute(item.expenseId))
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+// ---------------- 以下为辅助组件定义 ----------------
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -587,13 +581,33 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "内部转账",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            // 【修改】标题栏：增加手续费标签
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "内部转账",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (item.fee > 0.01) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), // 浅色背景
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "手续费 ${String.format("%.2f", item.fee)}",
+                            style = MaterialTheme.typography.labelSmall, // 小字体
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
             Spacer(Modifier.height(2.dp))
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = item.fromAccount.name,
