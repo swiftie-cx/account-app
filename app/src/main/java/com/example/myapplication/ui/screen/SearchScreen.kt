@@ -51,7 +51,7 @@ fun SearchScreen(
     initialCategory: String? = null,
     initialStartDate: Long? = null,
     initialEndDate: Long? = null,
-    initialType: Int = 0 // 0全部, 1支出, 2收入
+    initialType: Int = 0 // 0全部/结余, 1支出, 2收入
 ) {
     var localSearchText by remember { mutableStateOf("") }
     val searchResults by viewModel.filteredExpenses.collectAsState()
@@ -86,7 +86,6 @@ fun SearchScreen(
         (expenseCategories + incomeCategories).associate { it.title to it.icon }
     }
 
-    // --- (修复) 智能标题生成逻辑 ---
     val dynamicTitle = remember(initialCategory, customDateRangeMillis) {
         val formatFullDay = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
         val formatMonth = SimpleDateFormat("yyyy年MM月", Locale.CHINA)
@@ -120,18 +119,16 @@ fun SearchScreen(
                 sb.append(formatFullDay.format(Date(start)))
             }
             // 2. 整月 (yyyy年MM月)
-            // 条件：同年同月，Start是1号，End是该月最后一天
             else if (y1 == y2 && m1 == m2 && d1 == 1 && d2 == c2.getActualMaximum(Calendar.DAY_OF_MONTH)) {
                 sb.append(formatMonth.format(Date(start)))
             }
             // 3. 整年 (yyyy年)
-            // 条件：Start是1月1日，End是12月31日
             else if (y1 == y2 &&
                 m1 == Calendar.JANUARY && d1 == 1 &&
                 m2 == Calendar.DECEMBER && d2 == 31) {
                 sb.append(formatYear.format(Date(start)))
             }
-            // 4. 其他范围 (yyyy年MM月dd日~yyyy年MM月dd日)
+            // 4. 其他范围
             else {
                 sb.append("${formatFullDay.format(Date(start))}~${formatFullDay.format(Date(end))}")
             }
@@ -168,7 +165,6 @@ fun SearchScreen(
                 if (startMillis != null && endMillis != null) {
                     val endOfDayCalendar = Calendar.getInstance().apply {
                         timeInMillis = endMillis
-                        // 确保包含选定日期的最后一秒
                         set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
                     }
                     val endOfDayMillis = endOfDayCalendar.timeInMillis
@@ -266,7 +262,7 @@ fun SearchScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background, // 统一背景色
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text(dynamicTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
@@ -281,6 +277,34 @@ fun SearchScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+        },
+        // 【关键修改】新增悬浮按钮
+        floatingActionButton = {
+            if (isFromChart) {
+                FloatingActionButton(
+                    onClick = {
+                        // 映射逻辑：
+                        // SearchScreen Type: 0=全部/结余, 1=支出, 2=收入
+                        // AddTransactionScreen Tab: 0=支出, 1=收入, 2=转账
+
+                        // 如果当前是收入(2)，跳转去收入Tab(1)
+                        // 如果当前是支出(1)或结余(0)，跳转去支出Tab(0)
+                        val targetTab = if (initialType == 2) 1 else 0
+
+                        navController.navigate(
+                            Routes.addTransactionRoute(
+                                dateMillis = initialStartDate, // 使用进入该页面的筛选日期
+                                type = targetTab
+                            )
+                        )
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "添加记录")
+                }
+            }
         },
         bottomBar = {
             if (!isFromChart) {
@@ -345,7 +369,7 @@ fun SearchScreen(
                                 .fillMaxWidth()
                                 .focusRequester(focusRequester),
                             singleLine = true,
-                            shape = RoundedCornerShape(24.dp), // 圆润搜索框
+                            shape = RoundedCornerShape(24.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
@@ -393,7 +417,7 @@ fun SearchScreen(
             // 结果列表
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                contentPadding = PaddingValues(bottom = 80.dp) // 增加底部边距，防止FAB遮挡
             ) {
                 if (displayItems.isEmpty()) {
                     item {
@@ -534,8 +558,6 @@ private fun CategoryFilterRow(
     }
 }
 
-// --- 美化后的列表项组件 (复制自 DetailsScreen 以保持一致) ---
-
 @Composable
 private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
     val transferColor = MaterialTheme.colorScheme.primary
@@ -628,7 +650,6 @@ private fun ExpenseItem(
 
     val iconTintColor = if (isExpense) expenseColor else incomeColor
 
-    // 日期格式化
     val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.CHINA) }
 
     Row(

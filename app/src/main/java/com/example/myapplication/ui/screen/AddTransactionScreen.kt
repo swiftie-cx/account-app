@@ -40,7 +40,6 @@ import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import com.example.myapplication.data.ExchangeRates
-// 务必导入 CustomDateRangePicker
 import com.example.myapplication.ui.screen.CustomDateRangePicker
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,9 +52,11 @@ fun AddTransactionScreen(
     navController: NavHostController,
     viewModel: ExpenseViewModel,
     expenseId: Long? = null,
-    dateMillis: Long? = null
+    dateMillis: Long? = null,
+    initialTab: Int = 0 // 【修改】新增：初始Tab页 (0支出, 1收入, 2转账)
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    // 【修改】使用 initialTab 初始化 selectedTab
+    var selectedTab by remember { mutableIntStateOf(initialTab) }
     val tabs = listOf("支出", "收入", "转账")
 
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
@@ -143,19 +144,19 @@ fun AddTransactionScreen(
     LaunchedEffect(selectedTab) {
         if (expenseId == null) {
             val currentList = if (selectedTab == 0) expenseCategories else incomeCategories
-            selectedCategory = currentList.firstOrNull()
+            // 每次切换 tab 时，如果没有预设 category，则重置
+            // 注意：这里需要确保初始化进入时，selectedCategory 能正确赋值
+            if (selectedCategory == null || selectedCategory !in currentList) {
+                selectedCategory = currentList.firstOrNull()
+            }
 
-            amount = "0"
-            remark = ""
-            val defaultAcc = accounts.find { it.id == defaultAccountId }
-            selectedAccount = defaultAcc ?: accounts.firstOrNull()
+            if (amount == "0") amount = "0" // 保持金额逻辑
 
-            fromAccount = defaultAcc ?: accounts.firstOrNull()
-            toAccount = null
-            fromAmount = "0"
-            toAmount = "0"
-            focusedAmountField = "fromAmount"
-            showAccountPickerFor = null
+            // 确保账户有值
+            if (selectedAccount == null) {
+                val defaultAcc = accounts.find { it.id == defaultAccountId }
+                selectedAccount = defaultAcc ?: accounts.firstOrNull()
+            }
         }
     }
 
@@ -185,19 +186,16 @@ fun AddTransactionScreen(
         }
     }
 
-    // --- 核心逻辑提取：保存账单 ---
-    // shouldFinish: true 表示保存并退出，false 表示保存后清空继续记
     fun saveExpense(shouldFinish: Boolean) {
         if (selectedCategory != null && selectedAccount != null && amount != "0") {
             val finalAmountStr = try { evaluateExpression(amount).toString() } catch(e: Exception) { amount }
             val rawAmount = finalAmountStr.toDoubleOrNull() ?: 0.0
 
-            // 如果计算结果为0，不保存
             if (rawAmount == 0.0) return
 
             val finalAmount = if (selectedTab == 0) -rawAmount else rawAmount
             val expense = Expense(
-                id = expenseId ?: 0, // 如果是再记，id 永远是 0 (新增)
+                id = expenseId ?: 0,
                 category = selectedCategory!!.title,
                 amount = finalAmount,
                 date = Date(selectedDate),
@@ -206,25 +204,20 @@ fun AddTransactionScreen(
             )
 
             if (expenseId != null && shouldFinish) {
-                // 编辑模式且点击完成 -> 更新
                 viewModel.updateExpense(expense)
             } else {
-                // 新增模式 或 编辑模式点击再记 -> 插入新记录
                 viewModel.insert(expense)
             }
 
             if (shouldFinish) {
                 navController.popBackStack()
             } else {
-                // 再记模式：重置金额和备注，保持日期/账户/分类不变
                 amount = "0"
                 remark = ""
-                // 提示用户已保存? (Optional: UI enhancement would be a Snackbar)
             }
         }
     }
 
-    // 转账保存逻辑 (转账一般不涉及连续再记，暂保持原样，或仅支持完成)
     val onTransferDoneClick: () -> Unit = {
         val finalFromStr = try { evaluateExpression(fromAmount).toString() } catch(e: Exception) { fromAmount }
         val finalToStr = try { evaluateExpression(toAmount).toString() } catch(e: Exception) { toAmount }
@@ -242,8 +235,6 @@ fun AddTransactionScreen(
             navController.popBackStack()
         }
     }
-
-    // --- Dialogs ---
 
     if (showAccountPickerFor != null) {
         AccountPickerDialog(
@@ -316,16 +307,13 @@ fun AddTransactionScreen(
             }
 
             when (selectedTab) {
-                0, 1 -> { // 支出 和 收入
+                0, 1 -> {
                     Column(modifier = Modifier.fillMaxSize()) {
-
-                        // 1. 金额显示卡片
                         NewAmountDisplay(
                             category = selectedCategory,
                             amount = amount
                         )
 
-                        // 2. 分类列表
                         CategoryGrid(
                             categories = categoriesToShow,
                             selectedCategory = selectedCategory,
@@ -333,7 +321,6 @@ fun AddTransactionScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // 3. 键盘上方的工具栏
                         KeyboardActionToolbar(
                             account = selectedAccount,
                             dateMillis = selectedDate,
@@ -343,13 +330,12 @@ fun AddTransactionScreen(
                             onRemarkClick = { showRemarkDialog = true }
                         )
 
-                        // 4. 数字键盘 (常驻)
                         NumericKeyboard(
                             onNumberClick = { num -> handleInput { if (it == "0") num else it + num } },
                             onOperatorClick = { op -> handleInput { it + " $op " } },
                             onBackspaceClick = { handleInput { if (it.length > 1) it.dropLast(1) else "0" } },
-                            onAgainClick = { saveExpense(shouldFinish = false) }, // (新增) 再记
-                            onDoneClick = { saveExpense(shouldFinish = true) }, // (修改) 完成
+                            onAgainClick = { saveExpense(shouldFinish = false) },
+                            onDoneClick = { saveExpense(shouldFinish = true) },
                             onEqualsClick = {
                                 handleInput {
                                     try {
@@ -362,7 +348,7 @@ fun AddTransactionScreen(
                         )
                     }
                 }
-                2 -> { // 转账
+                2 -> {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier
@@ -394,14 +380,11 @@ fun AddTransactionScreen(
                         }
 
                         if (fromAccount != null && toAccount != null) {
-                            // 转账界面暂时复用新键盘，但忽略"再记"功能，或者将其视为等同于完成
-                            // 为了简单，转账界面 "再记" 这里不做特殊处理，或者您可以隐藏
-                            // 这里我们简单地让 "再记" 也执行保存并退出，或者暂不绑定逻辑
                             NumericKeyboard(
                                 onNumberClick = { num -> handleInput { if (it == "0") num else it + num } },
                                 onOperatorClick = { op -> handleInput { it + " $op " } },
                                 onBackspaceClick = { handleInput { if (it.length > 1) it.dropLast(1) else "0" } },
-                                onAgainClick = { /* 转账通常不需要连续记，留空或做成保存 */ },
+                                onAgainClick = { },
                                 onDoneClick = onTransferDoneClick,
                                 onEqualsClick = {
                                     handleInput {
@@ -421,18 +404,9 @@ fun AddTransactionScreen(
     }
 }
 
-// 辅助组件 (CategoryGrid, KeyboardActionToolbar 等) 保持不变，请确保文件中保留了它们
-// ...
-// NewAmountDisplay, KeyboardActionToolbar, ActionChipItem, RemarkInputDialog,
-// TransferScreenContent, AccountSelectorBox, AmountInputBox, evaluateExpression,
-// CategoryGrid, CategoryItem, AccountPickerDialog 等请继续保留
-// (为节省篇幅，此处省略这些未变动的代码，请使用上一次提供的完整代码块中的这些组件)
-
+// 辅助组件保留
 @Composable
-fun NewAmountDisplay(
-    category: Category?,
-    amount: String
-) {
+fun NewAmountDisplay(category: Category?, amount: String) {
     val cardColor = MaterialTheme.colorScheme.primary
     val contentColor = MaterialTheme.colorScheme.onPrimary
 

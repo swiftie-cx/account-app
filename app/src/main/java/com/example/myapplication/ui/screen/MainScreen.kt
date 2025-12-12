@@ -50,10 +50,9 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // 当处于 锁屏、添加交易、搜索、周期记账编辑 等页面时，隐藏底部导航栏
     val showScaffold = currentRoute != Routes.LOCK &&
             currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true &&
-            currentRoute?.startsWith("add_periodic_transaction") != true && // 隐藏周期编辑页的底部栏
+            currentRoute?.startsWith("add_periodic_transaction") != true &&
             currentRoute != Routes.SEARCH
 
     if (showScaffold) {
@@ -123,7 +122,7 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
         BottomNavItem.Chart,
         BottomNavItem.Budget,
         BottomNavItem.Assets,
-        BottomNavItem.Mine // “我的”
+        BottomNavItem.Mine
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -205,7 +204,6 @@ fun NavigationGraph(
             AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
-        // “我的”页面
         composable(BottomNavItem.Mine.route) {
             SettingsScreen(
                 navController = navController,
@@ -216,16 +214,26 @@ fun NavigationGraph(
 
         // --- 功能页面 ---
 
+        // 【修改】添加 type 参数
         composable(
-            route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}",
+            route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}&type={type}",
             arguments = listOf(
                 navArgument("expenseId") { type = NavType.LongType; defaultValue = -1L },
-                navArgument("dateMillis") { type = NavType.LongType; defaultValue = -1L }
+                navArgument("dateMillis") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("type") { type = NavType.IntType; defaultValue = 0 } // 默认 0 (支出)
             )
         ) { backStackEntry ->
             val expenseId = backStackEntry.arguments?.getLong("expenseId")
             val dateMillis = backStackEntry.arguments?.getLong("dateMillis")
-            AddTransactionScreen(navController = navController, viewModel = expenseViewModel, expenseId = if (expenseId == -1L) null else expenseId, dateMillis = if (dateMillis == -1L) null else dateMillis)
+            val type = backStackEntry.arguments?.getInt("type") ?: 0
+
+            AddTransactionScreen(
+                navController = navController,
+                viewModel = expenseViewModel,
+                expenseId = if (expenseId == -1L) null else expenseId,
+                dateMillis = if (dateMillis == -1L) null else dateMillis,
+                initialTab = type // 传递初始 Tab
+            )
         }
 
         composable(
@@ -263,7 +271,6 @@ fun NavigationGraph(
             }
         }
 
-        // 保留 Routes.SETTINGS 兼容
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 navController = navController,
@@ -272,7 +279,6 @@ fun NavigationGraph(
             )
         }
 
-        // --- 设置相关 ---
         composable(Routes.PRIVACY_SETTINGS) {
             PrivacySettingsScreen(navController = navController, viewModel = expenseViewModel)
         }
@@ -325,14 +331,10 @@ fun NavigationGraph(
             )
         }
 
-        // --- 周期记账相关 (新增) ---
-
-        // 1. 周期列表页
         composable(Routes.PERIODIC_BOOKKEEPING) {
             PeriodicBookkeepingScreen(navController = navController, viewModel = expenseViewModel)
         }
 
-        // 2. 周期编辑/添加页 (带 type 参数)
         composable(
             route = "add_periodic_transaction?id={id}&type={type}",
             arguments = listOf(
@@ -351,7 +353,6 @@ fun NavigationGraph(
             )
         }
 
-        // --- 用户信息相关 ---
         composable(Routes.USER_INFO) {
             UserInfoScreen(navController = navController, viewModel = expenseViewModel)
         }

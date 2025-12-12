@@ -5,6 +5,13 @@ import android.net.Uri
 object Routes {
     // 交易相关
     const val ADD_TRANSACTION = "add_transaction"
+    // 新增辅助方法，方便构建带参数的路由
+    fun addTransactionRoute(expenseId: Long? = null, dateMillis: Long? = null, type: Int = 0): String {
+        val id = expenseId ?: -1L
+        val date = dateMillis ?: -1L
+        return "$ADD_TRANSACTION?expenseId=$id&dateMillis=$date&type=$type"
+    }
+
     const val TRANSACTION_DETAIL = "transaction_detail/{expenseId}"
     fun transactionDetailRoute(expenseId: Long) = "transaction_detail/$expenseId"
 
@@ -42,8 +49,8 @@ object Routes {
 
     // --- 用户信息相关 ---
     const val USER_INFO = "user_info"
-    const val LOGIN = "login"          // 新增：登录
-    const val REGISTER = "register"    // 新增：注册 (替代原来的 bind_email)
+    const val LOGIN = "login"
+    const val REGISTER = "register"
     const val CHANGE_PASSWORD = "change_password"
     const val FORGOT_PASSWORD = "forgot_password"
 
