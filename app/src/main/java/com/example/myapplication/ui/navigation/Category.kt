@@ -34,16 +34,18 @@ val expenseCategories = listOf(
     Category("礼物", Icons.Default.CardGiftcard),
     Category("捐款", Icons.Default.Favorite),
     Category("零食", Icons.Default.Icecream),
-    Category("孩子", Icons.Default.ChildFriendly),
-    Category("设置", Icons.Default.Settings)
+    Category("孩子", Icons.Default.ChildFriendly)
 )
 
 // 收入分类列表
 val incomeCategories = listOf(
     Category("薪水", Icons.Default.AccountBalanceWallet),
+    Category("奖金", Icons.Default.StackedBarChart), // 新增
     Category("理财", Icons.Default.TrendingUp),
     Category("兼职", Icons.Default.Work),
     Category("礼金", Icons.Default.Redeem),
-    Category("其他", Icons.Default.MoreHoriz),
-    Category("设置", Icons.Default.Settings)
+    Category("红包", Icons.Default.CardGiftcard),    // 新增
+    Category("报销", Icons.Default.ReceiptLong),     // 新增
+    Category("二手", Icons.Default.Storefront),      // 新增
+    Category("其他", Icons.Default.MoreHoriz)
 )
