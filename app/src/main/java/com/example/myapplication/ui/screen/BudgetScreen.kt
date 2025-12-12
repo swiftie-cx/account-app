@@ -68,7 +68,10 @@ fun BudgetScreen(
             val expenseCalendar = Calendar.getInstance().apply { time = it.date }
             (expenseCalendar.get(Calendar.YEAR) == year &&
                     expenseCalendar.get(Calendar.MONTH) + 1 == month &&
-                    it.amount < 0 && !it.category.startsWith("转账"))
+                    it.amount < 0 &&
+                    !it.category.startsWith("转账") &&
+                    // 【关键修改】过滤掉不计入预算的条目
+                    !it.excludeFromBudget)
         }
     }
 
@@ -144,7 +147,7 @@ fun BudgetScreen(
                     val converted = ExchangeRates.convert(totalBudget.amount, "CNY", defaultCurrency)
                     totalBudget.copy(amount = converted)
                 } else {
-                    // 如果没有总预算，临时计算一个总和用于展示（可选）
+                    // 如果没有总预算，临时计算一个总和用于展示
                     val sumCategoryBudgets = categoryBudgets.sumOf {
                         ExchangeRates.convert(it.amount, "CNY", defaultCurrency)
                     }

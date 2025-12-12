@@ -5,7 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape // 确保导入了这个
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -55,12 +55,11 @@ fun PeriodicBookkeepingScreen(
             )
         },
         floatingActionButton = {
-            // 【关键修改】添加样式参数，使其变成圆形且颜色一致
             FloatingActionButton(
                 onClick = { showTypeSheet = true },
-                shape = CircleShape, // 变成圆形
-                containerColor = MaterialTheme.colorScheme.primary, // 使用主题紫色
-                contentColor = MaterialTheme.colorScheme.onPrimary // 图标变白
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(Icons.Default.Add, "添加")
             }
@@ -89,7 +88,12 @@ fun PeriodicBookkeepingScreen(
         }
 
         if (showTypeSheet) {
-            ModalBottomSheet(onDismissRequest = { showTypeSheet = false }) {
+            ModalBottomSheet(
+                onDismissRequest = { showTypeSheet = false },
+                // 【修改点】设置容器颜色为 Surface (纯白)，覆盖默认的微灰/微紫色背景
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ) {
                 Column(modifier = Modifier.padding(bottom = 32.dp)) {
                     Text(
                         "选择类型",
@@ -99,6 +103,7 @@ fun PeriodicBookkeepingScreen(
                     ListItem(
                         headlineContent = { Text("周期支出") },
                         leadingContent = { Icon(Icons.Outlined.CreditCard, null, tint = Color(0xFFE53935)) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent), // 确保列表项背景透明
                         modifier = Modifier.clickable {
                             showTypeSheet = false
                             navController.navigate("add_periodic_transaction?id=-1&type=0")
@@ -107,6 +112,7 @@ fun PeriodicBookkeepingScreen(
                     ListItem(
                         headlineContent = { Text("周期收入") },
                         leadingContent = { Icon(Icons.Outlined.Paid, null, tint = Color(0xFF4CAF50)) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable {
                             showTypeSheet = false
                             navController.navigate("add_periodic_transaction?id=-1&type=1")
@@ -115,6 +121,7 @@ fun PeriodicBookkeepingScreen(
                     ListItem(
                         headlineContent = { Text("周期转账") },
                         leadingContent = { Icon(Icons.AutoMirrored.Filled.CompareArrows, null, tint = MaterialTheme.colorScheme.primary) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable {
                             showTypeSheet = false
                             navController.navigate("add_periodic_transaction?id=-1&type=2")

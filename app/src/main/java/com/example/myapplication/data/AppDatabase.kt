@@ -6,14 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-// (修改) 增加 PeriodicTransaction，版本号升级为 2
-@Database(entities = [Expense::class, Budget::class, Account::class, PeriodicTransaction::class], version = 3, exportSchema = false)
+// 【修改】version 升级为 4，以应用 Expense 表的新字段
+@Database(entities = [Expense::class, Budget::class, Account::class, PeriodicTransaction::class], version = 4, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun budgetDao(): BudgetDao
     abstract fun accountDao(): AccountDao
-    // (新增)
     abstract fun periodicDao(): PeriodicTransactionDao
 
     companion object {
@@ -27,9 +26,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "expense_database"
                 )
-                    // (关键) 允许破坏性迁移，这会清空旧数据！
-                    // 如果你想保留数据，需要写 Migration 脚本。
-                    // 鉴于目前是开发阶段，为了方便直接用 fallbackToDestructiveMigration
+                    // 注意：fallbackToDestructiveMigration 会清空旧数据
+                    // 如果需要保留数据，请编写 Migration (1->2, 2->3, 3->4)
                     .fallbackToDestructiveMigration()
                     .allowMainThreadQueries()
                     .build()

@@ -80,7 +80,7 @@ fun AddPeriodicTransactionScreen(
     val amountFocusRequester = remember { FocusRequester() }
 
     var remark by remember { mutableStateOf("") }
-    var excludeFromStats by remember { mutableStateOf(false) }
+    // 【修改】移除了 excludeFromStats 状态变量，默认视为 false
     var excludeFromBudget by remember { mutableStateOf(false) }
 
     // 对象选择
@@ -172,7 +172,7 @@ fun AddPeriodicTransactionScreen(
                 endCount = item.endCount
                 amount = item.amount.toString()
                 remark = item.remark ?: ""
-                excludeFromStats = item.excludeFromStats
+                // 【修改】不再加载 excludeFromStats
                 excludeFromBudget = item.excludeFromBudget
 
                 if (item.type != 2) {
@@ -227,7 +227,7 @@ fun AddPeriodicTransactionScreen(
             endDate = if (endMode == END_MODE_DATE) endDate else null,
             endCount = if (endMode == END_MODE_COUNT) endCount else null,
             remark = remark,
-            excludeFromStats = excludeFromStats,
+            excludeFromStats = false, // 【修改】强制设为 false，因为界面入口已移除
             excludeFromBudget = excludeFromBudget
         )
 
@@ -413,8 +413,7 @@ fun AddPeriodicTransactionScreen(
             if (transactionType != 2) {
                 Card(colors = CardDefaults.cardColors(containerColor = cardColor)) {
                     Column {
-                        FormToggleItem(label = "不计入收支", checked = excludeFromStats, onCheckedChange = { excludeFromStats = it })
-                        HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        // 【修改】移除了“不计入收支”选项及其分割线
                         FormToggleItem(label = "不计入预算", checked = excludeFromBudget, onCheckedChange = { excludeFromBudget = it })
                     }
                 }
@@ -539,7 +538,6 @@ fun isToday(date: Date): Boolean {
             cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }
 
-// 【关键修改】去掉了右侧的小箭头图标代码
 @Composable
 fun FormItem(label: String, value: String, icon: ImageVector? = null, onClick: () -> Unit) {
     Row(
@@ -555,7 +553,6 @@ fun FormItem(label: String, value: String, icon: ImageVector? = null, onClick: (
             Spacer(Modifier.width(8.dp))
         }
         Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        // 删除了这里的 Spacer 和 Icon(ArrowForwardIos)
     }
 }
 

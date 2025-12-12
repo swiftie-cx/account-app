@@ -163,11 +163,11 @@ class ExpenseRepository(
     suspend fun getPeriodicById(id: Long) = periodicDao.getById(id)
 
     // =========================================================
-    //               核心逻辑：检查并执行周期记账 (修改版)
+    //               核心逻辑：检查并执行周期记账
     // =========================================================
 
     suspend fun checkAndExecutePeriodicTransactions() {
-        // 【关键逻辑】获取"今天结束"的时间点 (23:59:59.999)
+        // 获取"今天结束"的时间点 (23:59:59.999)
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 23)
         calendar.set(Calendar.MINUTE, 59)
@@ -197,8 +197,7 @@ class ExpenseRepository(
 
         // B. 生成真实账单
         // 注意：这里生成的账单，date 用的是 rule.nextExecutionDate (比如今天 11:00)
-        // 而不是 Date() (现在时间 06:00)。
-        // 这样就保证了时间排序的正确性。
+        // 而不是 Date() (现在时间 06:00)。这样就保证了时间排序的正确性。
         if (rule.type == 2 && rule.targetAccountId != null) {
             val expenseOut = Expense(
                 accountId = rule.accountId,
@@ -222,7 +221,9 @@ class ExpenseRepository(
                 amount = finalAmount,
                 date = rule.nextExecutionDate,
                 accountId = rule.accountId,
-                remark = rule.remark ?: "周期自动记账"
+                remark = rule.remark ?: "周期自动记账",
+                // 【关键修改】将 PeriodicTransaction 的 excludeFromBudget 传递给生成的 Expense
+                excludeFromBudget = rule.excludeFromBudget
             )
             expenseDao.insertExpense(expense)
         }
@@ -248,13 +249,5 @@ class ExpenseRepository(
         )
 
         periodicDao.update(updatedRule)
-
-        // E. 递归检查 (可选)：如果这个规则是每天执行，且上次漏了好几天，
-        // 执行完这一笔后，nextExecutionDate 可能还在“今天”之前。
-        // 为了补齐所有漏单，可以递归调用：
-        // if (updatedRule.nextExecutionDate.time <= Calendar.getInstance().apply { ...Set to End of Today... }.time.time) {
-        //     executeRule(updatedRule)
-        // }
-        // 但为了稳妥起见，暂不开启递归，每次启动补一笔即可。
     }
 }

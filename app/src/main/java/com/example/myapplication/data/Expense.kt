@@ -23,5 +23,6 @@ data class Expense(
     val category: String,
     val amount: Double,
     val date: Date, // *** 保持 Date 类型 ***
-    val remark: String? = null
+    val remark: String? = null,
+    val excludeFromBudget: Boolean = false
 )
