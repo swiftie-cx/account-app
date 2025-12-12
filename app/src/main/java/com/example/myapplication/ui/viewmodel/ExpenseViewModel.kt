@@ -25,7 +25,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.Currency
 import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
 
 // 定义筛选类型枚举
@@ -47,6 +49,41 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         // 2. 启动时检查周期记账
         viewModelScope.launch(Dispatchers.IO) {
             repository.checkAndExecutePeriodicTransactions()
+        }
+    }
+
+    // ===========================
+    // 0. 欢迎页与初始化逻辑 (新增)
+    // ===========================
+
+    val isFirstLaunch: Boolean
+        get() = repository.isFirstLaunch()
+
+    fun completeOnboarding(initialBalance: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. 自动检测系统币种
+            val currencyCode = try {
+                Currency.getInstance(Locale.getDefault()).currencyCode
+            } catch (e: Exception) {
+                "CNY"
+            }
+
+            // 2. 创建默认账户
+            val defaultAccount = Account(
+                name = "默认账户",
+                type = "默认",
+                initialBalance = initialBalance,
+                currency = currencyCode,
+                iconName = "AccountBalanceWallet",
+                isLiability = false
+            )
+
+            // 插入账户并获取 ID (Repository 的 insertAccount 需返回 Long)
+            val newId = repository.insertAccount(defaultAccount)
+            repository.saveDefaultAccountId(newId)
+
+            // 3. 标记完成
+            repository.setFirstLaunchCompleted()
         }
     }
 

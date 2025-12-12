@@ -22,6 +22,13 @@ class ExpenseRepository(
     private val prefs = context.getSharedPreferences("expense_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
 
+    // --- 【新增】首次启动标记 ---
+    fun isFirstLaunch(): Boolean = prefs.getBoolean("is_first_launch", true)
+
+    fun setFirstLaunchCompleted() {
+        prefs.edit().putBoolean("is_first_launch", false).apply()
+    }
+
     // --- 用户认证逻辑 (模拟) ---
     private val _isLoggedIn = MutableStateFlow(prefs.getBoolean("is_logged_in", false))
     val isLoggedIn = _isLoggedIn.asStateFlow()

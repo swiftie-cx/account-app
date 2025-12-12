@@ -50,8 +50,9 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // 当处于 锁屏、添加交易、搜索、周期记账编辑 等页面时，隐藏底部导航栏
+    // 当处于 欢迎页、锁屏、添加交易 等页面时，隐藏底部导航栏
     val showScaffold = currentRoute != Routes.LOCK &&
+            currentRoute != Routes.WELCOME && // 新增
             currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true &&
             currentRoute?.startsWith("add_periodic_transaction") != true &&
             currentRoute != Routes.SEARCH
@@ -173,9 +174,21 @@ fun NavigationGraph(
     onDefaultCurrencyChange: (String) -> Unit
 ) {
     val privacyType = expenseViewModel.getPrivacyType()
-    val startDestination = if (privacyType != "NONE") Routes.LOCK else BottomNavItem.Details.route
+    val isFirstLaunch = expenseViewModel.isFirstLaunch
+
+    // 【关键修改】判断起始页：首次启动 > 隐私锁 > 主页
+    val startDestination = when {
+        isFirstLaunch -> Routes.WELCOME
+        privacyType != "NONE" -> Routes.LOCK
+        else -> BottomNavItem.Details.route
+    }
 
     NavHost(navController, startDestination = startDestination, modifier = modifier) {
+
+        // 【新增】欢迎页
+        composable(Routes.WELCOME) {
+            WelcomeScreen(navController = navController, viewModel = expenseViewModel)
+        }
 
         // --- 核心页面 ---
         composable(Routes.LOCK) {
@@ -257,7 +270,6 @@ fun NavigationGraph(
             AddAccountScreen(viewModel = expenseViewModel, navController = navController, accountId = if (accountId == -1L) null else accountId)
         }
 
-        // 【新增】账户详情页面路由
         composable(
             route = Routes.ACCOUNT_DETAIL,
             arguments = listOf(navArgument("accountId") { type = NavType.LongType })

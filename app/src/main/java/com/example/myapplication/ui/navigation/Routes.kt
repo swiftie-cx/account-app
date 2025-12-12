@@ -3,9 +3,11 @@ package com.example.myapplication.ui.navigation
 import android.net.Uri
 
 object Routes {
+    // 【新增】欢迎页
+    const val WELCOME = "welcome"
+
     // 交易相关
     const val ADD_TRANSACTION = "add_transaction"
-    // 新增辅助方法，方便构建带参数的路由
     fun addTransactionRoute(expenseId: Long? = null, dateMillis: Long? = null, type: Int = 0): String {
         val id = expenseId ?: -1L
         val date = dateMillis ?: -1L
@@ -24,7 +26,6 @@ object Routes {
     const val ADD_ACCOUNT = "add_account?accountId={accountId}"
     fun addAccountRoute(accountId: Long? = null) = "add_account?accountId=${accountId ?: -1L}"
 
-    // 【新增】账户详情页路由
     const val ACCOUNT_DETAIL = "account_detail/{accountId}"
     fun accountDetailRoute(accountId: Long) = "account_detail/$accountId"
 
@@ -51,7 +52,7 @@ object Routes {
     const val LOCK = "lock"
     const val THEME_SETTINGS = "theme_settings"
 
-    // --- 用户信息相关 ---
+    // 用户信息相关
     const val USER_INFO = "user_info"
     const val LOGIN = "login"
     const val REGISTER = "register"
