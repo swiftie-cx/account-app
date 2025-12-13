@@ -34,6 +34,7 @@ fun LineChart(
     dataPoints: List<LineChartPoint>,
     modifier: Modifier = Modifier,
     lineColor: Color = MaterialTheme.colorScheme.primary,
+    showAllLabels: Boolean = false, // [新增] 控制是否显示所有标签
     onPointClick: (LineChartPoint) -> Unit
 ) {
     if (dataPoints.isEmpty()) return
@@ -142,7 +143,9 @@ fun LineChart(
                 path.lineTo(x, y)
                 fillPath.lineTo(x, y)
             }
-            if (dataPoints.size <= 7 || index % (dataPoints.size / 5) == 0) {
+
+            // [关键修改] 根据 showAllLabels 决定是否显示所有标签
+            if (showAllLabels || dataPoints.size <= 7 || index % (dataPoints.size / 5) == 0) {
                 drawContext.canvas.nativeCanvas.drawText(point.label, x, height - 5.dp.toPx(), textPaint)
             }
         }

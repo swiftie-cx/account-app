@@ -142,3 +142,50 @@ fun CategoryRankItem(
         }
     }
 }
+
+// --- [新增] 子类列表项组件 ---
+@Composable
+fun SubCategoryRankItem(
+    stat: SubCategoryStat,
+    color: Color, // 继承大类的颜色
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp, horizontal = 8.dp), // 稍微缩进一点
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 子类不需要大图标，用一个小点或者空位即可，这里用一个小的半透明圆点
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.5f))
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = stat.name,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+            modifier = Modifier.weight(1f)
+        )
+
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = String.format("%.0f", stat.amount),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+            Text(
+                text = "${String.format("%.1f", stat.percentageOfParent)}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+    }
+}

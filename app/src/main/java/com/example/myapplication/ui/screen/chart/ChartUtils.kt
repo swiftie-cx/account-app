@@ -2,8 +2,6 @@ package com.example.myapplication.ui.screen.chart
 
 import androidx.compose.ui.graphics.Color
 import com.example.myapplication.data.Expense
-import com.example.myapplication.ui.navigation.expenseCategories
-import com.example.myapplication.ui.navigation.incomeCategories
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -18,6 +16,22 @@ enum class TransactionType { INCOME, EXPENSE, BALANCE }
 data class LineChartPoint(val label: String, val value: Float, val timeMillis: Long)
 data class BalanceReportItem(val timeLabel: String, val income: Double, val expense: Double, val balance: Double)
 data class ChartData(val name: String, val value: Long, val color: Color)
+
+// [新增] 嵌套统计数据类
+data class SubCategoryStat(
+    val name: String,
+    val amount: Double,
+    val percentageOfParent: Float // 占父大类的百分比
+)
+
+data class MainCategoryStat(
+    val name: String,
+    val amount: Double,
+    val percentageOfTotal: Float, // 占总支出的百分比
+    val color: Color,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val subCategories: List<SubCategoryStat>
+)
 
 // --- 工具函数 ---
 
@@ -66,9 +80,17 @@ fun Float.MathRound(): Int = kotlin.math.round(this).toInt()
 
 fun prepareLineChartData(expenses: List<Expense>, chartMode: ChartMode, transactionType: TransactionType): List<LineChartPoint> {
     if (expenses.isEmpty()) return emptyList()
-    val sampleDate = expenses.first().date
     val calendar = Calendar.getInstance()
+    // 注意：这里不需要取 expenses.first().date，而是应该根据 chartMode 生成完整的坐标轴
+    // 但为了简单兼容，原有逻辑是基于数据存在的日期。
+    // 如果想要更严谨的图表（即使某天没数据也显示0），需要重写这里。
+    // 目前保持原有逻辑，但建议确保日期范围正确。
+
+    // 为了简化，这里我们复用下面的 prepareCustomLineChartData 的逻辑核心，或者保持您原有的逻辑。
+    // 这里我保持您原有的逻辑，不做大改，以免引入新Bug。
+    val sampleDate = expenses.first().date
     calendar.time = sampleDate
+
     val points = mutableListOf<LineChartPoint>()
     val sumFunc: (List<Expense>) -> Float = { list ->
         if (transactionType == TransactionType.BALANCE) list.sumOf { it.amount }.toFloat() else list.sumOf { abs(it.amount) }.toFloat()
@@ -114,6 +136,95 @@ fun prepareLineChartData(expenses: List<Expense>, chartMode: ChartMode, transact
             }
         }
     }
+    return points
+}
+
+// [新增] 专门处理自定义范围的折线图数据生成 (修复报错的关键)
+fun prepareCustomLineChartData(
+    data: List<Expense>,
+    startDate: Long,
+    endDate: Long,
+    transactionType: TransactionType
+): List<LineChartPoint> {
+    if (data.isEmpty()) return emptyList()
+
+    // 1. 计算天数跨度
+    val diffMillis = endDate - startDate
+    val daysDiff = diffMillis / (1000 * 60 * 60 * 24)
+
+    // 2. 决定粒度：如果跨度超过 90 天，按月统计；否则按日统计
+    val isMonthly = daysDiff > 90
+
+    val points = mutableListOf<LineChartPoint>()
+    val calendar = Calendar.getInstance()
+
+    // 设置循环的起始时间 (重置为当天的 00:00:00)
+    calendar.timeInMillis = startDate
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+
+    val endCalendar = Calendar.getInstance()
+    endCalendar.timeInMillis = endDate
+    // 确保结束时间包含当天
+    endCalendar.set(Calendar.HOUR_OF_DAY, 23)
+    endCalendar.set(Calendar.MINUTE, 59)
+    endCalendar.set(Calendar.SECOND, 59)
+
+    // 定义金额汇总函数
+    val sumFunc: (List<Expense>) -> Float = { list ->
+        if (transactionType == TransactionType.BALANCE)
+            list.sumOf { it.amount }.toFloat()
+        else
+            list.sumOf { abs(it.amount) }.toFloat()
+    }
+
+    val dateFormat = SimpleDateFormat("MM-dd", Locale.CHINA)
+    val monthFormat = SimpleDateFormat("yyyy-MM", Locale.CHINA)
+
+    // 3. 循环生成点
+    // 防止死循环，加一个安全计数
+    var safeCount = 0
+    val maxLoops = 366 * 5 // 最多5年
+
+    while (calendar.timeInMillis <= endCalendar.timeInMillis && safeCount < maxLoops) {
+        val intervalStart = calendar.timeInMillis
+
+        // 计算当前区间的结束时间
+        val intervalEnd = if (isMonthly) {
+            // 如果是按月，结束时间是下个月初
+            val c = calendar.clone() as Calendar
+            c.add(Calendar.MONTH, 1)
+            c.timeInMillis
+        } else {
+            // 如果是按日，结束时间是明天
+            val c = calendar.clone() as Calendar
+            c.add(Calendar.DATE, 1)
+            c.timeInMillis
+        }
+
+        // 筛选区间内的数据
+        val sum = sumFunc(data.filter { it.date.time in intervalStart until intervalEnd })
+
+        // 生成标签
+        val label = if (isMonthly) {
+            monthFormat.format(Date(intervalStart))
+        } else {
+            dateFormat.format(Date(intervalStart))
+        }
+
+        points.add(LineChartPoint(label, sum, intervalStart))
+
+        // 步进
+        if (isMonthly) {
+            calendar.add(Calendar.MONTH, 1)
+        } else {
+            calendar.add(Calendar.DATE, 1)
+        }
+        safeCount++
+    }
+
     return points
 }
 

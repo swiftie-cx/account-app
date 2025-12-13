@@ -34,6 +34,9 @@ import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import com.example.myapplication.ui.viewmodel.ThemeViewModel
 import java.util.Calendar
 import com.example.myapplication.ui.screen.chart.ChartScreen
+import com.example.myapplication.ui.screen.chart.CategoryChartDetailScreen
+import com.example.myapplication.ui.screen.chart.FullScreenChartScreen // [新增] 导入
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -50,12 +53,14 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // 当处于 欢迎页、锁屏、添加交易 等页面时，隐藏底部导航栏
+    // [修改] 增加 fullscreen_chart 的判断，隐藏底部导航栏
     val showScaffold = currentRoute != Routes.LOCK &&
-            currentRoute != Routes.WELCOME && // 新增
+            currentRoute != Routes.WELCOME &&
             currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true &&
             currentRoute?.startsWith("add_periodic_transaction") != true &&
-            currentRoute != Routes.SEARCH
+            currentRoute != Routes.SEARCH &&
+            currentRoute?.startsWith("category_chart_detail") != true && // 详情页不显示
+            currentRoute?.startsWith("fullscreen_chart") != true         // [新增] 全屏页不显示
 
     if (showScaffold) {
         Scaffold(
@@ -176,7 +181,6 @@ fun NavigationGraph(
     val privacyType = expenseViewModel.getPrivacyType()
     val isFirstLaunch = expenseViewModel.isFirstLaunch
 
-    // 【关键修改】判断起始页：首次启动 > 隐私锁 > 主页
     val startDestination = when {
         isFirstLaunch -> Routes.WELCOME
         privacyType != "NONE" -> Routes.LOCK
@@ -185,12 +189,10 @@ fun NavigationGraph(
 
     NavHost(navController, startDestination = startDestination, modifier = modifier) {
 
-        // 【新增】欢迎页
         composable(Routes.WELCOME) {
             WelcomeScreen(navController = navController, viewModel = expenseViewModel)
         }
 
-        // --- 核心页面 ---
         composable(Routes.LOCK) {
             LockScreen(
                 viewModel = expenseViewModel,
@@ -210,6 +212,52 @@ fun NavigationGraph(
             ChartScreen(viewModel = expenseViewModel, navController = navController)
         }
 
+        composable(
+            route = Routes.CATEGORY_CHART_DETAIL,
+            arguments = listOf(
+                navArgument("category") { type = NavType.StringType },
+                navArgument("type") { type = NavType.IntType },
+                navArgument("start") { type = NavType.LongType },
+                navArgument("end") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val category = backStackEntry.arguments?.getString("category") ?: ""
+            val type = backStackEntry.arguments?.getInt("type") ?: 0
+            val start = backStackEntry.arguments?.getLong("start") ?: 0L
+            val end = backStackEntry.arguments?.getLong("end") ?: 0L
+
+            CategoryChartDetailScreen(
+                navController = navController,
+                viewModel = expenseViewModel,
+                categoryName = category,
+                transactionType = type,
+                startDate = start,
+                endDate = end
+            )
+        }
+
+        // [新增] 全屏图表页路由注册
+        composable(
+            route = "fullscreen_chart/{type}/{start}/{end}",
+            arguments = listOf(
+                navArgument("type") { type = NavType.IntType },
+                navArgument("start") { type = NavType.LongType },
+                navArgument("end") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getInt("type") ?: 0
+            val start = backStackEntry.arguments?.getLong("start") ?: 0L
+            val end = backStackEntry.arguments?.getLong("end") ?: 0L
+
+            FullScreenChartScreen(
+                navController = navController,
+                viewModel = expenseViewModel,
+                startDate = start,
+                endDate = end,
+                transactionType = type
+            )
+        }
+
         composable(BottomNavItem.Budget.route) {
             BudgetScreen(viewModel = expenseViewModel, navController = navController, year = budgetScreenYear, month = budgetScreenMonth, onDateChange = onBudgetScreenDateChange, defaultCurrency = defaultCurrency)
         }
@@ -225,8 +273,6 @@ fun NavigationGraph(
                 viewModel = expenseViewModel
             )
         }
-
-        // --- 功能页面 ---
 
         composable(
             route = "${Routes.ADD_TRANSACTION}?expenseId={expenseId}&dateMillis={dateMillis}&type={type}",

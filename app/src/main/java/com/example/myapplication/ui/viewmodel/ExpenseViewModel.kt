@@ -13,6 +13,11 @@ import com.example.myapplication.data.PeriodicTransaction
 import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
+import com.example.myapplication.ui.navigation.MainCategory // [关键缺失]
+import com.example.myapplication.ui.navigation.expenseMainCategories // [关键缺失]
+import com.example.myapplication.ui.navigation.incomeMainCategories // [关键缺失]
+import com.example.myapplication.ui.screen.chart.ChartMode
+import com.example.myapplication.ui.screen.chart.TransactionType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -29,10 +35,7 @@ import java.util.Currency
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
-import com.example.myapplication.ui.navigation.MainCategory // [关键缺失]
-import com.example.myapplication.ui.navigation.expenseMainCategories // [关键缺失]
-import com.example.myapplication.ui.navigation.incomeMainCategories // [关键缺失]
-import kotlinx.coroutines.flow.map
+
 // 定义筛选类型枚举
 enum class ExpenseTypeFilter { ALL, EXPENSE, INCOME, TRANSFER }
 // 定义分类类型枚举
@@ -450,5 +453,46 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     fun deletePeriodic(transaction: PeriodicTransaction) {
         viewModelScope.launch(Dispatchers.IO) { repository.deletePeriodic(transaction) }
+    }
+
+    // ===========================
+    // 10. [新增] 图表页面 (ChartScreen) 专属状态
+    // ===========================
+    // 既然要持久化，就放在 ViewModel 里，横竖屏切换绝对不会丢
+
+    // 1. 图表模式 (默认月视图)
+    private val _chartMode = MutableStateFlow(ChartMode.MONTH)
+    val chartModeState = _chartMode.asStateFlow()
+
+    fun setChartMode(mode: ChartMode) {
+        _chartMode.value = mode
+    }
+
+    // 2. 交易类型 (默认支出)
+    private val _chartTransactionType = MutableStateFlow(TransactionType.EXPENSE)
+    val chartTransactionTypeState = _chartTransactionType.asStateFlow()
+
+    fun setChartTransactionType(type: TransactionType) {
+        _chartTransactionType.value = type
+    }
+
+    // 3. 当前选中的日期 (时间戳)
+    private val _chartDateMillis = MutableStateFlow(System.currentTimeMillis())
+    val chartDateMillisState = _chartDateMillis.asStateFlow()
+
+    fun setChartDate(millis: Long) {
+        _chartDateMillis.value = millis
+    }
+
+    // 4. 自定义日期范围 (Start, End) - Pair<Long, Long>?
+    private val _chartCustomDateRange = MutableStateFlow<Pair<Long, Long>?>(null)
+    val chartCustomDateRangeState = _chartCustomDateRange.asStateFlow()
+
+    fun setChartCustomDateRange(start: Long?, end: Long?) {
+        if (start != null && end != null) {
+            _chartCustomDateRange.value = start to end
+        } else {
+            _chartCustomDateRange.value = null
+        }
     }
 }

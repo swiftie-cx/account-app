@@ -63,4 +63,11 @@ object Routes {
     const val PERIODIC_BOOKKEEPING = "periodic_bookkeeping"
     const val ADD_PERIODIC_TRANSACTION = "add_periodic_transaction?id={id}"
     fun addPeriodicTransactionRoute(id: Long? = null) = "add_periodic_transaction?id=${id ?: -1L}"
+
+    // [新增] 大类图表详情页
+    const val CATEGORY_CHART_DETAIL = "category_chart_detail/{category}/{type}/{start}/{end}"
+
+    fun categoryChartDetailRoute(category: String, type: Int, start: Long, end: Long): String {
+        return "category_chart_detail/$category/$type/$start/$end"
+    }
 }
