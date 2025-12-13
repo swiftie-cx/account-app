@@ -157,4 +157,10 @@ object CategoryHelper {
             main.subCategories.any { sub -> sub.title == categoryName }
         }
     }
+
+    // [新增] 查找某个小类名称对应的图标
+    fun getIcon(categoryName: String): ImageVector {
+        val allSubCategories = (expenseMainCategories + incomeMainCategories).flatMap { it.subCategories }
+        return allSubCategories.find { it.title == categoryName }?.icon ?: Icons.Default.HelpOutline
+    }
 }
