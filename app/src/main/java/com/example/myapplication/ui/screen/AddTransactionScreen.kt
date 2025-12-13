@@ -62,6 +62,9 @@ fun AddTransactionScreen(
     dateMillis: Long? = null,
     initialTab: Int = 0
 ) {
+    val expenseMainCategories by viewModel.expenseMainCategoriesState.collectAsState()
+    val incomeMainCategories by viewModel.incomeMainCategoriesState.collectAsState()
+
     var selectedTab by remember { mutableIntStateOf(initialTab) }
     val tabs = listOf("支出", "收入", "转账")
 

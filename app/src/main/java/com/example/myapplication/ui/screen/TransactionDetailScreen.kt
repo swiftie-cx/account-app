@@ -8,18 +8,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.ExchangeRates
-import com.example.myapplication.data.Expense
-import com.example.myapplication.ui.navigation.expenseCategories
-import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -36,6 +35,21 @@ fun TransactionDetailScreen(
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val accountMap = remember(accounts) { accounts.associateBy { it.id } }
+
+    // [新增] 1. 获取实时分类数据
+    val expenseMainCategories by viewModel.expenseMainCategoriesState.collectAsState()
+    val incomeMainCategories by viewModel.incomeMainCategoriesState.collectAsState()
+
+    // [新增] 2. 构建样式查找表 (分类名 -> 图标, 颜色)
+    val categoryStyleMap = remember(expenseMainCategories, incomeMainCategories) {
+        val map = mutableMapOf<String, Pair<ImageVector, Color>>()
+        (expenseMainCategories + incomeMainCategories).forEach { main ->
+            main.subCategories.forEach { sub ->
+                map[sub.title] = sub.icon to main.color
+            }
+        }
+        map
+    }
 
     val currentExpense = remember(expenses, expenseId) {
         expenses.find { it.id == expenseId }
@@ -69,12 +83,9 @@ fun TransactionDetailScreen(
         if (transferOut != null && transferIn != null) {
             val accOut = accountMap[transferOut.accountId]
             val accIn = accountMap[transferIn.accountId]
-            if (accOut?.currency == accIn?.currency) {
-                val fee = abs(transferOut.amount) - abs(transferIn.amount)
-                if (fee > 0.01) fee else 0.0
-            } else {
-                0.0
-            }
+            // 简单计算：转出绝对值 - 转入绝对值
+            val fee = abs(transferOut.amount) - abs(transferIn.amount)
+            if (fee > 0.01) fee else 0.0
         } else {
             0.0
         }
@@ -96,14 +107,23 @@ fun TransactionDetailScreen(
         } else 0.0
     }
 
-    val categoryIconMap = remember {
-        (expenseCategories + incomeCategories).associate { it.title to it.icon }
-    }
+    // [修改] 3. 确定显示的图标和颜色
+    var displayIcon: ImageVector? = null
+    var displayColor: Color = MaterialTheme.colorScheme.primary
 
-    val icon = if (transferOut != null) {
-        Icons.AutoMirrored.Filled.CompareArrows
-    } else {
-        currentExpense?.let { categoryIconMap[it.category] }
+    if (transferOut != null) {
+        displayIcon = Icons.AutoMirrored.Filled.CompareArrows
+        displayColor = MaterialTheme.colorScheme.primary
+    } else if (currentExpense != null) {
+        val style = categoryStyleMap[currentExpense.category]
+        if (style != null) {
+            displayIcon = style.first
+            displayColor = style.second
+        } else {
+            // 如果没找到(极少见), 使用默认
+            displayIcon = Icons.Default.HelpOutline
+            displayColor = if (currentExpense.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
+        }
     }
 
     val dateFormat = remember { SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault()) }
@@ -168,18 +188,19 @@ fun TransactionDetailScreen(
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (icon != null) {
+                // [修改] 4. 使用动态获取的 Icon 和 Color 渲染
+                if (displayIcon != null) {
                     Box(
                         modifier = Modifier
                             .size(64.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                            .padding(16.dp),
+                            .background(displayColor.copy(alpha = 0.15f), CircleShape) // 浅色背景
+                            .padding(12.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = icon,
+                            imageVector = displayIcon!!,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = displayColor, // 深色图标
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -199,26 +220,24 @@ fun TransactionDetailScreen(
 
                         DetailRow(label = "类型", value = "转账")
 
-                        // 转出详情 (统一风格)
+                        // 转出详情
                         DetailRow(
                             label = "转出",
                             value = "${accountOut?.currency ?: ""} ${String.format("%.2f", abs(transferOut.amount))}",
-                            valueColor = Color(0xFFE53935) // 红色
+                            valueColor = Color(0xFFE53935)
                         )
-                        // 余额小字
                         DetailRow(
                             label = "",
                             value = "${accountOut?.name} (余额: ${String.format("%.2f", outAccountBalance)})",
                             isSubText = true
                         )
 
-                        // 转入详情 (统一风格)
+                        // 转入详情
                         DetailRow(
                             label = "转入",
                             value = "${accountIn?.currency ?: ""} ${String.format("%.2f", abs(transferIn.amount))}",
-                            valueColor = Color(0xFF4CAF50) // 绿色
+                            valueColor = Color(0xFF4CAF50)
                         )
-                        // 余额小字
                         DetailRow(
                             label = "",
                             value = "${accountIn?.name} (余额: ${String.format("%.2f", inAccountBalance)})",
@@ -278,9 +297,8 @@ private fun DetailRow(
     label: String,
     value: String,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
-    isSubText: Boolean = false // 新增参数，用于显示从属信息（如余额）
+    isSubText: Boolean = false
 ) {
-    // 如果是 SubText，垂直间距缩小，标签不占位，内容颜色变淡
     val verticalPadding = if (isSubText) 0.dp else 12.dp
     val labelText = if (isSubText) "" else label
     val finalValueColor = if (isSubText) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f) else valueColor
@@ -292,7 +310,6 @@ private fun DetailRow(
             .padding(vertical = verticalPadding),
         verticalAlignment = Alignment.Top
     ) {
-        // 标签列固定宽度，保持对齐
         Text(
             text = labelText,
             style = MaterialTheme.typography.bodyLarge,

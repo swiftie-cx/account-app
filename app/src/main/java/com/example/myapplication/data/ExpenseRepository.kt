@@ -1,6 +1,16 @@
 package com.example.myapplication.data
 
 import android.content.Context
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import com.example.myapplication.ui.navigation.Category
+import com.example.myapplication.ui.navigation.IconMapper
+import com.example.myapplication.ui.navigation.MainCategory
+import com.example.myapplication.ui.navigation.expenseCategories
+import com.example.myapplication.ui.navigation.expenseMainCategories
+import com.example.myapplication.ui.navigation.incomeCategories
+import com.example.myapplication.ui.navigation.incomeMainCategories
+import com.example.myapplication.ui.viewmodel.CategoryType
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
@@ -10,6 +20,13 @@ import kotlinx.coroutines.flow.combine
 import java.util.Calendar
 import java.util.Date
 import kotlin.math.abs
+
+// 用于序列化的简单数据类 (因为 ImageVector 不能直接序列化)
+data class CategoryDto(val title: String, val iconName: String)
+
+// 用于序列化嵌套结构的 DTO
+data class SubCategoryDto(val title: String, val iconName: String)
+data class MainCategoryDto(val title: String, val iconName: String, val colorInt: Int, val subs: List<SubCategoryDto>)
 
 class ExpenseRepository(
     private val expenseDao: ExpenseDao,
@@ -27,6 +44,93 @@ class ExpenseRepository(
 
     fun setFirstLaunchCompleted() {
         prefs.edit().putBoolean("is_first_launch", false).apply()
+    }
+
+    // ===========================
+    //  MainCategory Persistence (大类结构持久化)
+    // ===========================
+
+    fun saveMainCategories(categories: List<MainCategory>, type: CategoryType) {
+        // 1. 将 UI 的 MainCategory 对象转换为可序列化的 DTO (包含子类)
+        val dtoList = categories.map { main ->
+            MainCategoryDto(
+                title = main.title,
+                iconName = IconMapper.getIconName(main.icon),
+                colorInt = main.color.toArgb(),
+                subs = main.subCategories.map { sub ->
+                    SubCategoryDto(sub.title, IconMapper.getIconName(sub.icon))
+                }
+            )
+        }
+        // 2. 转 JSON
+        val json = gson.toJson(dtoList)
+        // 3. 存入 Prefs
+        val key = if (type == CategoryType.EXPENSE) "main_cats_expense" else "main_cats_income"
+        prefs.edit().putString(key, json).apply()
+    }
+
+    fun getMainCategories(type: CategoryType): List<MainCategory> {
+        val key = if (type == CategoryType.EXPENSE) "main_cats_expense" else "main_cats_income"
+        val json = prefs.getString(key, null)
+
+        return if (json != null) {
+            try {
+                // 1. 读取 JSON
+                val itemType = object : TypeToken<List<MainCategoryDto>>() {}.type
+                val dtoList: List<MainCategoryDto> = gson.fromJson(json, itemType) ?: emptyList()
+
+                // 2. 转回 UI 对象
+                dtoList.map { dto ->
+                    MainCategory(
+                        title = dto.title,
+                        icon = IconMapper.getIcon(dto.iconName),
+                        color = Color(dto.colorInt),
+                        subCategories = dto.subs.map { subDto ->
+                            Category(subDto.title, IconMapper.getIcon(subDto.iconName))
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // 出错回退到默认
+                if (type == CategoryType.EXPENSE) expenseMainCategories else incomeMainCategories
+            }
+        } else {
+            // 3. 第一次运行，返回默认静态列表
+            if (type == CategoryType.EXPENSE) expenseMainCategories else incomeMainCategories
+        }
+    }
+
+    // ===========================
+    //  Legacy Category Persistence (旧版/扁平化 分类持久化 - 保留以兼容旧逻辑)
+    // ===========================
+
+    fun saveCategories(categories: List<Category>, type: CategoryType) {
+        val dtoList = categories.map {
+            CategoryDto(it.title, IconMapper.getIconName(it.icon))
+        }
+        val json = gson.toJson(dtoList)
+        val key = if (type == CategoryType.EXPENSE) "cats_expense" else "cats_income"
+        prefs.edit().putString(key, json).apply()
+    }
+
+    fun getCategories(type: CategoryType): List<Category> {
+        val key = if (type == CategoryType.EXPENSE) "cats_expense" else "cats_income"
+        val json = prefs.getString(key, null)
+
+        return if (json != null) {
+            try {
+                val itemType = object : TypeToken<List<CategoryDto>>() {}.type
+                val dtoList: List<CategoryDto> = gson.fromJson(json, itemType) ?: emptyList()
+                dtoList.map {
+                    Category(it.title, IconMapper.getIcon(it.iconName))
+                }
+            } catch (e: Exception) {
+                if (type == CategoryType.EXPENSE) expenseCategories else incomeCategories
+            }
+        } else {
+            if (type == CategoryType.EXPENSE) expenseCategories else incomeCategories
+        }
     }
 
     // --- 用户认证逻辑 (模拟) ---

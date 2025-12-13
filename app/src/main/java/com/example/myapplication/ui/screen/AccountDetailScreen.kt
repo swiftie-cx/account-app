@@ -16,21 +16,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector // 确保导入
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.Expense
 import com.example.myapplication.ui.navigation.IconMapper
 import com.example.myapplication.ui.navigation.Routes
-import com.example.myapplication.ui.navigation.expenseCategories
-import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.example.myapplication.ui.navigation.CategoryHelper
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountDetailScreen(
@@ -41,6 +39,21 @@ fun AccountDetailScreen(
 ) {
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+
+    // [新增] 1. 获取实时分类数据
+    val expenseMainCategories by viewModel.expenseMainCategoriesState.collectAsState()
+    val incomeMainCategories by viewModel.incomeMainCategoriesState.collectAsState()
+
+    // [新增] 2. 构建样式查找表
+    val categoryStyleMap = remember(expenseMainCategories, incomeMainCategories) {
+        val map = mutableMapOf<String, Pair<ImageVector, Color>>()
+        (expenseMainCategories + incomeMainCategories).forEach { main ->
+            main.subCategories.forEach { sub ->
+                map[sub.title] = sub.icon to main.color
+            }
+        }
+        map
+    }
 
     // 获取当前账户
     val account = remember(allAccounts, accountId) {
@@ -62,11 +75,6 @@ fun AccountDetailScreen(
         } else {
             0.0
         }
-    }
-
-    // 准备图标映射
-    val categoryIconMap = remember {
-        (expenseCategories + incomeCategories).associate { it.title to it.icon }
     }
 
     Scaffold(
@@ -132,9 +140,16 @@ fun AccountDetailScreen(
                         contentPadding = PaddingValues(bottom = 20.dp)
                     ) {
                         items(accountTransactions) { expense ->
+
+                            // [修改] 3. 动态获取样式
+                            val stylePair = categoryStyleMap[expense.category]
+                            val icon = stylePair?.first
+                            val color = stylePair?.second ?: if(expense.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
+
                             AccountTransactionItem(
                                 expense = expense,
-                                icon = categoryIconMap[expense.category],
+                                icon = icon,
+                                categoryColor = color, // 传入颜色
                                 onClick = {
                                     navController.navigate(Routes.transactionDetailRoute(expense.id))
                                 }
@@ -198,24 +213,23 @@ fun AccountHeaderCard(account: Account, currentBalance: Double) {
     }
 }
 
+// [修改] 组件升级：接收 categoryColor
 @Composable
 fun AccountTransactionItem(
     expense: Expense,
-    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    icon: ImageVector?,
+    categoryColor: Color, // 新增参数
     onClick: () -> Unit
 ) {
     val isExpense = expense.amount < 0
+    // 金额颜色保持 红/绿
     val amountColor = if (isExpense) Color(0xFFE53935) else Color(0xFF4CAF50)
-    val dateFormat = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) }
 
-    // [修改开始] --- 获取颜色 ---
-    val typeInt = if (isExpense) 0 else 1
-    val categoryThemeColor = CategoryHelper.getCategoryColor(expense.category, typeInt)
+    // [修改] 使用传入的颜色
+    val iconBgColor = categoryColor.copy(alpha = 0.15f)
+    val iconTint = categoryColor
 
-    // 背景色和图标色
-    val iconBgColor = categoryThemeColor.copy(alpha = 0.15f)
-    val iconTint = categoryThemeColor
-    // [修改结束] ---------------
+    val dateFormat = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) } // 已应用 i18n 修复
 
     Column(
         modifier = Modifier
@@ -233,14 +247,14 @@ fun AccountTransactionItem(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    .background(iconBgColor), // 应用背景色
                 contentAlignment = Alignment.Center
             ) {
                 if (icon != null) {
                     Icon(
                         imageVector = icon,
                         contentDescription = expense.category,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = iconTint, // 应用图标色
                         modifier = Modifier.size(20.dp)
                     )
                 } else {
@@ -248,7 +262,7 @@ fun AccountTransactionItem(
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = iconTint,
                         modifier = Modifier.size(20.dp)
                     )
                 }

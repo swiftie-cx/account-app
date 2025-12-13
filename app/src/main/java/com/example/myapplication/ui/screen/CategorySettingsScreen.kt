@@ -2,6 +2,7 @@ package com.example.myapplication.ui.screen
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
@@ -19,10 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.myapplication.ui.navigation.Category
+import com.example.myapplication.ui.navigation.MainCategory
 import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.viewmodel.CategoryType
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
@@ -30,26 +34,30 @@ import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
+import kotlin.collections.toMutableList
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("支出", "收入")
+    val currentType = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
 
-    val expenseCategories by viewModel.expenseCategoriesState.collectAsState()
-    val incomeCategories by viewModel.incomeCategoriesState.collectAsState()
+    // 获取大类数据源
+    val expenseMainList by viewModel.expenseMainCategoriesState.collectAsState()
+    val incomeMainList by viewModel.incomeMainCategoriesState.collectAsState()
+    val sourceList = if (selectedTab == 0) expenseMainList else incomeMainList
 
-    val source = if (selectedTab == 0) expenseCategories else incomeCategories
-    var items by remember(source) { mutableStateOf(source.toMutableList()) }
+    // 大类排序用的本地状态
+    var mainItems by remember(sourceList) { mutableStateOf(sourceList) }
 
-    // 监听数据源变化 (例如删除后)
-    LaunchedEffect(source) {
-        items = source.toMutableList()
+    // 监听数据源变化
+    LaunchedEffect(sourceList) {
+        mainItems = sourceList
     }
 
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var categoryToDelete by remember { mutableStateOf<Pair<Category, CategoryType>?>(null) }
+    // 控制小类编辑弹窗
+    var editingMainCategory by remember { mutableStateOf<MainCategory?>(null) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -61,9 +69,7 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                )
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
             )
         },
         floatingActionButton = {
@@ -78,7 +84,7 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            // 美化后的 TabRow
+            // Tab 栏
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -89,29 +95,29 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
                         color = MaterialTheme.colorScheme.primary
                     )
                 },
-                divider = {} // 移除分割线
+                divider = {}
             ) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = {
-                            Text(title, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal)
-                        },
+                        text = { Text(title, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) },
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            val type = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
+            // 大类拖拽列表
             val reorderState = rememberReorderableLazyListState(
                 onMove = { from, to ->
-                    items = items.toMutableList().apply {
-                        add(to.index, removeAt(from.index))
-                    }
+                    // [修改] 使用更安全的写法
+                    val list = mainItems.toMutableList()
+                    val item = list.removeAt(from.index)
+                    list.add(to.index, item)
+                    mainItems = list
                 },
                 onDragEnd = { _, _ ->
-                    viewModel.reorderCategories(items, type)
+                    viewModel.reorderMainCategories(mainItems, currentType)
                 }
             )
 
@@ -124,29 +130,21 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
                 contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(items, key = { it.title }) { category ->
-                    ReorderableItem(reorderState, key = category.title) { isDragging ->
+                items(mainItems, key = { it.title }) { mainCategory ->
+                    ReorderableItem(reorderState, key = mainCategory.title) { isDragging ->
                         val elevation = animateDpAsState(if (isDragging) 8.dp else 0.dp)
 
-                        CategorySettingCard(
-                            category = category,
+                        MainCategorySettingCard(
+                            mainCategory = mainCategory,
                             elevation = elevation.value,
-                            onDelete = {
-                                categoryToDelete = category to type
-                                showDeleteDialog = true
-                            },
-                            // 拖拽把手 UI
+                            onClick = { editingMainCategory = mainCategory },
                             handle = { modifier ->
-                                IconButton(
-                                    onClick = {},
+                                Icon(
+                                    Icons.Default.DragHandle,
+                                    contentDescription = "排序",
+                                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                     modifier = modifier.detectReorder(reorderState)
-                                ) {
-                                    Icon(
-                                        Icons.Default.DragHandle,
-                                        contentDescription = "排序",
-                                        tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                                    )
-                                }
+                                )
                             }
                         )
                     }
@@ -155,34 +153,27 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
         }
     }
 
-    if (showDeleteDialog && categoryToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("确认删除") },
-            text = { Text("您确定要删除 \"${categoryToDelete!!.first.title}\" 吗？") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteCategory(categoryToDelete!!.first, categoryToDelete!!.second)
-                        showDeleteDialog = false
-                    }
-                ) { Text("确定", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("取消") }
-            }
+    // --- 小类管理弹窗 ---
+    if (editingMainCategory != null) {
+        SubCategorySheet(
+            mainCategory = editingMainCategory!!,
+            type = currentType,
+            viewModel = viewModel,
+            onDismiss = { editingMainCategory = null }
         )
     }
 }
 
+// --- 组件：大类卡片 ---
 @Composable
-fun CategorySettingCard(
-    category: Category,
+fun MainCategorySettingCard(
+    mainCategory: MainCategory,
     elevation: androidx.compose.ui.unit.Dp,
-    onDelete: () -> Unit,
+    onClick: () -> Unit,
     handle: @Composable (Modifier) -> Unit
 ) {
     Card(
+        onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
@@ -191,41 +182,161 @@ fun CategorySettingCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 删除按钮
-            IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
-            }
-
-            // 图标容器
+            // 大类图标
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(mainCategory.color.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    category.icon,
+                    mainCategory.icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = mainCategory.color
                 )
             }
 
-            // 类别名称
-            Text(
-                text = category.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
+            Spacer(Modifier.width(16.dp))
+
+            // 大类名称 + 小类数量提示
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = mainCategory.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${mainCategory.subCategories.size} 个子分类",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             // 拖拽把手
             handle(Modifier)
+
+            Spacer(Modifier.width(16.dp))
+
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                null,
+                tint = MaterialTheme.colorScheme.outlineVariant
+            )
+        }
+    }
+}
+
+// --- 组件：小类管理底部面板 ---
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SubCategorySheet(
+    mainCategory: MainCategory,
+    type: CategoryType,
+    viewModel: ExpenseViewModel,
+    onDismiss: () -> Unit
+) {
+    // 小类排序用的本地状态
+    var subItems by remember(mainCategory) { mutableStateOf(mainCategory.subCategories) }
+
+    // 监听外部数据变化(比如删除了一个子类)
+    LaunchedEffect(mainCategory) {
+        subItems = mainCategory.subCategories
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(bottom = 32.dp)
+                .fillMaxHeight(0.6f) // 限制最大高度
+        ) {
+            // 标题栏
+            Text(
+                text = "${mainCategory.title} - 子分类管理",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = mainCategory.color,
+                modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally)
+            )
+
+            Text(
+                text = "长按右侧图标拖拽排序",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(bottom = 8.dp).align(Alignment.CenterHorizontally)
+            )
+
+            // 小类拖拽列表
+            val subReorderState = rememberReorderableLazyListState(
+                onMove = { from, to ->
+                    // [修改] 使用更安全的写法
+                    val list = subItems.toMutableList()
+                    val item = list.removeAt(from.index)
+                    list.add(to.index, item)
+                    subItems = list
+                },
+                onDragEnd = { _, _ ->
+                    viewModel.reorderSubCategories(mainCategory, subItems, type)
+                }
+            )
+
+            LazyColumn(
+                state = subReorderState.listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .reorderable(subReorderState),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(subItems, key = { it.title }) { sub ->
+                    ReorderableItem(subReorderState, key = sub.title) { isDragging ->
+                        val bgColor = if (isDragging) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent
+
+                        ListItem(
+                            modifier = Modifier.background(bgColor),
+                            leadingContent = {
+                                Icon(
+                                    sub.icon,
+                                    null,
+                                    tint = mainCategory.color,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            },
+                            headlineContent = { Text(sub.title) },
+                            trailingContent = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // 删除按钮
+                                    IconButton(
+                                        onClick = { viewModel.deleteSubCategory(mainCategory, sub, type) }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "删除",
+                                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    // 拖拽把手
+                                    Icon(
+                                        Icons.Default.DragHandle,
+                                        contentDescription = "排序",
+                                        tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                        modifier = Modifier.detectReorder(subReorderState)
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -29,7 +29,10 @@ import java.util.Currency
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
-
+import com.example.myapplication.ui.navigation.MainCategory // [关键缺失]
+import com.example.myapplication.ui.navigation.expenseMainCategories // [关键缺失]
+import com.example.myapplication.ui.navigation.incomeMainCategories // [关键缺失]
+import kotlinx.coroutines.flow.map
 // 定义筛选类型枚举
 enum class ExpenseTypeFilter { ALL, EXPENSE, INCOME, TRANSFER }
 // 定义分类类型枚举
@@ -167,39 +170,91 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     }
 
     // ===========================
-    // 4. 分类管理 (Category)
+    // 4. 分类管理 (Category) - [已升级为大类结构 & 支持持久化]
     // ===========================
 
-    private val _expenseCategories = MutableStateFlow(expenseCategories)
-    val expenseCategoriesState: StateFlow<List<Category>> = _expenseCategories.asStateFlow()
+    // 【关键修改】初始化时尝试从 Repository 读取 (如果本地没有存档，Repository 会自动返回默认列表)
+    private val _expenseMainCategories = MutableStateFlow(repository.getMainCategories(CategoryType.EXPENSE))
+    val expenseMainCategoriesState: StateFlow<List<MainCategory>> = _expenseMainCategories.asStateFlow()
 
-    private val _incomeCategories = MutableStateFlow(incomeCategories)
-    val incomeCategoriesState: StateFlow<List<Category>> = _incomeCategories.asStateFlow()
+    private val _incomeMainCategories = MutableStateFlow(repository.getMainCategories(CategoryType.INCOME))
+    val incomeMainCategoriesState: StateFlow<List<MainCategory>> = _incomeMainCategories.asStateFlow()
 
-    fun addCategory(name: String, icon: ImageVector, type: CategoryType) {
-        val newCategory = Category(name, icon)
-        if (type == CategoryType.EXPENSE) {
-            _expenseCategories.value = _expenseCategories.value + newCategory
-        } else {
-            _incomeCategories.value = _incomeCategories.value + newCategory
+    // 兼容旧的扁平化 State，供其他未修改的页面读取 (自动从 MainCategory 拍平)
+    val expenseCategoriesState: StateFlow<List<Category>> = _expenseMainCategories.map { list ->
+        list.flatMap { it.subCategories }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val incomeCategoriesState: StateFlow<List<Category>> = _incomeMainCategories.map { list ->
+        list.flatMap { it.subCategories }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // --- 操作逻辑 ---
+
+    // 1. 添加小类
+    fun addSubCategory(mainCategory: MainCategory, subCategory: Category, type: CategoryType) {
+        updateMainCategoryList(type) { list ->
+            list.map { main ->
+                if (main.title == mainCategory.title) {
+                    // 复制大类，并向其子类列表中添加新小类
+                    main.copy(subCategories = main.subCategories + subCategory)
+                } else {
+                    main
+                }
+            }
         }
     }
 
-    fun deleteCategory(category: Category, type: CategoryType) {
-        if (type == CategoryType.EXPENSE) {
-            _expenseCategories.value = _expenseCategories.value.filter { it.title != category.title }
-        } else {
-            _incomeCategories.value = _incomeCategories.value.filter { it.title != category.title }
+    // 2. 删除小类
+    fun deleteSubCategory(mainCategory: MainCategory, subCategory: Category, type: CategoryType) {
+        updateMainCategoryList(type) { list ->
+            list.map { main ->
+                if (main.title == mainCategory.title) {
+                    main.copy(subCategories = main.subCategories.filter { it.title != subCategory.title })
+                } else {
+                    main
+                }
+            }
         }
     }
 
-    fun reorderCategories(categories: List<Category>, type: CategoryType) {
-        if (type == CategoryType.EXPENSE) {
-            _expenseCategories.value = categories
-        } else {
-            _incomeCategories.value = categories
+    // 3. 排序大类 (在主界面拖拽大类)
+    fun reorderMainCategories(newOrder: List<MainCategory>, type: CategoryType) {
+        updateMainCategoryList(type) { newOrder }
+    }
+
+    // 4. 排序小类 (在弹窗里拖拽小类)
+    fun reorderSubCategories(mainCategory: MainCategory, newSubOrder: List<Category>, type: CategoryType) {
+        updateMainCategoryList(type) { list ->
+            list.map { main ->
+                if (main.title == mainCategory.title) {
+                    main.copy(subCategories = newSubOrder)
+                } else {
+                    main
+                }
+            }
         }
     }
+
+    // 【关键辅助函数】统一更新逻辑并保存到 Repository
+    private fun updateMainCategoryList(type: CategoryType, updateAction: (List<MainCategory>) -> List<MainCategory>) {
+        if (type == CategoryType.EXPENSE) {
+            val newList = updateAction(_expenseMainCategories.value)
+            _expenseMainCategories.value = newList
+            // 保存到本地
+            repository.saveMainCategories(newList, type)
+        } else {
+            val newList = updateAction(_incomeMainCategories.value)
+            _incomeMainCategories.value = newList
+            // 保存到本地
+            repository.saveMainCategories(newList, type)
+        }
+    }
+
+    // (旧方法兼容：这些方法已废弃，留空即可)
+    fun addCategory(name: String, icon: ImageVector, type: CategoryType) {}
+    fun deleteCategory(category: Category, type: CategoryType) {}
+    fun reorderCategories(categories: List<Category>, type: CategoryType) {}
 
     // ===========================
     // 5. 账单操作 (CRUD)
