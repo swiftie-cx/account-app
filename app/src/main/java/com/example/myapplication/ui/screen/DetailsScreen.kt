@@ -39,7 +39,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
-
+import com.example.myapplication.ui.navigation.CategoryHelper
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun DetailsScreen(
@@ -493,20 +493,20 @@ private fun ExpenseItem(
     onClick: () -> Unit
 ) {
     val isExpense = expense.amount < 0
-    val incomeColor = Color(0xFF4CAF50)
-    val expenseColor = Color(0xFFE53935)
-    val amountColor = if (isExpense) expenseColor else incomeColor
+    // 金额文字依然保持 红/绿，符合财务习惯
+    val amountColor = if (isExpense) Color(0xFFE53935) else Color(0xFF4CAF50)
 
-    val iconContainerColor = if (isExpense) {
-        expenseColor.copy(alpha = 0.1f)
-    } else {
-        incomeColor.copy(alpha = 0.1f)
-    }
+    // [修改开始] --- 动态获取大类颜色用于图标 ---
+    val typeInt = if (isExpense) 0 else 1
+    // 使用 Helper 获取颜色，如果找不到则回退到默认
+    val categoryThemeColor = CategoryHelper.getCategoryColor(expense.category, typeInt)
 
-    val iconTintColor = if (isExpense) expenseColor else incomeColor
+    // 图标背景使用大类颜色的浅色版，图标使用大类颜色
+    val iconContainerColor = categoryThemeColor.copy(alpha = 0.15f)
+    val iconTintColor = categoryThemeColor
+    // [修改结束] -------------------------------
 
-    val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.CHINA) }
-
+    val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.getDefault()) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -525,7 +525,7 @@ private fun ExpenseItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = expense.category,
-                    tint = iconTintColor,
+                    tint = iconTintColor, // 应用颜色
                     modifier = Modifier.size(22.dp)
                 )
             }

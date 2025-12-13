@@ -42,7 +42,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
-
+import com.example.myapplication.ui.navigation.CategoryHelper
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
@@ -652,19 +652,17 @@ private fun ExpenseItem(
     onClick: () -> Unit
 ) {
     val isExpense = expense.amount < 0
-    val incomeColor = Color(0xFF4CAF50) // 绿色
-    val expenseColor = Color(0xFFE53935) // 红色
-    val amountColor = if (isExpense) expenseColor else incomeColor
+    val amountColor = if (isExpense) Color(0xFFE53935) else Color(0xFF4CAF50)
 
-    val iconContainerColor = if (isExpense) {
-        expenseColor.copy(alpha = 0.1f)
-    } else {
-        incomeColor.copy(alpha = 0.1f)
-    }
+    // [修改开始] --- 使用 CategoryHelper 获取大类颜色 ---
+    val typeInt = if (isExpense) 0 else 1
+    val categoryThemeColor = CategoryHelper.getCategoryColor(expense.category, typeInt)
 
-    val iconTintColor = if (isExpense) expenseColor else incomeColor
+    val iconContainerColor = categoryThemeColor.copy(alpha = 0.15f)
+    val iconTintColor = categoryThemeColor
+    // [修改结束] -------------------------------------
 
-    val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.CHINA) }
+    val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.getDefault()) }
 
     Row(
         modifier = Modifier

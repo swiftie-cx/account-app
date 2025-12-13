@@ -30,7 +30,7 @@ import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
-
+import com.example.myapplication.ui.navigation.CategoryHelper
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountDetailScreen(
@@ -206,7 +206,16 @@ fun AccountTransactionItem(
 ) {
     val isExpense = expense.amount < 0
     val amountColor = if (isExpense) Color(0xFFE53935) else Color(0xFF4CAF50)
-    val dateFormat = remember { SimpleDateFormat("MM-dd HH:mm", Locale.CHINA) }
+    val dateFormat = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) }
+
+    // [修改开始] --- 获取颜色 ---
+    val typeInt = if (isExpense) 0 else 1
+    val categoryThemeColor = CategoryHelper.getCategoryColor(expense.category, typeInt)
+
+    // 背景色和图标色
+    val iconBgColor = categoryThemeColor.copy(alpha = 0.15f)
+    val iconTint = categoryThemeColor
+    // [修改结束] ---------------
 
     Column(
         modifier = Modifier

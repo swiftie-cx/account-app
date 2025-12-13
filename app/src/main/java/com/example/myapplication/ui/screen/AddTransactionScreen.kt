@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -42,7 +43,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
-
+import com.example.myapplication.ui.navigation.expenseMainCategories
+import com.example.myapplication.ui.navigation.incomeMainCategories
+import com.example.myapplication.ui.navigation.MainCategory
+import com.example.myapplication.ui.navigation.SubCategory
 // 转账计算模式
 enum class TransferMode {
     SOURCE_FIXED, // 转出固定 (含手续费) -> 输入转出，算转入
@@ -99,6 +103,10 @@ fun AddTransactionScreen(
     // 手动模式 (断开汇率自动计算)
     var isManualMode by remember { mutableStateOf(false) }
 
+    // [新增] 大类相关状态
+    var selectedMainCategory by remember { mutableStateOf<MainCategory?>(null) }
+    var showSubCategorySheet by remember { mutableStateOf(false) }
+
     // 辅助判断是否同币种
     val isSameCurrency = remember(fromAccount, toAccount) {
         val from = fromAccount
@@ -145,11 +153,24 @@ fun AddTransactionScreen(
     }
 
     // 3. Tab 切换
-    LaunchedEffect(selectedTab) {
+    LaunchedEffect(selectedTab, expenseId) {
         if (expenseId == null) {
-            val currentList = if (selectedTab == 0) expenseCategories else incomeCategories
-            if (selectedCategory == null || selectedCategory !in currentList) {
-                selectedCategory = currentList.firstOrNull()
+            // 获取当前 Tab 对应的大类列表
+            val mainList = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
+
+            // 默认选中第一个大类
+            if (selectedMainCategory == null || selectedMainCategory !in mainList) {
+                selectedMainCategory = mainList.firstOrNull()
+            }
+
+            // 默认选中该大类的第一个小类
+            if (selectedMainCategory != null) {
+                // 只有当当前选中的小类不在当前Tab列表里时，才重置
+                // 这样可以避免切换Tab时重置用户已选的有效分类（虽然跨Tab通常不保留）
+                val allSubInTab = mainList.flatMap { it.subCategories }
+                if (selectedCategory == null || selectedCategory !in allSubInTab) {
+                    selectedCategory = selectedMainCategory!!.subCategories.firstOrNull()
+                }
             }
             if (amountStr == "0") amountStr = "0"
             if (fromAmountStr == "0") fromAmountStr = "0"
@@ -163,6 +184,19 @@ fun AddTransactionScreen(
             } else {
                 focusedField = "amount"
                 isInputOverwriteMode = false
+            }
+        }
+    }
+
+    // [新增] 编辑模式下的回填逻辑 (反查大类)
+    LaunchedEffect(expenseId, selectedCategory) {
+        if (expenseId != null && selectedCategory != null) {
+            val mainList = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
+            val foundMain = mainList.find { main ->
+                main.subCategories.any { sub -> sub.title == selectedCategory!!.title }
+            }
+            if (foundMain != null) {
+                selectedMainCategory = foundMain
             }
         }
     }
@@ -322,6 +356,43 @@ fun AddTransactionScreen(
         )
     }
 
+    // [新增] 小类选择弹窗
+    if (showSubCategorySheet && selectedMainCategory != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showSubCategorySheet = false },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.padding(bottom = 32.dp)) {
+                Text(
+                    text = selectedMainCategory!!.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = selectedMainCategory!!.color,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally)
+                )
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(5), // 一行5个，与原风格保持一致
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(selectedMainCategory!!.subCategories) { sub ->
+                        SubCategoryItem(
+                            subCategory = sub,
+                            mainColor = selectedMainCategory!!.color,
+                            isSelected = selectedCategory?.title == sub.title,
+                            onClick = {
+                                selectedCategory = sub
+                                showSubCategorySheet = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -342,13 +413,37 @@ fun AddTransactionScreen(
             when (selectedTab) {
                 0, 1 -> { // 支出/收入
                     Column(modifier = Modifier.fillMaxSize()) {
-                        NewAmountDisplay(selectedCategory, amountStr)
-                        CategoryGrid(
-                            categories = if (selectedTab == 0) expenseCategories else incomeCategories,
-                            selectedCategory = selectedCategory,
-                            onCategoryClick = { selectedCategory = it },
-                            modifier = Modifier.weight(1f)
+                        // [修改] 顶部金额卡片：传入大类颜色
+                        val displayColor = selectedMainCategory?.color ?: MaterialTheme.colorScheme.primary
+                        NewAmountDisplay(
+                            category = selectedCategory,
+                            amount = amountStr,
+                            backgroundColor = displayColor // 需要修改 NewAmountDisplay 接受此参数
                         )
+
+                        // [修改] 大类选择网格
+                        val currentMainList = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
+
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4), // 大类一行4个比较合适
+                            modifier = Modifier.weight(1f).padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(currentMainList) { mainCat ->
+                                MainCategoryItem(
+                                    mainCategory = mainCat,
+                                    // 只要当前选中的小类属于这个大类，这个大类就是“选中状态”
+                                    isSelected = selectedMainCategory == mainCat,
+                                    onClick = {
+                                        selectedMainCategory = mainCat
+                                        // 选中大类时，同时默认选中该大类的第一个小类 (可选体验)
+                                        // selectedCategory = mainCat.subCategories.firstOrNull()
+                                        showSubCategorySheet = true
+                                    }
+                                )
+                            }
+                        }
                         KeyboardActionToolbar(
                             button1Icon = if (selectedAccount != null) IconMapper.getIcon(selectedAccount!!.iconName) else Icons.Default.CalendarToday,
                             button1Text = selectedAccount?.name ?: "选择账户",
@@ -741,27 +836,59 @@ fun TransferAccountCard(
 }
 
 @Composable
-fun NewAmountDisplay(category: Category?, amount: String) {
-    val cardColor = MaterialTheme.colorScheme.primary
-    val contentColor = MaterialTheme.colorScheme.onPrimary
+fun NewAmountDisplay(
+    category: Category?,
+    amount: String,
+    backgroundColor: Color = MaterialTheme.colorScheme.primary // [新增参数]
+) {
+    // 使用传入的 backgroundColor，而不是写死的 primary
+    val contentColor = Color.White // 假定大类颜色都较深，文字用白色。如果颜色太浅可能需要判断亮度。
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(16.dp).height(100.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
+        shape = RoundedCornerShape(20.dp), // 圆角稍微加大一点
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (category != null) {
-                Icon(imageVector = category.icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(32.dp))
+                // 图标背景加一点半透明白色，增加层次感
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = category.icon,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(16.dp))
-                Text(text = category.title, style = MaterialTheme.typography.headlineSmall, color = contentColor, fontWeight = FontWeight.Bold)
+                Text(
+                    text = category.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = contentColor,
+                    fontWeight = FontWeight.Bold
+                )
             } else {
                 Text(text = "选择分类", style = MaterialTheme.typography.titleMedium, color = contentColor.copy(alpha = 0.8f))
             }
             Spacer(modifier = Modifier.weight(1f))
-            Text(text = amount, style = MaterialTheme.typography.displaySmall, color = contentColor, fontWeight = FontWeight.Bold)
+            // 自动调整字体大小防止溢出 (简单处理)
+            val textStyle = if(amount.length > 8) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall
+            Text(
+                text = amount,
+                style = textStyle,
+                color = contentColor,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -848,4 +975,79 @@ fun evaluateExpression(expression: String): Double {
         if (operator == "+") result += nextOperand else if (operator == "-") result -= nextOperand
     }
     return result
+}
+
+@Composable
+fun MainCategoryItem(mainCategory: MainCategory, isSelected: Boolean, onClick: () -> Unit) {
+    // 选中状态：颜色鲜艳；未选中：灰色
+    val bgColor = if (isSelected) mainCategory.color.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    val contentColor = if (isSelected) mainCategory.color else MaterialTheme.colorScheme.onSurfaceVariant
+    val border = if (isSelected) BorderStroke(1.dp, mainCategory.color.copy(alpha = 0.5f)) else null
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .background(bgColor)
+            .then(if (border != null) Modifier.padding(1.dp) else Modifier) // 防止边框占位跳动
+            .padding(vertical = 12.dp, horizontal = 4.dp)
+    ) {
+        Icon(
+            imageVector = mainCategory.icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(32.dp)
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = mainCategory.title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = contentColor,
+            fontWeight = if(isSelected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+fun SubCategoryItem(
+    subCategory: SubCategory,
+    mainColor: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    // 小类选中样式：实心背景色
+    val backgroundColor = if (isSelected) mainColor else Color.Transparent
+    val contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp) // 小类图标稍微大一点方便点击
+                .clip(CircleShape)
+                .background(backgroundColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = subCategory.icon,
+                contentDescription = subCategory.title,
+                tint = if(isSelected) contentColor else mainColor, // 未选中时图标用大类颜色
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = subCategory.title,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if(isSelected) mainColor else Color.Unspecified
+        )
+    }
 }
