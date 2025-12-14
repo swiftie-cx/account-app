@@ -1,22 +1,14 @@
 package com.example.myapplication.ui.screen
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Note
-import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.SwapVert
@@ -26,10 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.myapplication.data.Account
 import com.example.myapplication.data.ExchangeRates
@@ -39,14 +29,13 @@ import com.example.myapplication.ui.navigation.IconMapper
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 import com.example.myapplication.ui.navigation.expenseMainCategories
 import com.example.myapplication.ui.navigation.incomeMainCategories
 import com.example.myapplication.ui.navigation.MainCategory
-import com.example.myapplication.ui.navigation.SubCategory
+
 // 转账计算模式
 enum class TransferMode {
     SOURCE_FIXED, // 转出固定 (含手续费) -> 输入转出，算转入
@@ -158,18 +147,13 @@ fun AddTransactionScreen(
     // 3. Tab 切换
     LaunchedEffect(selectedTab, expenseId) {
         if (expenseId == null) {
-            // 获取当前 Tab 对应的大类列表
             val mainList = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
 
-            // 默认选中第一个大类
             if (selectedMainCategory == null || selectedMainCategory !in mainList) {
                 selectedMainCategory = mainList.firstOrNull()
             }
 
-            // 默认选中该大类的第一个小类
             if (selectedMainCategory != null) {
-                // 只有当当前选中的小类不在当前Tab列表里时，才重置
-                // 这样可以避免切换Tab时重置用户已选的有效分类（虽然跨Tab通常不保留）
                 val allSubInTab = mainList.flatMap { it.subCategories }
                 if (selectedCategory == null || selectedCategory !in allSubInTab) {
                     selectedCategory = selectedMainCategory!!.subCategories.firstOrNull()
@@ -191,7 +175,6 @@ fun AddTransactionScreen(
         }
     }
 
-    // [新增] 编辑模式下的回填逻辑 (反查大类)
     LaunchedEffect(expenseId, selectedCategory) {
         if (expenseId != null && selectedCategory != null) {
             val mainList = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
@@ -203,7 +186,15 @@ fun AddTransactionScreen(
             }
         }
     }
-
+    fun smartFormat(value: Double): String {
+        // 判断是否为整数 (允许极小的浮点误差)
+        val isInteger = abs(value - value.toLong()) < 0.001
+        return if (isInteger) {
+            value.toLong().toString() // 如果是整数，直接转 Long 显示 (例如 "100")
+        } else {
+            String.format(Locale.US, "%.2f", value) // 如果有小数，保留两位 (例如 "100.50")
+        }
+    }
     // --- 计算核心逻辑 ---
     fun recalculateTransfer() {
         if (isManualMode && !isSameCurrency) return
@@ -212,22 +203,39 @@ fun AddTransactionScreen(
 
         if (fromAccount != null && toAccount != null) {
             if (transferMode == TransferMode.SOURCE_FIXED) {
+                // 模式1：转出固定 -> 算转入
                 val fromVal = try { evaluateExpression(fromAmountStr) } catch(e:Exception){0.0}
+
+                // 计算净转出额 (扣除手续费)
                 val baseInSource = fromVal - feeVal
+
                 val toVal = if (isSameCurrency) {
                     if (baseInSource > 0) baseInSource else 0.0
                 } else {
                     ExchangeRates.convert(baseInSource, fromAccount!!.currency, toAccount!!.currency)
                 }
-                toAmountStr = String.format(Locale.US, "%.2f", if(toVal > 0) toVal else 0.0)
+
+                // 【修改】传入目标账户的币种，进行智能格式化
+                toAmountStr = smartFormat(
+                    value = if(toVal > 0) toVal else 0.0,
+                    currencyCode = toAccount!!.currency
+                )
+
             } else {
+                // 模式2：转入固定 -> 算转出
                 val toVal = try { evaluateExpression(toAmountStr) } catch(e:Exception){0.0}
+
                 val baseInSource = if (isSameCurrency) {
                     toVal
                 } else {
                     ExchangeRates.convert(toVal, toAccount!!.currency, fromAccount!!.currency)
                 }
-                fromAmountStr = String.format(Locale.US, "%.2f", baseInSource + feeVal)
+
+                // 【修改】传入来源账户的币种，进行智能格式化
+                fromAmountStr = smartFormat(
+                    value = baseInSource + feeVal,
+                    currencyCode = fromAccount!!.currency
+                )
             }
         }
     }
@@ -245,32 +253,59 @@ fun AddTransactionScreen(
     }
 
     fun handleInput(transform: (String) -> String) {
+        // 1. 确定当前上下文的货币代码
+        val currentCurrency = if (selectedTab == 2) {
+            when (focusedField) {
+                "from", "fee" -> fromAccount?.currency ?: ""
+                "to" -> toAccount?.currency ?: ""
+                else -> ""
+            }
+        } else {
+            selectedAccount?.currency ?: ""
+        }
+
+        // 2. 获取当前的目标变量引用 (用于读取旧值和更新)
+        // 使用一个 getter/setter 包装器来简化逻辑
+        var currentValue = ""
+        var updateValue: (String) -> Unit = {}
+
         if (selectedTab == 2) {
             when (focusedField) {
                 "fee" -> {
-                    // 手动模式下，fee 应该被禁用，理论上不会走到这里，但加个判断更安全
-                    if (!isManualMode) {
-                        transferFeeStr = transform(transferFeeStr)
-                        recalculateTransfer()
-                    }
+                    if (isManualMode) return // 手动模式下禁用手续费输入(或根据需求)
+                    currentValue = transferFeeStr
+                    updateValue = { transferFeeStr = it; recalculateTransfer() }
                 }
                 "from" -> {
                     if ((!isManualMode || isSameCurrency) && transferMode != TransferMode.SOURCE_FIXED) {
                         transferMode = TransferMode.SOURCE_FIXED
                     }
-                    fromAmountStr = transform(fromAmountStr)
-                    recalculateTransfer()
+                    currentValue = fromAmountStr
+                    updateValue = { fromAmountStr = it; recalculateTransfer() }
                 }
                 "to" -> {
                     if ((!isManualMode || isSameCurrency) && transferMode != TransferMode.TARGET_FIXED) {
                         transferMode = TransferMode.TARGET_FIXED
                     }
-                    toAmountStr = transform(toAmountStr)
-                    recalculateTransfer()
+                    currentValue = toAmountStr
+                    updateValue = { toAmountStr = it; recalculateTransfer() }
                 }
             }
         } else {
-            amountStr = transform(amountStr)
+            currentValue = amountStr
+            updateValue = { amountStr = it }
+        }
+
+        // 3. 计算新值
+        val newValue = transform(currentValue)
+
+        // 4. 【关键】验证精度
+        // 如果是删除操作(变短)，或者是合法的精度，或者是中间算式(包含+-符号)，则允许更新
+        // 注意：validateInputPrecision 只处理纯数字格式，如果包含运算符则放行(交给 evaluateExpression 处理)
+        val isEquation = newValue.contains("+") || newValue.contains("-")
+
+        if (isEquation || newValue.length < currentValue.length || validateInputPrecision(newValue, currentCurrency)) {
+            updateValue(newValue)
         }
     }
 
@@ -323,17 +358,62 @@ fun AddTransactionScreen(
 
     // --- UI ---
     if (showAccountPickerFor != null) {
+        // 【修改】不过滤，传入所有账户
         AccountPickerDialog(
             accounts = accounts,
-            onAccountSelected = { account ->
-                if (showAccountPickerFor == "from") fromAccount = account else toAccount = account
-                recalculateTransfer()
+            onAccountSelected = { selected ->
+                when(showAccountPickerFor) {
+                    "main" -> selectedAccount = selected
+                    "from" -> {
+                        fromAccount = selected
+                        // 【逻辑】若转出==转入，则清空转入
+                        if (fromAccount?.id == toAccount?.id) {
+                            toAccount = null
+                            toAmountStr = "0"
+                        }
+                    }
+                    "to" -> {
+                        toAccount = selected
+                        // 【逻辑】若转入==转出，则清空转出
+                        if (toAccount?.id == fromAccount?.id) {
+                            fromAccount = null
+                            fromAmountStr = "0"
+                        }
+                    }
+                }
+
+                if (showAccountPickerFor == "from" || showAccountPickerFor == "to") {
+                    // 【关键修复】切换账户后，立即对已有金额进行精度修正
+                    // 1. 清洗转出金额 (如果转出账户切到了日元，原来的 10.5 会变成 11)
+                    if (fromAccount != null) {
+                        val currentFromVal = try { fromAmountStr.toDouble() } catch(e: Exception) { 0.0 }
+                        fromAmountStr = smartFormat(currentFromVal, fromAccount!!.currency)
+                    }
+
+                    // 2. 清洗转入金额 (同理)
+                    if (toAccount != null) {
+                        val currentToVal = try { toAmountStr.toDouble() } catch(e: Exception) { 0.0 }
+                        toAmountStr = smartFormat(currentToVal, toAccount!!.currency)
+                    }
+
+                    // 3. 清洗手续费 (手续费通常跟随转出账户币种)
+                    if (fromAccount != null) {
+                        val currentFeeVal = try { transferFeeStr.toDouble() } catch(e: Exception) { 0.0 }
+                        transferFeeStr = smartFormat(currentFeeVal, fromAccount!!.currency)
+                    }
+
+                    // 4. 最后再触发汇率重算，确保关联的一方金额也正确更新
+                    recalculateTransfer()
+                }
+
                 showAccountPickerFor = null
             },
             onDismissRequest = { showAccountPickerFor = null },
             navController = navController
         )
     }
+
+    // ... 其他弹窗保持不变 ...
     if (showAccountPicker) {
         AccountPickerDialog(
             accounts = accounts,
@@ -359,7 +439,6 @@ fun AddTransactionScreen(
         )
     }
 
-    // [新增] 小类选择弹窗
     if (showSubCategorySheet && selectedMainCategory != null) {
         ModalBottomSheet(
             onDismissRequest = { showSubCategorySheet = false },
@@ -375,7 +454,7 @@ fun AddTransactionScreen(
                 )
 
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(5), // 一行5个，与原风格保持一致
+                    columns = GridCells.Fixed(5),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -416,19 +495,17 @@ fun AddTransactionScreen(
             when (selectedTab) {
                 0, 1 -> { // 支出/收入
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // [修改] 顶部金额卡片：传入大类颜色
                         val displayColor = selectedMainCategory?.color ?: MaterialTheme.colorScheme.primary
                         NewAmountDisplay(
                             category = selectedCategory,
                             amount = amountStr,
-                            backgroundColor = displayColor // 需要修改 NewAmountDisplay 接受此参数
+                            backgroundColor = displayColor
                         )
 
-                        // [修改] 大类选择网格
                         val currentMainList = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
 
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(4), // 大类一行4个比较合适
+                            columns = GridCells.Fixed(4),
                             modifier = Modifier.weight(1f).padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -436,12 +513,9 @@ fun AddTransactionScreen(
                             items(currentMainList) { mainCat ->
                                 MainCategoryItem(
                                     mainCategory = mainCat,
-                                    // 只要当前选中的小类属于这个大类，这个大类就是“选中状态”
                                     isSelected = selectedMainCategory == mainCat,
                                     onClick = {
                                         selectedMainCategory = mainCat
-                                        // 选中大类时，同时默认选中该大类的第一个小类 (可选体验)
-                                        // selectedCategory = mainCat.subCategories.firstOrNull()
                                         showSubCategorySheet = true
                                     }
                                 )
@@ -499,8 +573,32 @@ fun AddTransactionScreen(
                                 }
                             )
 
-                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.SwapVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            // 【修改】添加了点击互换功能
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        // 互换逻辑
+                                        val tempAccount = fromAccount
+                                        fromAccount = toAccount
+                                        toAccount = tempAccount
+
+                                        val tempAmount = fromAmountStr
+                                        fromAmountStr = toAmountStr
+                                        toAmountStr = tempAmount
+
+                                        recalculateTransfer()
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.SwapVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
 
                             TransferAccountCard(
@@ -521,21 +619,19 @@ fun AddTransactionScreen(
                                 fee = transferFeeStr,
                                 currency = fromAccount?.currency ?: "",
                                 isFocused = focusedField == "fee",
-                                enabled = !isManualMode, // 【关键修改】手动模式下禁用
+                                enabled = !isManualMode,
                                 onClick = {
                                     focusedField = "fee"
                                     isInputOverwriteMode = true
                                 }
                             )
 
-                            // 手动模式开关：仅跨币种显示
                             if (!isSameCurrency) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
                                             isManualMode = !isManualMode
-                                            // 如果开启手动模式，且当前焦点是手续费，则强制移走焦点
                                             if (isManualMode && focusedField == "fee") {
                                                 focusedField = "from"
                                             }
@@ -562,7 +658,6 @@ fun AddTransactionScreen(
                                 }
                             }
 
-                            // 模式选择按钮：只要不是(跨币种且开启了手动模式)，就显示。
                             if (!(!isSameCurrency && isManualMode)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -641,416 +736,5 @@ fun AddTransactionScreen(
                 }
             }
         }
-    }
-}
-
-// --- 组件定义 ---
-
-@Composable
-fun FeeInputCard(
-    fee: String,
-    currency: String,
-    isFocused: Boolean,
-    enabled: Boolean = true, // 【新增】控制是否可用
-    onClick: () -> Unit
-) {
-    // 根据 enabled 状态调整颜色
-    val containerColor = if (enabled) {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f) // 禁用时变淡/灰
-    }
-    val contentColor = if (enabled) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) // 禁用时文字变淡
-    }
-    val border = if (isFocused && enabled) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick), // 禁用时不可点击
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = border
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.AttachMoney, null, tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else contentColor)
-                Spacer(Modifier.width(8.dp))
-                Text("手续费", style = MaterialTheme.typography.titleMedium, color = contentColor)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(fee, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = contentColor)
-                if (currency.isNotEmpty()) {
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = currency,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else contentColor
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ModeSelectionButton(
-    text: String,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = containerColor
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                color = contentColor,
-                maxLines = 1
-            )
-        }
-    }
-}
-
-@Composable
-fun SimpleKeyboardToolbar(
-    dateMillis: Long,
-    onDateClick: () -> Unit,
-    remark: String,
-    onRemarkClick: () -> Unit
-) {
-    val dateFormat = remember { SimpleDateFormat("MM月dd日", Locale.getDefault()) }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        ActionChipItem(
-            icon = Icons.Default.CalendarToday,
-            text = dateFormat.format(Date(dateMillis)),
-            onClick = onDateClick,
-            modifier = Modifier.weight(1f)
-        )
-        ActionChipItem(
-            icon = if(remark.isNotEmpty()) Icons.AutoMirrored.Filled.Note else Icons.Default.Edit,
-            text = if (remark.isNotEmpty()) remark else "添加备注",
-            onClick = onRemarkClick,
-            modifier = Modifier.weight(1f),
-            isHighlight = remark.isNotEmpty()
-        )
-    }
-}
-
-@Composable
-fun TransferAccountCard(
-    account: Account?,
-    label: String,
-    displayValue: String,
-    amountColor: Color,
-    onClick: () -> Unit,
-    onCardClick: () -> Unit,
-    isFocused: Boolean
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onCardClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        border = if (isFocused) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onClick)
-                    .padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (account != null) {
-                        Icon(
-                            imageVector = IconMapper.getIcon(account.iconName),
-                            contentDescription = null,
-                            tint = amountColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(Icons.Default.CalendarToday, null, tint = Color.Gray)
-                    }
-                }
-                Spacer(Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = account?.name ?: "选择",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = displayValue,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = amountColor
-                )
-                if (account != null) {
-                    Text(
-                        text = account.currency,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = amountColor.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun NewAmountDisplay(
-    category: Category?,
-    amount: String,
-    backgroundColor: Color = MaterialTheme.colorScheme.primary // [新增参数]
-) {
-    // 使用传入的 backgroundColor，而不是写死的 primary
-    val contentColor = Color.White // 假定大类颜色都较深，文字用白色。如果颜色太浅可能需要判断亮度。
-
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp).height(100.dp),
-        shape = RoundedCornerShape(20.dp), // 圆角稍微加大一点
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (category != null) {
-                // 图标背景加一点半透明白色，增加层次感
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = category.icon,
-                        contentDescription = null,
-                        tint = contentColor,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = category.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = contentColor,
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
-                Text(text = "选择分类", style = MaterialTheme.typography.titleMedium, color = contentColor.copy(alpha = 0.8f))
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            // 自动调整字体大小防止溢出 (简单处理)
-            val textStyle = if(amount.length > 8) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall
-            Text(
-                text = amount,
-                style = textStyle,
-                color = contentColor,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-fun KeyboardActionToolbar(
-    button1Icon: ImageVector,
-    button1Text: String,
-    button1OnClick: () -> Unit,
-    button1Highlight: Boolean = false,
-    dateMillis: Long,
-    onDateClick: () -> Unit,
-    remark: String,
-    onRemarkClick: () -> Unit
-) {
-    val dateFormat = remember { SimpleDateFormat("MM月dd日", Locale.getDefault()) }
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ActionChipItem(icon = button1Icon, text = button1Text, onClick = button1OnClick, modifier = Modifier.weight(1f), isHighlight = button1Highlight)
-        ActionChipItem(icon = Icons.Default.CalendarToday, text = dateFormat.format(Date(dateMillis)), onClick = onDateClick, modifier = Modifier.weight(1f))
-        ActionChipItem(icon = if(remark.isNotEmpty()) Icons.AutoMirrored.Filled.Note else Icons.Default.Edit, text = if (remark.isNotEmpty()) remark else "添加备注", onClick = onRemarkClick, modifier = Modifier.weight(1.5f), isHighlight = remark.isNotEmpty())
-    }
-}
-
-@Composable
-fun ActionChipItem(icon: ImageVector, text: String, onClick: () -> Unit, modifier: Modifier = Modifier, isHighlight: Boolean = false) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(8.dp), color = if (isHighlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), modifier = modifier.height(40.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isHighlight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = text, style = MaterialTheme.typography.bodyMedium, maxLines = 1, color = if (isHighlight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
-        }
-    }
-}
-
-@Composable
-fun RemarkInputDialog(initialRemark: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
-    var text by remember { mutableStateOf(initialRemark) }
-    AlertDialog(
-        onDismissRequest = onDismiss, title = { Text("添加备注") },
-        text = { OutlinedTextField(value = text, onValueChange = { text = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("请输入备注内容...") }, singleLine = true) },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("确定") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
-    )
-}
-
-@Composable
-fun CategoryGrid(categories: List<Category>, selectedCategory: Category?, onCategoryClick: (Category) -> Unit, modifier: Modifier = Modifier) {
-    LazyVerticalGrid(columns = GridCells.Fixed(5), modifier = modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        gridItems(categories) { category -> CategoryItem(category = category, isSelected = category == selectedCategory, onClick = { onCategoryClick(category) }) }
-    }
-}
-
-@Composable
-fun CategoryItem(category: Category, isSelected: Boolean, onClick: () -> Unit) {
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    Column(modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(4.dp).aspectRatio(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(backgroundColor), contentAlignment = Alignment.Center) {
-            Icon(imageVector = category.icon, contentDescription = category.title, tint = contentColor)
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = category.title, style = MaterialTheme.typography.bodySmall, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Unspecified)
-    }
-}
-
-@Composable
-fun AccountPickerDialog(accounts: List<Account>, onAccountSelected: (Account) -> Unit, onDismissRequest: () -> Unit, navController: NavHostController) {
-    AlertDialog(
-        onDismissRequest = onDismissRequest, title = { Text("选择账户") },
-        text = { LazyColumn { items(accounts.size) { index -> val account = accounts[index]; Row(modifier = Modifier.fillMaxWidth().clickable { onAccountSelected(account) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) { val icon = IconMapper.getIcon(account.iconName); Icon(icon, contentDescription = account.name, modifier = Modifier.padding(end = 16.dp)); Text(account.name) } } } },
-        confirmButton = { TextButton(onClick = onDismissRequest) { Text("取消") } },
-        dismissButton = { TextButton(onClick = { navController.navigate("account_management"); onDismissRequest() }) { Text("账户管理") } }
-    )
-}
-
-fun evaluateExpression(expression: String): Double {
-    val tokens = expression.split(" ")
-    if (tokens.isEmpty()) return 0.0
-    var result = tokens[0].toDoubleOrNull() ?: 0.0
-    for (i in 1 until tokens.size step 2) {
-        if (i + 1 >= tokens.size) break
-        val operator = tokens[i]
-        val nextOperand = tokens[i + 1].toDoubleOrNull() ?: 0.0
-        if (operator == "+") result += nextOperand else if (operator == "-") result -= nextOperand
-    }
-    return result
-}
-
-@Composable
-fun MainCategoryItem(mainCategory: MainCategory, isSelected: Boolean, onClick: () -> Unit) {
-    // 选中状态：颜色鲜艳；未选中：灰色
-    val bgColor = if (isSelected) mainCategory.color.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-    val contentColor = if (isSelected) mainCategory.color else MaterialTheme.colorScheme.onSurfaceVariant
-    val border = if (isSelected) BorderStroke(1.dp, mainCategory.color.copy(alpha = 0.5f)) else null
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .background(bgColor)
-            .then(if (border != null) Modifier.padding(1.dp) else Modifier) // 防止边框占位跳动
-            .padding(vertical = 12.dp, horizontal = 4.dp)
-    ) {
-        Icon(
-            imageVector = mainCategory.icon,
-            contentDescription = null,
-            tint = contentColor,
-            modifier = Modifier.size(32.dp)
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = mainCategory.title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = contentColor,
-            fontWeight = if(isSelected) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1
-        )
-    }
-}
-
-@Composable
-fun SubCategoryItem(
-    subCategory: SubCategory,
-    mainColor: Color,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    // 小类选中样式：实心背景色
-    val backgroundColor = if (isSelected) mainColor else Color.Transparent
-    val contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp) // 小类图标稍微大一点方便点击
-                .clip(CircleShape)
-                .background(backgroundColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = subCategory.icon,
-                contentDescription = subCategory.title,
-                tint = if(isSelected) contentColor else mainColor, // 未选中时图标用大类颜色
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = subCategory.title,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if(isSelected) mainColor else Color.Unspecified
-        )
     }
 }
