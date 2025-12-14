@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-// 【修改】version 升级为 4，以应用 Expense 表的新字段
-@Database(entities = [Expense::class, Budget::class, Account::class, PeriodicTransaction::class], version = 4, exportSchema = false)
+// 【修改】version 升级为 6，以应用 Expense 表的新字段
+@Database(entities = [Expense::class, Budget::class, Account::class, PeriodicTransaction::class], version = 6, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao

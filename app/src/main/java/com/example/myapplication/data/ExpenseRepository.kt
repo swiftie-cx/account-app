@@ -307,25 +307,46 @@ class ExpenseRepository(
         }
 
         // B. 生成真实账单
-        // 注意：这里生成的账单，date 用的是 rule.nextExecutionDate (比如今天 11:00)
-        // 而不是 Date() (现在时间 06:00)。这样就保证了时间排序的正确性。
         if (rule.type == 2 && rule.targetAccountId != null) {
+            val amountVal = abs(rule.amount)
+            val feeVal = abs(rule.fee)
+
+            val finalOut: Double
+            val finalIn: Double
+
+            if (rule.transferMode == 0) {
+                // 模式 0: 转出固定 (含手续费) -> 您输入的金额是总扣款
+                // 例如输入100，手续费1。
+                // 转出 = -100
+                // 转入 = 100 - 1 = 99
+                finalOut = -amountVal
+                finalIn = amountVal - feeVal
+            } else {
+                // 模式 1: 转入固定 (额外手续费) -> 您输入的金额是实际到账
+                // 例如输入100，手续费1。
+                // 转出 = -(100 + 1) = -101
+                // 转入 = 100
+                finalOut = -(amountVal + feeVal)
+                finalIn = amountVal
+            }
+
             val expenseOut = Expense(
                 accountId = rule.accountId,
                 category = "转账 (转出)",
-                amount = -abs(rule.amount),
+                amount = finalOut,
                 date = rule.nextExecutionDate,
                 remark = rule.remark ?: "周期转账"
             )
             val expenseIn = Expense(
                 accountId = rule.targetAccountId,
                 category = "转账 (转入)",
-                amount = abs(rule.amount),
+                amount = finalIn,
                 date = rule.nextExecutionDate,
                 remark = rule.remark ?: "周期转账"
             )
             expenseDao.insertTransfer(expenseOut, expenseIn)
         } else {
+            // (支出/收入逻辑保持不变)
             val finalAmount = if (rule.type == 0) -abs(rule.amount) else abs(rule.amount)
             val expense = Expense(
                 category = rule.category,
@@ -333,7 +354,6 @@ class ExpenseRepository(
                 date = rule.nextExecutionDate,
                 accountId = rule.accountId,
                 remark = rule.remark ?: "周期自动记账",
-                // 【关键修改】将 PeriodicTransaction 的 excludeFromBudget 传递给生成的 Expense
                 excludeFromBudget = rule.excludeFromBudget
             )
             expenseDao.insertExpense(expense)

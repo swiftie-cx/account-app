@@ -37,6 +37,7 @@ import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.expenseCategories
 import com.example.myapplication.ui.navigation.incomeCategories
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -57,6 +58,8 @@ fun AddPeriodicTransactionScreen(
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // --- 准备按钮颜色 ---
     val positiveColor = MaterialTheme.colorScheme.primary.toArgb()
@@ -76,11 +79,15 @@ fun AddPeriodicTransactionScreen(
 
     // 账单详情
     var amount by remember { mutableStateOf("") }
+    var fee by remember { mutableStateOf("") } // 手续费
+
+    // 转账模式状态 (0:转出固定, 1:转入固定)
+    var transferMode by remember { mutableIntStateOf(0) }
+
     // 焦点请求器
     val amountFocusRequester = remember { FocusRequester() }
 
     var remark by remember { mutableStateOf("") }
-    // 【修改】移除了 excludeFromStats 状态变量，默认视为 false
     var excludeFromBudget by remember { mutableStateOf(false) }
 
     // 对象选择
@@ -171,8 +178,9 @@ fun AddPeriodicTransactionScreen(
                 endDate = item.endDate
                 endCount = item.endCount
                 amount = item.amount.toString()
+                fee = if (item.fee > 0) item.fee.toString() else ""
+                transferMode = item.transferMode
                 remark = item.remark ?: ""
-                // 【修改】不再加载 excludeFromStats
                 excludeFromBudget = item.excludeFromBudget
 
                 if (item.type != 2) {
@@ -189,7 +197,14 @@ fun AddPeriodicTransactionScreen(
             if (accounts.isNotEmpty()) {
                 if (selectedAccount == null) selectedAccount = accounts.first()
                 if (fromAccount == null) fromAccount = accounts.first()
-                if (toAccount == null) toAccount = accounts.first()
+
+                // 尝试找到一个同币种的转入账户
+                if (toAccount == null) {
+                    toAccount = accounts.firstOrNull {
+                        it.id != fromAccount?.id &&
+                                it.currency == fromAccount?.currency
+                    }
+                }
             }
             if (selectedCategory == null && transactionType != 2) {
                 val cats = if (transactionType == 0) expenseCategories else incomeCategories
@@ -203,6 +218,8 @@ fun AddPeriodicTransactionScreen(
         val amountVal = amount.toDoubleOrNull() ?: 0.0
         if (amountVal <= 0) return
 
+        val feeVal = fee.toDoubleOrNull() ?: 0.0
+
         // 强制将秒和毫秒清零
         val cal = Calendar.getInstance()
         cal.time = startDate
@@ -214,21 +231,21 @@ fun AddPeriodicTransactionScreen(
             id = if (periodicId != null && periodicId != -1L) periodicId else 0,
             type = transactionType,
             amount = amountVal,
+            fee = feeVal,
+            transferMode = transferMode,
             category = if(transactionType == 2) "转账" else (selectedCategory?.title ?: "其他"),
             accountId = if(transactionType == 2) (fromAccount?.id ?: 0) else (selectedAccount?.id ?: 0),
             targetAccountId = if(transactionType == 2) toAccount?.id else null,
             frequency = frequency,
             startDate = cleanStartDate,
-
-            // 下次执行时间初始值
             nextExecutionDate = cleanStartDate,
-
             endMode = endMode,
             endDate = if (endMode == END_MODE_DATE) endDate else null,
             endCount = if (endMode == END_MODE_COUNT) endCount else null,
             remark = remark,
-            excludeFromStats = false, // 【修改】强制设为 false，因为界面入口已移除
-            excludeFromBudget = excludeFromBudget
+            excludeFromStats = false,
+            // 只有支出类型才应用不计入预算
+            excludeFromBudget = if (transactionType == 0) excludeFromBudget else false
         )
 
         if (periodicId != null && periodicId != -1L) {
@@ -239,15 +256,24 @@ fun AddPeriodicTransactionScreen(
         navController.popBackStack()
     }
 
+    // --- 动态标题 ---
+    val titleText = when(transactionType) {
+        0 -> "周期支出"
+        1 -> "周期收入"
+        2 -> "周期转账"
+        else -> "设置重复"
+    }
+
     // --- UI 渲染 ---
     val bgColor = MaterialTheme.colorScheme.surfaceContainerLow
     val cardColor = MaterialTheme.colorScheme.surface
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }, // 添加 Snackbar 用于提示错误
         containerColor = bgColor,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("设置重复", fontWeight = FontWeight.Bold) },
+                title = { Text(titleText, fontWeight = FontWeight.Bold) }, // 【修改】使用动态标题
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "取消")
@@ -365,15 +391,63 @@ fun AddPeriodicTransactionScreen(
                     }
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 
+                    // --- 转账专用字段 ---
                     if (transactionType == 2) {
                         FormItem(label = "转出账户", value = fromAccount?.name ?: "选择账户", onClick = { showAccountPickerFor = "from" })
                         HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
                         FormItem(label = "转入账户", value = toAccount?.name ?: "选择账户", onClick = { showAccountPickerFor = "to" })
-                    } else {
-                        FormItem(label = "账户", value = selectedAccount?.name ?: "选择账户", onClick = { showAccountPickerFor = "main" })
-                    }
-                    HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 
+                        // 手续费输入框
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("手续费", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            BasicTextField(
+                                value = fee,
+                                onValueChange = { input -> if (input.isEmpty() || input.matches(Regex("^\\d*\\.?\\d*$"))) fee = input },
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.End, color = MaterialTheme.colorScheme.onSurface),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true,
+                                modifier = Modifier.width(100.dp),
+                                decorationBox = { inner ->
+                                    Box(contentAlignment = Alignment.CenterEnd) {
+                                        if(fee.isEmpty()) Text("0.00", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        inner()
+                                    }
+                                }
+                            )
+                        }
+                        HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+
+                        // 转账模式选择
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ModeSelectionButton(
+                                text = "转出固定(含手续费)",
+                                isSelected = transferMode == 0,
+                                modifier = Modifier.weight(1f),
+                                onClick = { transferMode = 0 }
+                            )
+                            ModeSelectionButton(
+                                text = "转入固定(额外手续费)",
+                                isSelected = transferMode == 1,
+                                modifier = Modifier.weight(1f),
+                                onClick = { transferMode = 1 }
+                            )
+                        }
+                        HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+
+                    } else {
+                        // 收入/支出
+                        FormItem(label = "账户", value = selectedAccount?.name ?: "选择账户", onClick = { showAccountPickerFor = "main" })
+                        HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                    }
+
+                    // --- 备注 ---
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -410,13 +484,24 @@ fun AddPeriodicTransactionScreen(
                 }
             }
 
-            if (transactionType != 2) {
+            // --- 第三组：选项 ---
+            // 只有支出 (type=0) 才显示不计入预算
+            if (transactionType == 0) {
                 Card(colors = CardDefaults.cardColors(containerColor = cardColor)) {
                     Column {
-                        // 【修改】移除了“不计入收支”选项及其分割线
                         FormToggleItem(label = "不计入预算", checked = excludeFromBudget, onCheckedChange = { excludeFromBudget = it })
                     }
                 }
+            }
+
+            // --- 底部提示 ---
+            if (transactionType == 2) {
+                Text(
+                    text = "* 周期转账暂不支持跨币种，请选择相同币种的账户。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
             }
         }
 
@@ -498,14 +583,37 @@ fun AddPeriodicTransactionScreen(
         }
 
         if (showAccountPickerFor != null) {
+            // 【关键修改】允许选择任意账户，如果冲突则自动清空另一方
             AccountPickerDialog(
                 accounts = accounts,
-                onAccountSelected = {
-                    when(showAccountPickerFor) {
-                        "main" -> selectedAccount = it
-                        "from" -> fromAccount = it
-                        "to" -> toAccount = it
+                onAccountSelected = { selected ->
+                    // 1. 确定操作方和另一方
+                    val otherAccount = if (showAccountPickerFor == "from") toAccount else fromAccount
+                    var shouldClearOther = false
+
+                    if (otherAccount != null) {
+                        // 2. 检测冲突：跨币种 OR 同账户
+                        val isCurrencyMismatch = selected.currency != otherAccount.currency
+                        val isSameAccount = selected.id == otherAccount.id
+
+                        if (isCurrencyMismatch || isSameAccount) {
+                            shouldClearOther = true // 标记清空
+                        }
                     }
+
+                    // 3. 执行赋值
+                    when(showAccountPickerFor) {
+                        "main" -> selectedAccount = selected
+                        "from" -> {
+                            fromAccount = selected
+                            if (shouldClearOther) toAccount = null // 自动清空
+                        }
+                        "to" -> {
+                            toAccount = selected
+                            if (shouldClearOther) fromAccount = null // 自动清空
+                        }
+                    }
+
                     showAccountPickerFor = null
                 },
                 onDismissRequest = { showAccountPickerFor = null },
