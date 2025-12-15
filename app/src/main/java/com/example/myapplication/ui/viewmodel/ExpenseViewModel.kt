@@ -9,13 +9,13 @@ import com.example.myapplication.data.ExchangeRates
 import com.example.myapplication.data.Expense
 import com.example.myapplication.data.ExpenseRepository
 import com.example.myapplication.data.PeriodicTransaction
-import com.example.myapplication.data.SyncStrategy // 新增
+import com.example.myapplication.data.SyncStrategy
 import com.example.myapplication.ui.navigation.Category
 import com.example.myapplication.ui.navigation.MainCategory
 import com.example.myapplication.ui.screen.chart.ChartMode
 import com.example.myapplication.ui.screen.chart.TransactionType
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay // 新增
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,7 +38,7 @@ enum class ExpenseTypeFilter { ALL, EXPENSE, INCOME, TRANSFER }
 // 定义分类类型枚举
 enum class CategoryType { EXPENSE, INCOME }
 
-// 【新增】同步状态 UI State
+// 同步状态 UI State
 sealed class SyncUiState {
     object Idle : SyncUiState()
     data class Loading(val msg: String) : SyncUiState()
@@ -158,13 +158,11 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     fun logout() = repository.logout()
 
-    // 【修改】注销账号：增加回调，确保 UI 能收到成功或失败的通知
+    // 注销账号：增加回调，确保 UI 能收到成功或失败的通知
     fun deleteUserAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.deleteUserAccount()
             if (result.isSuccess) {
-                // 可选：注销成功后也可以顺便清除本地缓存
-                // repository.clearAllData()
                 onSuccess()
             } else {
                 onError(result.exceptionOrNull()?.message ?: "注销失败")
@@ -202,6 +200,9 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun clearAllData() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.clearAllData()
+            // 重新加载默认分类到 UI
+            _expenseMainCategories.value = repository.getMainCategories(CategoryType.EXPENSE)
+            _incomeMainCategories.value = repository.getMainCategories(CategoryType.INCOME)
         }
     }
 
@@ -525,20 +526,18 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
             // 核心逻辑：判断是否冲突
             if (status.hasCloudData && status.hasLocalData) {
-                // 两边都有数据 -> 冲突！(或者叫需要合并) -> 弹窗让用户选
                 _syncState.value = SyncUiState.Conflict(status.cloudTimestamp)
             } else if (status.hasCloudData && !status.hasLocalData) {
-                // 本地空，云端有 -> 自动下载 (OVERWRITE_LOCAL)
+                // 本地空，云端有 -> 自动下载
                 performSync(SyncStrategy.OVERWRITE_LOCAL)
             } else {
-                // 云端空，本地有 (或者都空) -> 自动上传 (OVERWRITE_CLOUD)
-                // 实际上 MERGE 也可以，在云端为空时 MERGE 等于 Upload
+                // 云端空，本地有 -> 自动上传
                 performSync(SyncStrategy.OVERWRITE_CLOUD)
             }
         }
     }
 
-    // 第二步：执行具体的同步策略 (由弹窗选择或自动触发)
+    // 第二步：执行具体的同步策略
     fun performSync(strategy: SyncStrategy) {
         viewModelScope.launch {
             val strategyName = when(strategy) {
@@ -552,11 +551,17 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
             if (result.isSuccess) {
                 _syncState.value = SyncUiState.Success(result.getOrNull() ?: "同步成功")
+
+                // 【新增】如果执行了 恢复 或 合并，需要重新加载分类配置到 UI
+                if (strategy == SyncStrategy.OVERWRITE_LOCAL || strategy == SyncStrategy.MERGE) {
+                    _expenseMainCategories.value = repository.getMainCategories(CategoryType.EXPENSE)
+                    _incomeMainCategories.value = repository.getMainCategories(CategoryType.INCOME)
+                }
+
             } else {
                 _syncState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "同步失败")
             }
 
-            // 3秒后重置状态，方便下次操作
             delay(3000)
             _syncState.value = SyncUiState.Idle
         }

@@ -19,7 +19,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
-import com.google.firebase.firestore.FirebaseFirestore // 新增
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.channels.awaitClose
@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first // 新增
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 import java.util.Date
@@ -41,7 +41,7 @@ data class CategoryDto(val title: String, val iconName: String)
 data class SubCategoryDto(val title: String, val iconName: String)
 data class MainCategoryDto(val title: String, val iconName: String, val colorInt: Int, val subs: List<SubCategoryDto>)
 
-// 定义同步冲突的三种策略 (新增)
+// 定义同步冲突的三种策略
 enum class SyncStrategy {
     OVERWRITE_CLOUD,   // 以此设备为准（覆盖云端）
     OVERWRITE_LOCAL,   // 以云端为准（覆盖本地）
@@ -61,16 +61,13 @@ class ExpenseRepository(
 
     // --- Firebase ---
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance() // 新增 Firestore 实例
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
-    // 【新增】初始化块：启用语言自动识别
     init {
-        // 这行代码会让 Firebase 自动使用用户当前设备的系统语言
-        // 来发送验证邮件、重置密码邮件等。
         firebaseAuth.useAppLanguage()
     }
 
-    // --- 【新增】首次启动标记 ---
+    // --- 首次启动标记 ---
     fun isFirstLaunch(): Boolean = prefs.getBoolean("is_first_launch", true)
 
     fun setFirstLaunchCompleted() {
@@ -78,7 +75,7 @@ class ExpenseRepository(
     }
 
     // ===========================
-    //  MainCategory Persistence (大类结构持久化)
+    //  MainCategory Persistence
     // ===========================
 
     fun saveMainCategories(categories: List<MainCategory>, type: CategoryType) {
@@ -126,7 +123,7 @@ class ExpenseRepository(
     }
 
     // ===========================
-    //  Legacy Category Persistence (旧版/扁平化 分类持久化 - 保留以兼容旧逻辑)
+    //  Legacy Category Persistence
     // ===========================
 
     fun saveCategories(categories: List<Category>, type: CategoryType) {
@@ -158,21 +155,18 @@ class ExpenseRepository(
     }
 
     // ===========================
-    //  Firebase 用户认证逻辑 (含中文错误处理)
+    //  Firebase Auth
     // ===========================
 
-    // 监听 Firebase 用户状态变化
     val isLoggedIn: Flow<Boolean> = callbackFlow {
         val authStateListener = FirebaseAuth.AuthStateListener { auth ->
             trySend(auth.currentUser != null)
         }
         firebaseAuth.addAuthStateListener(authStateListener)
-        // 初始发送
         trySend(firebaseAuth.currentUser != null)
         awaitClose { firebaseAuth.removeAuthStateListener(authStateListener) }
     }
 
-    // 获取当前用户邮箱
     val userEmail: Flow<String> = callbackFlow {
         val authStateListener = FirebaseAuth.AuthStateListener { auth ->
             trySend(auth.currentUser?.email ?: "")
@@ -182,11 +176,9 @@ class ExpenseRepository(
         awaitClose { firebaseAuth.removeAuthStateListener(authStateListener) }
     }
 
-    // 注册
     suspend fun register(email: String, password: String): Result<Boolean> {
         return try {
             firebaseAuth.createUserWithEmailAndPassword(email, password).await()
-            // 注册成功后，发送验证邮件
             firebaseAuth.currentUser?.sendEmailVerification()?.await()
             Result.success(true)
         } catch (e: Exception) {
@@ -200,7 +192,6 @@ class ExpenseRepository(
         }
     }
 
-    // 登录
     suspend fun login(email: String, password: String): Result<Boolean> {
         return try {
             firebaseAuth.signInWithEmailAndPassword(email, password).await()
@@ -208,7 +199,7 @@ class ExpenseRepository(
         } catch (e: Exception) {
             val msg = when (e) {
                 is FirebaseAuthInvalidUserException -> "该账号不存在"
-                is FirebaseAuthInvalidCredentialsException -> "邮箱或密码错误" // 解决你截图中的报错
+                is FirebaseAuthInvalidCredentialsException -> "邮箱或密码错误"
                 is FirebaseNetworkException -> "网络连接失败，请检查网络"
                 else -> "登录失败: ${e.message}"
             }
@@ -216,12 +207,10 @@ class ExpenseRepository(
         }
     }
 
-    // 登出
     fun logout() {
         firebaseAuth.signOut()
     }
 
-    // 发送重置密码邮件
     suspend fun sendPasswordResetEmail(email: String): Result<Boolean> {
         return try {
             firebaseAuth.sendPasswordResetEmail(email).await()
@@ -237,23 +226,15 @@ class ExpenseRepository(
         }
     }
 
-    // 修改密码 (需要重新认证)
     suspend fun changePassword(oldPass: String, newPass: String): Result<Boolean> {
         return try {
             val user = firebaseAuth.currentUser
             if (user == null || user.email == null) {
                 return Result.failure(Exception("用户未登录"))
             }
-
-            // 1. 创建认证凭证
             val credential = EmailAuthProvider.getCredential(user.email!!, oldPass)
-
-            // 2. 重新认证 (Re-authenticate)
             user.reauthenticate(credential).await()
-
-            // 3. 更新密码
             user.updatePassword(newPass).await()
-
             Result.success(true)
         } catch (e: Exception) {
             val msg = when (e) {
@@ -269,7 +250,6 @@ class ExpenseRepository(
         }
     }
 
-    // 注销账号 (从 Firebase 删除)
     suspend fun deleteUserAccount(): Result<Boolean> {
         return try {
             val user = firebaseAuth.currentUser
@@ -344,7 +324,7 @@ class ExpenseRepository(
         expenseDao.deleteAll()
         budgetDao.deleteAll()
         accountDao.deleteAll()
-        // 清除本地偏好
+
         val editor = prefs.edit()
         editor.remove("default_account_id")
         editor.remove("account_order")
@@ -352,6 +332,13 @@ class ExpenseRepository(
         editor.remove("privacy_pin")
         editor.remove("privacy_pattern")
         editor.remove("privacy_biometric")
+
+        // 同时清空分类
+        editor.remove("main_cats_expense")
+        editor.remove("main_cats_income")
+        editor.remove("cats_expense")
+        editor.remove("cats_income")
+
         editor.apply()
 
         _defaultAccountId.value = -1L
@@ -380,7 +367,6 @@ class ExpenseRepository(
     // =========================================================
 
     suspend fun checkAndExecutePeriodicTransactions() {
-        // 获取"今天结束"的时间点 (23:59:59.999)
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 23)
         calendar.set(Calendar.MINUTE, 59)
@@ -388,11 +374,9 @@ class ExpenseRepository(
         calendar.set(Calendar.MILLISECOND, 999)
         val endOfToday = calendar.time
 
-        // 获取所有规则
         val allRules = periodicDao.getAllSync()
 
         allRules.forEach { rule ->
-            // 如果 "下次执行时间" <= "今天结束"，说明它属于今天（或之前的漏单），立即执行
             if (rule.nextExecutionDate.time <= endOfToday.time) {
                 executeRule(rule)
             }
@@ -400,7 +384,6 @@ class ExpenseRepository(
     }
 
     private suspend fun executeRule(rule: PeriodicTransaction) {
-        // A. 检查是否已结束
         if (rule.endMode == 1 && rule.endDate != null && rule.nextExecutionDate.after(rule.endDate)) {
             return
         }
@@ -408,7 +391,6 @@ class ExpenseRepository(
             return
         }
 
-        // B. 生成真实账单
         if (rule.type == 2 && rule.targetAccountId != null) {
             val amountVal = abs(rule.amount)
             val feeVal = abs(rule.fee)
@@ -417,11 +399,9 @@ class ExpenseRepository(
             val finalIn: Double
 
             if (rule.transferMode == 0) {
-                // 模式 0: 转出固定 (含手续费)
                 finalOut = -amountVal
                 finalIn = amountVal - feeVal
             } else {
-                // 模式 1: 转入固定 (额外手续费)
                 finalOut = -(amountVal + feeVal)
                 finalIn = amountVal
             }
@@ -442,7 +422,6 @@ class ExpenseRepository(
             )
             expenseDao.insertTransfer(expenseOut, expenseIn)
         } else {
-            // (支出/收入逻辑保持不变)
             val finalAmount = if (rule.type == 0) -abs(rule.amount) else abs(rule.amount)
             val expense = Expense(
                 category = rule.category,
@@ -455,19 +434,17 @@ class ExpenseRepository(
             expenseDao.insertExpense(expense)
         }
 
-        // C. 计算下一次执行时间
         val calendar = Calendar.getInstance()
         calendar.time = rule.nextExecutionDate
 
         when (rule.frequency) {
-            0 -> calendar.add(Calendar.DAY_OF_YEAR, 1) // 每天
-            1 -> calendar.add(Calendar.WEEK_OF_YEAR, 1) // 每周
-            2 -> calendar.add(Calendar.MONTH, 1)       // 每月
-            3 -> calendar.add(Calendar.YEAR, 1)        // 每年
+            0 -> calendar.add(Calendar.DAY_OF_YEAR, 1)
+            1 -> calendar.add(Calendar.WEEK_OF_YEAR, 1)
+            2 -> calendar.add(Calendar.MONTH, 1)
+            3 -> calendar.add(Calendar.YEAR, 1)
         }
         val newNextDate = calendar.time
 
-        // D. 更新规则
         val newEndCount = if (rule.endMode == 2 && rule.endCount != null) rule.endCount - 1 else rule.endCount
 
         val updatedRule = rule.copy(
@@ -479,7 +456,7 @@ class ExpenseRepository(
     }
 
     // ==========================================
-    // 【核心】智能云同步逻辑 (新增)
+    // 【核心】智能云同步逻辑
     // ==========================================
 
     data class SyncCheckResult(
@@ -487,6 +464,15 @@ class ExpenseRepository(
         val hasLocalData: Boolean,
         val cloudTimestamp: Long
     )
+
+    // 辅助方法：智能解析日期
+    private fun parseDate(obj: Any?): Date {
+        return when (obj) {
+            is com.google.firebase.Timestamp -> obj.toDate()
+            is Long -> Date(obj)
+            else -> Date()
+        }
+    }
 
     // 1. 检查云端状态
     suspend fun checkCloudStatus(): Result<SyncCheckResult> {
@@ -496,7 +482,6 @@ class ExpenseRepository(
                 .collection("backups").document("latest")
                 .get().await()
 
-            // 使用 Flow.first() 获取当前快照
             val localExpenseCount = expenseDao.getAllExpenses().first().size
             val localAccountCount = accountDao.getAllAccounts().first().size
             val localCount = localExpenseCount + localAccountCount
@@ -516,24 +501,20 @@ class ExpenseRepository(
         val uid = firebaseAuth.currentUser?.uid ?: return Result.failure(Exception("未登录"))
 
         return try {
-            // 获取云端数据
             val doc = firestore.collection("users").document(uid)
                 .collection("backups").document("latest")
                 .get().await()
 
-            // 获取本地数据 (Snapshot)
             val localExpenses = expenseDao.getAllExpenses().first()
             val localAccounts = accountDao.getAllAccounts().first()
 
             when (strategy) {
                 SyncStrategy.OVERWRITE_CLOUD -> {
-                    // 覆盖云端：直接上传本地数据
                     uploadData(uid, localExpenses, localAccounts)
                     Result.success("已成功备份到云端")
                 }
 
                 SyncStrategy.OVERWRITE_LOCAL -> {
-                    // 覆盖本地：清空本地 -> 写入云端数据
                     if (doc.exists()) {
                         val data = doc.data ?: return Result.failure(Exception("云端数据为空"))
                         restoreDataLocally(data)
@@ -544,7 +525,6 @@ class ExpenseRepository(
                 }
 
                 SyncStrategy.MERGE -> {
-                    // 智能合并：两边加起来，去重
                     if (!doc.exists()) {
                         uploadData(uid, localExpenses, localAccounts)
                         return Result.success("云端为空，已自动上传本地数据")
@@ -554,15 +534,13 @@ class ExpenseRepository(
                     val cloudExpensesMap = cloudData["expenses"] as? List<Map<String, Any>> ?: emptyList()
                     val cloudAccountsMap = cloudData["accounts"] as? List<Map<String, Any>> ?: emptyList()
 
-                    // --- 合并账户 ---
-                    val accountIdMap = mutableMapOf<Long, Long>() // Old(Cloud) -> New(Local)
+                    val accountIdMap = mutableMapOf<Long, Long>()
 
                     cloudAccountsMap.forEach { accMap ->
                         val name = accMap["name"] as String
                         val type = accMap["type"] as String
                         val currency = accMap["currency"] as? String ?: "CNY"
 
-                        // 查找本地是否有同名同类型账户
                         val existingLocalAccount = localAccounts.find { it.name == name && it.type == type }
 
                         val cloudId = (accMap["id"] as Number).toLong()
@@ -577,25 +555,22 @@ class ExpenseRepository(
                                 iconName = accMap["iconName"] as? String ?: "Wallet",
                                 isLiability = accMap["isLiability"] as? Boolean ?: false
                             )
-                            val newId = accountDao.insert(newAccount) // 使用 accountDao
+                            val newId = accountDao.insert(newAccount)
                             accountIdMap[cloudId] = newId
                         }
                     }
 
-                    // --- 合并账单 ---
                     var addedCount = 0
 
                     cloudExpensesMap.forEach { expMap ->
                         val amount = (expMap["amount"] as Number).toDouble()
-                        val date = Date(expMap["date"] as Long)
+                        val date = parseDate(expMap["date"])
                         val remark = expMap["remark"] as? String ?: ""
                         val category = expMap["category"] as String
                         val cloudAccountId = (expMap["accountId"] as Number).toLong()
 
-                        // 映射 ID
                         val targetAccountId = accountIdMap[cloudAccountId] ?: return@forEach
 
-                        // 简单指纹去重 (金额+时间+账户+备注)
                         val isDuplicate = localExpenses.any { local ->
                             local.amount == amount &&
                                     local.date.time == date.time &&
@@ -616,7 +591,6 @@ class ExpenseRepository(
                         }
                     }
 
-                    // 合并后，重新上传一份全量数据，保证云端也是最新的
                     val finalExpenses = expenseDao.getAllExpenses().first()
                     val finalAccounts = accountDao.getAllAccounts().first()
                     uploadData(uid, finalExpenses, finalAccounts)
@@ -630,29 +604,67 @@ class ExpenseRepository(
         }
     }
 
-    // 辅助：上传数据到 Firestore
     private suspend fun uploadData(uid: String, expenses: List<Expense>, accounts: List<Account>) {
+
+        // 【新增】获取当前所有的分类设置
+        val expenseCats = getMainCategories(CategoryType.EXPENSE)
+        val incomeCats = getMainCategories(CategoryType.INCOME)
+
+        // 转换成 DTO 结构，方便 JSON 序列化 (复用现有的 DTO 逻辑)
+        val expenseCatsDto = expenseCats.map { main ->
+            MainCategoryDto(
+                title = main.title,
+                iconName = IconMapper.getIconName(main.icon),
+                colorInt = main.color.toArgb(),
+                subs = main.subCategories.map { SubCategoryDto(it.title, IconMapper.getIconName(it.icon)) }
+            )
+        }
+        val incomeCatsDto = incomeCats.map { main ->
+            MainCategoryDto(
+                title = main.title,
+                iconName = IconMapper.getIconName(main.icon),
+                colorInt = main.color.toArgb(),
+                subs = main.subCategories.map { SubCategoryDto(it.title, IconMapper.getIconName(it.icon)) }
+            )
+        }
+
+        // 转为 JSON 字符串，确保存储格式稳定
+        val expenseCatsJson = gson.toJson(expenseCatsDto)
+        val incomeCatsJson = gson.toJson(incomeCatsDto)
+
         val backupData = hashMapOf(
             "version" to 1,
             "timestamp" to System.currentTimeMillis(),
             "device" to Build.MODEL,
             "expenses" to expenses,
-            "accounts" to accounts
+            "accounts" to accounts,
+            // 【新增】把分类配置也传上去
+            "categories_expense_json" to expenseCatsJson,
+            "categories_income_json" to incomeCatsJson
         )
+
         firestore.collection("users").document(uid)
             .collection("backups").document("latest")
             .set(backupData)
             .await()
     }
 
-    // 辅助：将 Map 数据恢复到本地
     private suspend fun restoreDataLocally(data: Map<String, Any>) {
-        // 1. 清空本地
         expenseDao.deleteAll()
         accountDao.deleteAll()
-        // 可选：Budget 和 Periodic 要不要也同步？目前逻辑只同步了账单和账户。
+        budgetDao.deleteAll()
 
-        // 2. 恢复账户
+        // 【新增】恢复分类配置
+        val expJson = data["categories_expense_json"] as? String
+        val incJson = data["categories_income_json"] as? String
+
+        if (expJson != null) {
+            prefs.edit().putString("main_cats_expense", expJson).apply()
+        }
+        if (incJson != null) {
+            prefs.edit().putString("main_cats_income", incJson).apply()
+        }
+
         val accountsList = data["accounts"] as List<Map<String, Any>>
         val accountIdMap = mutableMapOf<Long, Long>()
 
@@ -669,17 +681,18 @@ class ExpenseRepository(
             accountIdMap[(map["id"] as Number).toLong()] = newId
         }
 
-        // 3. 恢复账单
         val expensesList = data["expenses"] as List<Map<String, Any>>
         expensesList.forEach { map ->
             val oldAccountId = (map["accountId"] as Number).toLong()
             val newAccountId = accountIdMap[oldAccountId] ?: return@forEach
 
+            val date = parseDate(map["date"])
+
             val expense = Expense(
                 accountId = newAccountId,
                 category = map["category"] as String,
                 amount = (map["amount"] as Number).toDouble(),
-                date = Date(map["date"] as Long),
+                date = date,
                 remark = map["remark"] as? String
             )
             expenseDao.insertExpense(expense)

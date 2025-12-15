@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
@@ -14,12 +13,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
@@ -35,7 +32,10 @@ fun SettingsScreen(
     val userEmail by viewModel.userEmail.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
 
-    var showClearDataDialog by remember { mutableStateOf(false) }
+    // --- 状态管理：清除数据 ---
+    var showClearDataDialog by remember { mutableStateOf(false) } // 第一步：普通确认
+    var showClearDataFinalDialog by remember { mutableStateOf(false) } // 第二步：输入文字确认
+    var clearDataInput by remember { mutableStateOf("") } // 输入框内容
 
     Scaffold(
         topBar = {
@@ -58,7 +58,6 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        // 如果已登录，去用户信息页；如果未登录，去登录页
                         if (isLoggedIn) {
                             navController.navigate(Routes.USER_INFO)
                         } else {
@@ -74,7 +73,6 @@ fun SettingsScreen(
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 头像
                     Box(
                         modifier = Modifier
                             .size(60.dp)
@@ -91,7 +89,6 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // 用户名/邮箱
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (isLoggedIn) userEmail else "点击登录/注册",
@@ -177,19 +174,18 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- 4. 数据设置 (【新增】同步入口) ---
+            // --- 4. 数据设置 ---
             SettingsGroupTitle("数据")
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column {
-                    // 【新增】云端同步按钮
+                    // 云端同步按钮
                     SettingsItem(
-                        icon = Icons.Default.CloudSync, // 需要 import androidx.compose.material.icons.filled.CloudSync
+                        icon = Icons.Default.CloudSync,
                         title = "云端同步",
                         onClick = {
-                            // 如果已登录直接去同步页，未登录则先去登录页
                             if (isLoggedIn) {
                                 navController.navigate(Routes.SYNC)
                             } else {
@@ -200,7 +196,7 @@ fun SettingsScreen(
 
                     Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
 
-                    // 清除数据按钮
+                    // 清除数据按钮 (红色)
                     SettingsItem(
                         icon = Icons.Default.DeleteForever,
                         title = "清除所有数据",
@@ -223,21 +219,25 @@ fun SettingsScreen(
         }
     }
 
-    // 清除数据确认弹窗
+    // --- 弹窗逻辑：清除数据 ---
+
+    // 1. 第一步：普通警告
     if (showClearDataDialog) {
         AlertDialog(
             onDismissRequest = { showClearDataDialog = false },
-            title = { Text("确认清除?") },
-            text = { Text("此操作将删除本地所有账单、账户和设置数据，且无法恢复。\n(不会删除云端备份)") },
+            title = { Text("确认清除本地数据?") },
+            text = { Text("此操作将删除本地所有账单、账户和设置数据。\n注意：此操作不可恢复！") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.clearAllData()
                         showClearDataDialog = false
+                        // 进入第二步
+                        clearDataInput = ""
+                        showClearDataFinalDialog = true
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("确认删除")
+                    Text("下一步")
                 }
             },
             dismissButton = {
@@ -247,9 +247,54 @@ fun SettingsScreen(
             }
         )
     }
+
+    // 2. 第二步：输入文字确认
+    if (showClearDataFinalDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDataFinalDialog = false },
+            title = { Text("最终安全确认") },
+            text = {
+                Column {
+                    Text("请输入以下文字以确认操作：", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "确认清除所有数据",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = clearDataInput,
+                        onValueChange = { clearDataInput = it },
+                        placeholder = { Text("确认清除所有数据") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllData()
+                        showClearDataFinalDialog = false
+                    },
+                    // 必须完全匹配中文
+                    enabled = clearDataInput == "确认清除所有数据",
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDataFinalDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
-// 辅助组件：分组标题
 @Composable
 fun SettingsGroupTitle(text: String) {
     Text(
@@ -262,7 +307,6 @@ fun SettingsGroupTitle(text: String) {
     )
 }
 
-// 辅助组件：设置项
 @Composable
 fun SettingsItem(
     icon: ImageVector,

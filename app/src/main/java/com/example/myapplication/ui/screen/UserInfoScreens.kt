@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,7 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.MarkEmailRead
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -373,12 +374,15 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
+    val context = LocalContext.current
     val email by viewModel.userEmail.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // 【新增】注销加载状态
-    var isDeleting by remember { mutableStateOf(false) }
+    // --- 状态管理：注销账号双重确认 ---
+    var showDeleteAccountDialog by remember { mutableStateOf(false) } // 第一步：风险警告
+    var showDeleteFinalDialog by remember { mutableStateOf(false) }   // 第二步：输入确认
+    var deleteInput by remember { mutableStateOf("") }                // 输入框内容
 
     Scaffold(
         snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
@@ -455,7 +459,6 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                enabled = !isDeleting,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
             ) {
                 Text("退出登录")
@@ -463,38 +466,119 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 【修改】注销账号：使用异步回调
+            // 【修改】注销账号按钮，触发第一步弹窗
             TextButton(
-                onClick = {
-                    if (!isDeleting) {
-                        isDeleting = true
+                onClick = { showDeleteAccountDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("注销账号", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+
+    // --- 弹窗逻辑：注销账号 ---
+
+    // 1. 第一步：风险警告
+    if (showDeleteAccountDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountDialog = false },
+            title = { Text("确认注销账号?") },
+            text = {
+                Column {
+                    Text("请注意：此操作将永久删除您的账号。")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "我们会清除云端所有数据，无法找回。",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("本地数据将保留，但无法再进行云端同步。")
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteAccountDialog = false
+                        // 进入第二步
+                        deleteInput = ""
+                        showDeleteFinalDialog = true
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("下一步")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAccountDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    // 2. 第二步：最终输入确认
+    if (showDeleteFinalDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteFinalDialog = false },
+            title = { Text("最终安全确认") },
+            text = {
+                Column {
+                    Text("请输入以下文字以确认注销账号：", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "确认注销账号",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = deleteInput,
+                        onValueChange = { deleteInput = it },
+                        placeholder = { Text("确认注销账号") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteFinalDialog = false
+                        // 执行注销
                         viewModel.deleteUserAccount(
                             onSuccess = {
-                                isDeleting = false
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("账号已注销")
-                                    delay(1000)
-                                    // 注销成功后退出页面
-                                    navController.popBackStack()
+                                Toast.makeText(context, "账号已注销", Toast.LENGTH_SHORT).show()
+                                // 注销成功后回到欢迎页或登录页，并清空栈
+                                navController.navigate(Routes.WELCOME) {
+                                    popUpTo(0)
                                 }
                             },
                             onError = { msg ->
-                                isDeleting = false
-                                scope.launch { snackbarHostState.showSnackbar(msg) }
+                                // 自动处理“安全验证过期”的情况
+                                if (msg.contains("安全验证过期") || msg.contains("recent login")) {
+                                    Toast.makeText(context, "为了安全，请重新登录后再操作", Toast.LENGTH_LONG).show()
+                                    navController.navigate(Routes.LOGIN)
+                                } else {
+                                    scope.launch { snackbarHostState.showSnackbar(msg) }
+                                }
                             }
                         )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isDeleting
-            ) {
-                if (isDeleting) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.error)
-                } else {
-                    Text("注销账号", color = MaterialTheme.colorScheme.error)
+                    },
+                    // 必须完全匹配中文
+                    enabled = deleteInput == "确认注销账号",
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认注销")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteFinalDialog = false }) {
+                    Text("取消")
                 }
             }
-        }
+        )
     }
 }
 
