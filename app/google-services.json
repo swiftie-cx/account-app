@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "458681938496",
+    "project_id": "timeledger-7ae68",
+    "storage_bucket": "timeledger-7ae68.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:458681938496:android:5e8b1a198bb1f0afaaa5a5",
+        "android_client_info": {
+          "package_name": "com.swiftiecx.timeledger"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8bSxTGwVqrg7ymah8L5xZVI3h6Sl5pN0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

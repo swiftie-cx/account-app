@@ -35,7 +35,7 @@ import com.example.myapplication.ui.viewmodel.ThemeViewModel
 import java.util.Calendar
 import com.example.myapplication.ui.screen.chart.ChartScreen
 import com.example.myapplication.ui.screen.chart.CategoryChartDetailScreen
-import com.example.myapplication.ui.screen.chart.FullScreenChartScreen // [新增] 导入
+import com.example.myapplication.ui.screen.chart.FullScreenChartScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,14 +53,15 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // [修改] 增加 fullscreen_chart 的判断，隐藏底部导航栏
+    // [修改] 增加 SYNC 页面的判断，隐藏底部导航栏
     val showScaffold = currentRoute != Routes.LOCK &&
             currentRoute != Routes.WELCOME &&
+            currentRoute != Routes.SYNC &&  // [新增] 同步页面不显示底部栏
             currentRoute?.startsWith(Routes.ADD_TRANSACTION) != true &&
             currentRoute?.startsWith("add_periodic_transaction") != true &&
             currentRoute != Routes.SEARCH &&
-            currentRoute?.startsWith("category_chart_detail") != true && // 详情页不显示
-            currentRoute?.startsWith("fullscreen_chart") != true         // [新增] 全屏页不显示
+            currentRoute?.startsWith("category_chart_detail") != true &&
+            currentRoute?.startsWith("fullscreen_chart") != true
 
     if (showScaffold) {
         Scaffold(
@@ -236,7 +237,7 @@ fun NavigationGraph(
             )
         }
 
-        // [新增] 全屏图表页路由注册
+        // 全屏图表页路由注册
         composable(
             route = "fullscreen_chart/{type}/{start}/{end}",
             arguments = listOf(
@@ -442,5 +443,11 @@ fun NavigationGraph(
         composable(Routes.FORGOT_PASSWORD) {
             ForgotPasswordScreen(navController = navController, viewModel = expenseViewModel)
         }
+
+        // [新增] 同步页面的路由注册
+        composable(Routes.SYNC) {
+            SyncScreen(navController = navController, viewModel = expenseViewModel)
+        }
+
     }
 }

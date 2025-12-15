@@ -38,7 +38,7 @@ import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// --- 封装一个居中显示的 SnackbarHost (保持不变) ---
+// --- 封装一个居中显示的 SnackbarHost ---
 @Composable
 fun CenteredSnackbarHost(hostState: SnackbarHostState) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -60,7 +60,7 @@ fun CenteredSnackbarHost(hostState: SnackbarHostState) {
     }
 }
 
-// --- 【新增】通用的时尚背景布局 ---
+// --- 通用的时尚背景布局 ---
 @Composable
 fun AuthScreenWrapper(
     title: String,
@@ -81,7 +81,7 @@ fun AuthScreenWrapper(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 1. 顶部带颜色的背景 (高度占屏幕约 35%)
+            // 1. 顶部带颜色的背景
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -96,7 +96,6 @@ fun AuthScreenWrapper(
                         )
                     )
             ) {
-                // 返回按钮
                 IconButton(
                     onClick = onBackClick,
                     modifier = Modifier
@@ -110,7 +109,6 @@ fun AuthScreenWrapper(
                     )
                 }
 
-                // 标题区域
                 Column(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -118,7 +116,7 @@ fun AuthScreenWrapper(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AccountBalanceWallet, // App Logo
+                        imageVector = Icons.Default.AccountBalanceWallet,
                         contentDescription = null,
                         modifier = Modifier.size(56.dp),
                         tint = Color.White
@@ -142,13 +140,13 @@ fun AuthScreenWrapper(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 200.dp) // 让卡片下移，叠加在背景上
+                    .padding(top = 200.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth(0.9f) // 宽度占屏幕 90%
+                        .fillMaxWidth(0.9f)
                         .shadow(16.dp, RoundedCornerShape(24.dp)),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = surfaceColor),
@@ -162,20 +160,20 @@ fun AuthScreenWrapper(
                         content()
                     }
                 }
-
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
-// --- 【美化】登录界面 ---
+// --- 登录界面 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -186,7 +184,6 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
         onBackClick = { navController.popBackStack() },
         snackbarHost = { CenteredSnackbarHost(snackbarHostState) }
     ) {
-        // 邮箱输入
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -198,7 +195,6 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
         )
 
-        // 密码输入
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -217,7 +213,6 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done)
         )
 
-        // 忘记密码链接
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
             Text(
                 text = "忘记密码？",
@@ -230,25 +225,35 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
 
         Spacer(Modifier.height(8.dp))
 
-        // 登录按钮
         Button(
             onClick = {
-                if (viewModel.login(email, password)) {
-                    navController.popBackStack()
-                } else {
-                    scope.launch { snackbarHostState.showSnackbar("账号或密码错误") }
-                }
+                isLoading = true
+                viewModel.login(
+                    email = email,
+                    password = password,
+                    onSuccess = {
+                        isLoading = false
+                        navController.popBackStack()
+                    },
+                    onError = { msg ->
+                        isLoading = false
+                        scope.launch { snackbarHostState.showSnackbar(msg) }
+                    }
+                )
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp),
             shape = RoundedCornerShape(14.dp),
-            enabled = email.isNotBlank() && password.isNotBlank()
+            enabled = email.isNotBlank() && password.isNotBlank() && !isLoading
         ) {
-            Text("立即登录", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("立即登录", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
-        // 注册引导
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("还没有账号？", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
@@ -264,19 +269,15 @@ fun LoginScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     }
 }
 
-// --- 【美化】注册界面 ---
+// --- 注册界面 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-
-    var isCountingDown by remember { mutableStateOf(false) }
-    var countdown by remember { mutableIntStateOf(60) }
-    var emailError by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -287,79 +288,16 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
         onBackClick = { navController.popBackStack() },
         snackbarHost = { CenteredSnackbarHost(snackbarHostState) }
     ) {
-        // 邮箱
         OutlinedTextField(
             value = email,
-            onValueChange = {
-                email = it
-                emailError = null
-            },
+            onValueChange = { email = it },
             label = { Text("电子邮箱") },
             leadingIcon = { Icon(Icons.Outlined.Email, null) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            isError = emailError != null,
-            supportingText = { if (emailError != null) Text(emailError!!) }
+            shape = RoundedCornerShape(12.dp)
         )
 
-        // 验证码行
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                value = code,
-                onValueChange = { code = it },
-                label = { Text("验证码") },
-                leadingIcon = { Icon(Icons.Outlined.MarkEmailRead, null) },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-
-            Button(
-                onClick = {
-                    if (email.isBlank()) {
-                        scope.launch { snackbarHostState.showSnackbar("请输入邮箱") }
-                    } else if (viewModel.isEmailRegistered(email)) {
-                        emailError = "该邮箱已注册，请直接登录"
-                    } else {
-                        isCountingDown = true
-                        scope.launch {
-                            countdown = 60
-                            while (countdown > 0 && isCountingDown) {
-                                delay(1000)
-                                countdown--
-                            }
-                            isCountingDown = false
-                            countdown = 60
-                        }
-
-                        viewModel.sendCodeToEmail(
-                            email = email,
-                            onSuccess = {
-                                scope.launch { snackbarHostState.showSnackbar("验证码已发送至邮箱") }
-                            },
-                            onError = { msg ->
-                                isCountingDown = false
-                                scope.launch { snackbarHostState.showSnackbar(msg) }
-                            }
-                        )
-                    }
-                },
-                enabled = !isCountingDown && email.isNotBlank() && emailError == null,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(OutlinedTextFieldDefaults.MinHeight),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
-            ) {
-                Text(if (isCountingDown) "${countdown}s" else "获取")
-            }
-        }
-
-        // 密码
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -377,7 +315,6 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
             shape = RoundedCornerShape(12.dp)
         )
 
-        // 确认密码
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
@@ -391,42 +328,57 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
         Spacer(Modifier.height(8.dp))
 
-        // 注册按钮
         Button(
             onClick = {
-                if (password.isBlank()) {
-                    scope.launch { snackbarHostState.showSnackbar("请设置密码") }
+                if (password.length < 6) {
+                    scope.launch { snackbarHostState.showSnackbar("密码长度至少为 6 位") }
                 } else if (password != confirmPassword) {
                     scope.launch { snackbarHostState.showSnackbar("两次密码不一致") }
-                } else if (code.isBlank()) {
-                    scope.launch { snackbarHostState.showSnackbar("请输入验证码") }
                 } else {
-                    if (viewModel.verifyCode(email, code)) {
-                        viewModel.register(email, password)
-                        navController.popBackStack(Routes.LOGIN, inclusive = true)
-                    } else {
-                        scope.launch { snackbarHostState.showSnackbar("验证码错误") }
-                    }
+                    isLoading = true
+                    viewModel.register(
+                        email = email,
+                        password = password,
+                        onSuccess = {
+                            isLoading = false
+                            scope.launch {
+                                snackbarHostState.showSnackbar("注册成功，验证邮件已发送")
+                                delay(1000)
+                                navController.popBackStack(Routes.LOGIN, inclusive = true)
+                            }
+                        },
+                        onError = { msg ->
+                            isLoading = false
+                            scope.launch { snackbarHostState.showSnackbar(msg) }
+                        }
+                    )
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp),
             shape = RoundedCornerShape(14.dp),
-            enabled = email.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank() && code.isNotBlank()
+            enabled = email.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank() && !isLoading
         ) {
-            Text("注册并登录", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("注册并登录", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
 
-// --- 用户信息主菜单 (基本保持原有结构，微调样式) ---
+// --- 用户信息主菜单 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
     val email by viewModel.userEmail.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // 【新增】注销加载状态
+    var isDeleting by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
@@ -448,7 +400,6 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 用户头像卡片
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -474,7 +425,6 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
             Spacer(Modifier.height(32.dp))
 
-            // 菜单项
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -497,7 +447,6 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 底部按钮
             Button(
                 onClick = {
                     viewModel.logout()
@@ -506,6 +455,7 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
+                enabled = !isDeleting,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
             ) {
                 Text("退出登录")
@@ -513,102 +463,240 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 【修改】注销账号：使用异步回调
             TextButton(
                 onClick = {
-                    viewModel.deleteUserAccount()
-                    scope.launch { snackbarHostState.showSnackbar("账号已注销") }
-                    navController.popBackStack()
+                    if (!isDeleting) {
+                        isDeleting = true
+                        viewModel.deleteUserAccount(
+                            onSuccess = {
+                                isDeleting = false
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("账号已注销")
+                                    delay(1000)
+                                    // 注销成功后退出页面
+                                    navController.popBackStack()
+                                }
+                            },
+                            onError = { msg ->
+                                isDeleting = false
+                                scope.launch { snackbarHostState.showSnackbar(msg) }
+                            }
+                        )
+                    }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isDeleting
             ) {
-                Text("注销账号", color = MaterialTheme.colorScheme.error)
+                if (isDeleting) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.error)
+                } else {
+                    Text("注销账号", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
 }
 
-// --- 保持原有逻辑的辅助界面 (修改密码、忘记密码) ---
-// 您之前的代码逻辑是正确的，为了节省篇幅，这里我保持它们的结构不变，
-// 但为了保持文件完整性，我还是把它们放进来，您可以根据需要应用同样的 UI 美化
-
+// --- 【重写】修改密码界面 (输入旧密码+新密码) ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangePasswordScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
-    // 复用之前的逻辑，建议您可以参照 AuthScreenWrapper 风格进行改造
-    // 这里保持功能完整性
-    var step by remember { mutableIntStateOf(1) }
     var oldPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+
+    var oldPasswordVisible by remember { mutableStateOf(false) }
+    var newPasswordVisible by remember { mutableStateOf(false) }
+
+    var isLoading by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold(
         snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
-        topBar = { CenterAlignedTopAppBar(title = { Text("修改密码") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } }) }
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("修改密码") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
+                    }
+                }
+            )
+        }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
-            if (step == 1) {
-                OutlinedTextField(value = oldPassword, onValueChange = { oldPassword = it }, label = { Text("输入旧密码") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Spacer(Modifier.height(24.dp))
-                Button(onClick = { if (viewModel.verifyUserPassword(oldPassword)) step = 2 else scope.launch { snackbarHostState.showSnackbar("旧密码错误") } }, modifier = Modifier.fillMaxWidth()) { Text("下一步") }
-            } else {
-                OutlinedTextField(value = newPassword, onValueChange = { newPassword = it }, label = { Text("新密码") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("确认新密码") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Spacer(Modifier.height(24.dp))
-                Button(onClick = { if (newPassword.isNotBlank() && newPassword == confirmPassword) { viewModel.saveUserPassword(newPassword); scope.launch { snackbarHostState.showSnackbar("修改成功") }; navController.popBackStack() } else scope.launch { snackbarHostState.showSnackbar("密码不一致") } }, modifier = Modifier.fillMaxWidth()) { Text("确认") }
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 旧密码
+            OutlinedTextField(
+                value = oldPassword,
+                onValueChange = { oldPassword = it },
+                label = { Text("当前密码") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = if (oldPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val image = if (oldPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                    IconButton(onClick = { oldPasswordVisible = !oldPasswordVisible }) {
+                        Icon(imageVector = image, contentDescription = null)
+                    }
+                }
+            )
+
+            // 新密码
+            OutlinedTextField(
+                value = newPassword,
+                onValueChange = { newPassword = it },
+                label = { Text("新密码 (至少6位)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val image = if (newPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                    IconButton(onClick = { newPasswordVisible = !newPasswordVisible }) {
+                        Icon(imageVector = image, contentDescription = null)
+                    }
+                }
+            )
+
+            // 确认新密码
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("确认新密码") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                isError = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && newPassword != confirmPassword,
+                supportingText = {
+                    if (newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && newPassword != confirmPassword) {
+                        Text("两次输入的密码不一致")
+                    }
+                }
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    if (oldPassword.isBlank()) {
+                        scope.launch { snackbarHostState.showSnackbar("请输入当前密码") }
+                    } else if (newPassword.length < 6) {
+                        scope.launch { snackbarHostState.showSnackbar("新密码长度不能少于6位") }
+                    } else if (newPassword != confirmPassword) {
+                        scope.launch { snackbarHostState.showSnackbar("两次新密码不一致") }
+                    } else if (oldPassword == newPassword) {
+                        scope.launch { snackbarHostState.showSnackbar("新密码不能与旧密码相同") }
+                    } else {
+                        isLoading = true
+                        viewModel.changePassword(
+                            oldPass = oldPassword,
+                            newPass = newPassword,
+                            onSuccess = {
+                                isLoading = false
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("密码修改成功")
+                                    delay(1000)
+                                    navController.popBackStack()
+                                }
+                            },
+                            onError = { error ->
+                                isLoading = false
+                                scope.launch { snackbarHostState.showSnackbar(error) }
+                            }
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                enabled = !isLoading && oldPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword == newPassword
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("确认修改", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
 
+// --- 忘记密码界面 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotPasswordScreen(navController: NavHostController, viewModel: ExpenseViewModel) {
-    // 保持原有逻辑
-    var step by remember { mutableIntStateOf(1) }
-    var email by remember { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
-    var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var isCountingDown by remember { mutableStateOf(false) }
-    var countdown by remember { mutableIntStateOf(60) }
+    // 1. 获取当前登录状态和邮箱
+    val userEmail by viewModel.userEmail.collectAsState()
+
+    // 2. 初始化邮箱输入框：如果有登录邮箱则自动填充，否则为空
+    var email by remember(userEmail) { mutableStateOf(userEmail) }
+
+    var isLoading by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val boundEmail by viewModel.userEmail.collectAsState()
-    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
-    LaunchedEffect(isLoggedIn, boundEmail) { if (isLoggedIn && boundEmail.isNotBlank()) email = boundEmail }
 
     Scaffold(
         snackbarHost = { CenteredSnackbarHost(snackbarHostState) },
         topBar = { CenterAlignedTopAppBar(title = { Text("重置密码") }, navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } }) }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
-            if (step == 1) {
-                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("邮箱") }, modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !isLoggedIn)
-                Spacer(Modifier.height(16.dp))
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("验证码") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = {
-                        if (email.isNotBlank()) {
-                            if (viewModel.isEmailRegistered(email)) {
-                                isCountingDown = true
-                                scope.launch { countdown = 60; while (countdown > 0 && isCountingDown) { delay(1000); countdown-- }; isCountingDown = false; countdown = 60 }
-                                viewModel.sendCodeToEmail(email, { scope.launch { snackbarHostState.showSnackbar("验证码已发送") } }, { msg -> isCountingDown = false; scope.launch { snackbarHostState.showSnackbar(msg) } })
-                            } else scope.launch { snackbarHostState.showSnackbar("该邮箱未注册") }
-                        } else scope.launch { snackbarHostState.showSnackbar("请输入邮箱") }
-                    }, enabled = !isCountingDown && email.isNotBlank()) { Text(if (isCountingDown) "${countdown}s" else "获取") }
+            Text(
+                "请输入您的注册邮箱，我们将向您发送重置密码的链接。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("邮箱") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                // 即使自动填入，也允许用户修改
+                enabled = !isLoading
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    if (email.isNotBlank()) {
+                        isLoading = true
+                        viewModel.sendPasswordResetEmail(
+                            email = email,
+                            onSuccess = {
+                                isLoading = false
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("重置邮件已发送，请查收")
+                                    delay(1500)
+                                    navController.popBackStack()
+                                }
+                            },
+                            onError = { msg ->
+                                isLoading = false
+                                scope.launch { snackbarHostState.showSnackbar(msg) }
+                            }
+                        )
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar("请输入邮箱") }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = email.isNotBlank() && !isLoading
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("发送重置链接")
                 }
-                Spacer(Modifier.height(24.dp))
-                Button(onClick = { if (viewModel.verifyCode(email, code)) step = 2 else scope.launch { snackbarHostState.showSnackbar("验证码错误") } }, modifier = Modifier.fillMaxWidth(), enabled = code.isNotBlank()) { Text("下一步") }
-            } else {
-                OutlinedTextField(value = newPassword, onValueChange = { newPassword = it }, label = { Text("新密码") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("确认新密码") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Spacer(Modifier.height(24.dp))
-                Button(onClick = { if (newPassword.isNotBlank() && newPassword == confirmPassword) { viewModel.saveUserPassword(newPassword); scope.launch { snackbarHostState.showSnackbar("密码重置成功") }; navController.popBackStack() } else scope.launch { snackbarHostState.showSnackbar("密码不一致") } }, modifier = Modifier.fillMaxWidth()) { Text("确认") }
             }
         }
     }

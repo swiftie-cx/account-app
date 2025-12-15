@@ -3,16 +3,18 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.kotlin.kapt")
     alias(libs.plugins.kotlin.compose)
+    // id("com.android.application") <--- 删掉这一行，因为第一行已经加过了
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.myapplication"
-    compileSdk = 34 // 注意：通常建议写具体的数字，如 34 或 35。如果您的libs.versions中定义了release(36)，请保持原样。这里我暂且保留您原本的结构。
+    namespace = "com.swiftiecx.timeledger"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.myapplication"
+        applicationId = "com.swiftiecx.timeledger"
         minSdk = 24
-        targetSdk = 34 // 同样建议写具体数字
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -36,7 +38,6 @@ android {
         jvmTarget = "1.8"
     }
 
-    // --- 新增：解决 META-INF 冲突的关键配置 ---
     packaging {
         resources {
             excludes += "META-INF/NOTICE.md"
@@ -75,23 +76,28 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
-    // ViewModel / 在 Compose 中收集 Flow
+    // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
 
-    // ---- Reorderable 列表 ----
+    // Reorderable
     implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
 
-    // 网络请求 Retrofit
+    // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
-    // 邮件发送库
+    // 邮件库 (虽然换了 Firebase，但这几个库留着也不报错，如果不想要可以删掉)
     implementation("com.sun.mail:android-mail:1.6.7")
     implementation("com.sun.mail:android-activation:1.6.7")
 
+    // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    // 添加 WorkManager 依赖
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0")) // 建议用较新的稳定版，或者保持你写的 34.7.0 如果确实有
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth-ktx")
+
+    implementation("com.google.firebase:firebase-firestore-ktx:24.10.0")
 }

@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screen
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,8 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,38 +17,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.myapplication.ui.navigation.Routes
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    navController: NavHostController,
+    navController: NavController,
     defaultCurrency: String,
     viewModel: ExpenseViewModel
 ) {
-    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val scrollState = rememberScrollState()
     val userEmail by viewModel.userEmail.collectAsState()
-    val context = LocalContext.current
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
 
-    var showWarningDialog by remember { mutableStateOf(false) }
-    var showFinalConfirmDialog by remember { mutableStateOf(false) }
-    var confirmationInput by remember { mutableStateOf("") }
-    val targetPhrase = "确认清除全部数据"
+    var showClearDataDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("我的", fontWeight = FontWeight.Bold) },
-                // navigationIcon 移除
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                )
+                title = { Text("我的", fontWeight = FontWeight.Bold) }
             )
         }
     ) { innerPadding ->
@@ -58,237 +48,228 @@ fun SettingsScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // --- 1. 用户信息卡片 ---
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                UserStatusHeader(
-                    isLoggedIn = isLoggedIn,
-                    email = userEmail,
-                    onClick = {
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        // 如果已登录，去用户信息页；如果未登录，去登录页
                         if (isLoggedIn) {
                             navController.navigate(Routes.USER_INFO)
                         } else {
                             navController.navigate(Routes.LOGIN)
                         }
+                    },
+                elevation = CardDefaults.cardElevation(2.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(20.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 头像
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
-                )
-            }
 
-            SettingsGroup(title = "常规") {
-                SettingsItem(
-                    icon = Icons.Default.Category,
-                    title = "类别设置",
-                    onClick = { navController.navigate(Routes.CATEGORY_SETTINGS) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                SettingsItem(
-                    icon = Icons.Default.Repeat, // 使用 Repeat 图标
-                    title = "周期记账",
-                    onClick = { navController.navigate(Routes.PERIODIC_BOOKKEEPING) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                SettingsItem(
-                    icon = Icons.Default.Paid,
-                    title = "默认货币",
-                    value = defaultCurrency,
-                    onClick = { navController.navigate(Routes.CURRENCY_SELECTION) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                SettingsItem(
-                    icon = Icons.Default.Palette,
-                    title = "主题风格",
-                    onClick = { navController.navigate(Routes.THEME_SETTINGS) }
-                )
-            }
+                    Spacer(modifier = Modifier.width(16.dp))
 
-            SettingsGroup(title = "安全") {
-                SettingsItem(
-                    icon = Icons.Default.Lock,
-                    title = "隐私密码",
-                    onClick = {
+                    // 用户名/邮箱
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isLoggedIn) userEmail else "点击登录/注册",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                         if (isLoggedIn) {
-                            navController.navigate(Routes.PRIVACY_SETTINGS)
+                            Text(
+                                text = "查看账号信息",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         } else {
-                            Toast.makeText(context, "请先登录账号", Toast.LENGTH_SHORT).show()
+                            Text(
+                                text = "登录以同步数据",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                )
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
-            SettingsGroup(title = "数据") {
-                SettingsItem(
-                    icon = Icons.Default.DeleteForever,
-                    title = "清除所有数据",
-                    titleColor = MaterialTheme.colorScheme.error,
-                    iconColor = MaterialTheme.colorScheme.error,
-                    showArrow = false,
-                    onClick = { showWarningDialog = true }
-                )
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 2. 常规设置 ---
+            SettingsGroupTitle("常规")
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column {
+                    SettingsItem(
+                        icon = Icons.Default.Category,
+                        title = "类别设置",
+                        onClick = { navController.navigate(Routes.CATEGORY_SETTINGS) }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    SettingsItem(
+                        icon = Icons.Default.Repeat,
+                        title = "周期记账",
+                        onClick = { navController.navigate(Routes.PERIODIC_BOOKKEEPING) }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    SettingsItem(
+                        icon = Icons.Default.AttachMoney,
+                        title = "默认货币",
+                        value = defaultCurrency,
+                        onClick = { navController.navigate(Routes.CURRENCY_SELECTION) }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    SettingsItem(
+                        icon = Icons.Default.Palette,
+                        title = "主题风格",
+                        onClick = { navController.navigate(Routes.THEME_SETTINGS) }
+                    )
+                }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "Version 1.0.0",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+            // --- 3. 安全设置 ---
+            SettingsGroupTitle("安全")
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column {
+                    SettingsItem(
+                        icon = Icons.Default.Lock,
+                        title = "隐私密码",
+                        onClick = { navController.navigate(Routes.PRIVACY_SETTINGS) }
+                    )
+                }
             }
-            Spacer(Modifier.height(24.dp))
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 4. 数据设置 (【新增】同步入口) ---
+            SettingsGroupTitle("数据")
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column {
+                    // 【新增】云端同步按钮
+                    SettingsItem(
+                        icon = Icons.Default.CloudSync, // 需要 import androidx.compose.material.icons.filled.CloudSync
+                        title = "云端同步",
+                        onClick = {
+                            // 如果已登录直接去同步页，未登录则先去登录页
+                            if (isLoggedIn) {
+                                navController.navigate(Routes.SYNC)
+                            } else {
+                                navController.navigate(Routes.LOGIN)
+                            }
+                        }
+                    )
+
+                    Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+
+                    // 清除数据按钮
+                    SettingsItem(
+                        icon = Icons.Default.DeleteForever,
+                        title = "清除所有数据",
+                        textColor = MaterialTheme.colorScheme.error,
+                        iconColor = MaterialTheme.colorScheme.error,
+                        onClick = { showClearDataDialog = true }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text(
+                text = "Version 1.0.0",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
-    if (showWarningDialog) {
+    // 清除数据确认弹窗
+    if (showClearDataDialog) {
         AlertDialog(
-            onDismissRequest = { showWarningDialog = false },
-            title = { Text("警告") },
-            text = { Text("您即将清除所有的记账记录、账户信息和预算设置。\n\n此操作不可恢复！") },
+            onDismissRequest = { showClearDataDialog = false },
+            title = { Text("确认清除?") },
+            text = { Text("此操作将删除本地所有账单、账户和设置数据，且无法恢复。\n(不会删除云端备份)") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showWarningDialog = false
-                        showFinalConfirmDialog = true
-                        confirmationInput = ""
-                    }
-                ) { Text("下一步", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { showWarningDialog = false }) { Text("取消") } }
-        )
-    }
-
-    if (showFinalConfirmDialog) {
-        val isMatch = confirmationInput == targetPhrase
-        AlertDialog(
-            onDismissRequest = { showFinalConfirmDialog = false },
-            title = { Text("最终确认") },
-            text = {
-                Column {
-                    Text("为了防止误操作，请在下方输入：")
-                    Text(text = targetPhrase, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
-                    OutlinedTextField(
-                        value = confirmationInput,
-                        onValueChange = { confirmationInput = it },
-                        placeholder = { Text(targetPhrase) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.error, cursorColor = MaterialTheme.colorScheme.error)
-                    )
+                        viewModel.clearAllData()
+                        showClearDataDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("确认删除")
                 }
             },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.clearAllData(); showFinalConfirmDialog = false },
-                    enabled = isMatch,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("彻底删除") }
-            },
-            dismissButton = { TextButton(onClick = { showFinalConfirmDialog = false }) { Text("取消") } }
-        )
-    }
-}
-
-@Composable
-fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 12.dp, bottom = 8.dp)
-        )
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(0.dp)
-        ) {
-            Column {
-                content()
+            dismissButton = {
+                TextButton(onClick = { showClearDataDialog = false }) {
+                    Text("取消")
+                }
             }
-        }
+        )
     }
 }
 
+// 辅助组件：分组标题
 @Composable
-fun UserStatusHeader(
-    isLoggedIn: Boolean,
-    email: String,
-    onClick: () -> Unit
-) {
-    Row(
+fun SettingsGroupTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
-                contentDescription = null,
-                modifier = Modifier.size(36.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            if (isLoggedIn) {
-                Text(
-                    text = email,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "查看账号信息",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Text(
-                    text = "登录 / 注册",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "开启云同步与高级功能",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.outline
-        )
-    }
+            .padding(start = 8.dp, bottom = 8.dp)
+    )
 }
 
+// 辅助组件：设置项
 @Composable
 fun SettingsItem(
     icon: ImageVector,
     title: String,
     value: String? = null,
-    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
     iconColor: Color = MaterialTheme.colorScheme.primary,
-    showArrow: Boolean = true,
     onClick: () -> Unit
 ) {
     Row(
@@ -298,15 +279,32 @@ fun SettingsItem(
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(22.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconColor,
+            modifier = Modifier.size(24.dp)
+        )
         Spacer(modifier = Modifier.width(16.dp))
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = titleColor, modifier = Modifier.weight(1f))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = textColor,
+            modifier = Modifier.weight(1f)
+        )
         if (value != null) {
-            Text(text = value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.width(8.dp))
         }
-        if (showArrow) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(20.dp))
-        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(14.dp)
+        )
     }
 }

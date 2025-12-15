@@ -70,4 +70,6 @@ object Routes {
     fun categoryChartDetailRoute(category: String, type: Int, start: Long, end: Long): String {
         return "category_chart_detail/$category/$type/$start/$end"
     }
+
+    const val SYNC = "sync_screen"
 }

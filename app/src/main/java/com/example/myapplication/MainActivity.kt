@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,21 +13,34 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModelProvider
-import androidx.work.ExistingPeriodicWorkPolicy // 新增
-import androidx.work.PeriodicWorkRequestBuilder // 新增
-import androidx.work.WorkManager // 新增
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.ExpenseRepository
 import com.example.myapplication.ui.screen.MainScreen
 import com.example.myapplication.ui.viewmodel.ExpenseViewModel
 import com.example.myapplication.ui.viewmodel.ExpenseViewModelFactory
 import com.example.myapplication.ui.viewmodel.ThemeViewModel
-import com.example.myapplication.worker.PeriodicWorker // 确保这一行没有红字，如果有，说明 PeriodicWorker 没创建
-import java.util.concurrent.TimeUnit // 新增
+import com.example.myapplication.worker.PeriodicWorker
+import java.util.concurrent.TimeUnit
+import com.google.firebase.FirebaseApp // 确保有这个引用
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // --- 【新增】安全检查：防止 Firebase 初始化失败导致闪退 ---
+        try {
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                FirebaseApp.initializeApp(this)
+                Log.d("MainActivity", "Firebase 手动初始化成功")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.e("MainActivity", "Firebase 初始化失败: ${e.message}")
+        }
+        // ----------------------------------------------------
 
         // 1. 开启 Edge-to-Edge
         enableEdgeToEdge()
@@ -44,7 +58,7 @@ class MainActivity : ComponentActivity() {
         val expenseViewModel = ViewModelProvider(this, expenseViewModelFactory)[ExpenseViewModel::class.java]
         val themeViewModel = ThemeViewModel(applicationContext)
 
-        // --- 【新增】启动后台周期任务 ---
+        // --- 启动后台周期任务 ---
         // 定义任务：每 12 小时检查一次有没有需要自动记账的规则
         val workRequest = PeriodicWorkRequestBuilder<PeriodicWorker>(
             12, TimeUnit.HOURS

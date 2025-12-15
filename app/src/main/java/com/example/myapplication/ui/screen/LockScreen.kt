@@ -1,23 +1,21 @@
 package com.example.myapplication.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.MarkEmailRead
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -141,6 +139,7 @@ fun LockScreen(
 
             // --- 底部忘记密码按钮 ---
             Spacer(modifier = Modifier.height(20.dp))
+            // 这里是第一层救命稻草：点击弹出账号登录框
             OutlinedButton(
                 onClick = { showEmailUnlockDialog = true },
                 border = null
@@ -167,7 +166,7 @@ fun LockScreen(
 }
 
 /**
- * 现代化的验证弹窗
+ * 现代化的验证弹窗 (适配 Firebase 异步登录 + 找回密码)
  */
 @Composable
 fun UnlockByEmailDialog(
@@ -176,21 +175,20 @@ fun UnlockByEmailDialog(
     onUnlockSuccess: () -> Unit
 ) {
     val savedEmail by viewModel.userEmail.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(Icons.Default.Security to "账号密码", Icons.Outlined.MarkEmailRead to "验证码")
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     var email by remember { mutableStateOf(savedEmail) }
     var password by remember { mutableStateOf("") }
-    var code by remember { mutableStateOf("") }
-    var isCountingDown by remember { mutableStateOf(false) }
-    var countdown by remember { mutableIntStateOf(60) }
     var passwordVisible by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
-    // 用状态来控制显示的错误信息，替代 Toast
+    // 用状态来控制显示的错误/提示信息
     var uiMessage by remember { mutableStateOf<String?>(null) }
     var isError by remember { mutableStateOf(false) }
+
+    // 用于控制倒计时 (防止狂点发送重置邮件)
+    var isResetSent by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -230,38 +228,6 @@ fun UnlockByEmailDialog(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Tab栏
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    indicator = { tabPositions ->
-                        if (selectedTab < tabPositions.size) {
-                            TabRowDefaults.SecondaryIndicator(
-                                Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    },
-                    divider = {},
-                    modifier = Modifier.clip(MaterialTheme.shapes.medium)
-                ) {
-                    tabs.forEachIndexed { index, (icon, title) ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = {
-                                selectedTab = index
-                                uiMessage = null // 切换 Tab 清除错误
-                            },
-                            text = { Text(title) },
-                            icon = { Icon(imageVector = icon, contentDescription = null) },
-                            selectedContentColor = MaterialTheme.colorScheme.primary,
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-
                 // 表单内容
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // 邮箱输入框
@@ -274,98 +240,69 @@ fun UnlockByEmailDialog(
                         label = { Text("注册邮箱") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        shape = MaterialTheme.shapes.medium
+                        shape = MaterialTheme.shapes.medium,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                     )
 
-                    if (selectedTab == 0) {
-                        // 密码模式
-                        OutlinedTextField(
-                            value = password,
-                            onValueChange = {
-                                password = it
-                                uiMessage = null
-                            },
-                            label = { Text("登录密码") },
-                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            trailingIcon = {
-                                val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                    Icon(imageVector = image, contentDescription = null)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.medium
-                        )
-                    } else {
-                        // 验证码模式
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = code,
-                                onValueChange = {
-                                    code = it
-                                    uiMessage = null
-                                },
-                                label = { Text("验证码") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                shape = MaterialTheme.shapes.medium
-                            )
-                            // 获取验证码按钮
-                            Button(
-                                onClick = {
-                                    if (email.isBlank()) {
-                                        uiMessage = "请输入邮箱"; isError = true
-                                    } else if (!viewModel.isEmailRegistered(email)) {
-                                        uiMessage = "该邮箱未注册"; isError = true
-                                    } else {
-                                        // 立即倒计时
-                                        isCountingDown = true
-                                        uiMessage = null // 清除旧错误
-                                        scope.launch {
-                                            countdown = 60
-                                            while (countdown > 0 && isCountingDown) {
-                                                delay(1000)
-                                                countdown--
-                                            }
-                                            isCountingDown = false
-                                            countdown = 60
-                                        }
-
-                                        // 发送邮件
-                                        viewModel.sendCodeToEmail(
-                                            email = email,
-                                            onSuccess = {
-                                                uiMessage = "验证码已发送"; isError = false
-                                            },
-                                            onError = { msg ->
-                                                isCountingDown = false
-                                                uiMessage = msg; isError = true
-                                            }
-                                        )
-                                    }
-                                },
-                                enabled = !isCountingDown && email.isNotBlank(),
-                                shape = MaterialTheme.shapes.medium,
-                                modifier = Modifier.height(OutlinedTextFieldDefaults.MinHeight)
-                            ) {
-                                Text(if (isCountingDown) "${countdown}s" else "获取")
+                    // 密码输入框
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = {
+                            password = it
+                            uiMessage = null
+                        },
+                        label = { Text("登录密码") },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = null)
                             }
-                        }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done)
+                    )
+
+                    // 【新增】第二层救命稻草：如果连账号密码也忘了
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                        Text(
+                            text = if(isResetSent) "邮件已发送，请查收" else "忘记账号密码？发送重置邮件",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if(isResetSent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable(enabled = !isResetSent && !isLoading) {
+                                if(email.isBlank()) {
+                                    uiMessage = "请先输入邮箱地址"
+                                    isError = true
+                                } else {
+                                    isLoading = true
+                                    viewModel.sendPasswordResetEmail(
+                                        email = email,
+                                        onSuccess = {
+                                            isLoading = false
+                                            isResetSent = true
+                                            uiMessage = "重置链接已发送至邮箱，请重置密码后在此登录"
+                                            isError = false
+                                        },
+                                        onError = { msg ->
+                                            isLoading = false
+                                            uiMessage = msg
+                                            isError = true
+                                        }
+                                    )
+                                }
+                            }
+                        )
                     }
                 }
 
                 Spacer(Modifier.height(16.dp))
 
-                // --- 消息提示区域 (替代 Toast) ---
-                // 这里用一个 Text 占位，显示错误或成功信息
+                // --- 消息提示区域 ---
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(20.dp),
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     if (uiMessage != null) {
@@ -378,7 +315,7 @@ fun UnlockByEmailDialog(
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
 
                 // 提示文案
                 Text(
@@ -391,29 +328,44 @@ fun UnlockByEmailDialog(
 
                 Spacer(Modifier.height(24.dp))
 
-                // 操作按钮
+                // 验证按钮
                 Button(
                     onClick = {
-                        if (selectedTab == 0) {
-                            // 账号密码验证
-                            if (viewModel.login(email, password)) {
-                                onUnlockSuccess()
-                            } else {
-                                uiMessage = "账号或密码错误"; isError = true
-                            }
+                        if (email.isBlank() || password.isBlank()) {
+                            uiMessage = "请输入账号和密码"
+                            isError = true
                         } else {
-                            // 验证码验证
-                            if (viewModel.verifyCode(email, code)) {
-                                onUnlockSuccess()
-                            } else {
-                                uiMessage = "验证码错误或邮箱不匹配"; isError = true
-                            }
+                            isLoading = true
+                            uiMessage = null
+                            // 异步调用 Firebase 登录
+                            viewModel.login(
+                                email = email,
+                                password = password,
+                                onSuccess = {
+                                    isLoading = false
+                                    onUnlockSuccess()
+                                },
+                                onError = { msg ->
+                                    isLoading = false
+                                    uiMessage = msg
+                                    isError = true
+                                }
+                            )
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.medium,
+                    enabled = !isLoading
                 ) {
-                    Text("验证并解锁", modifier = Modifier.padding(vertical = 4.dp))
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("验证并解锁", modifier = Modifier.padding(vertical = 4.dp))
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -421,7 +373,8 @@ fun UnlockByEmailDialog(
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.medium,
+                    enabled = !isLoading
                 ) {
                     Text("取消")
                 }
