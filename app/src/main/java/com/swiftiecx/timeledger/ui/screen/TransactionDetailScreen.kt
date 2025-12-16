@@ -1,5 +1,6 @@
 package com.swiftiecx.timeledger.ui.screen
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,16 +16,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
-import kotlin.collections.find
 import kotlin.math.abs
-import kotlin.text.startsWith
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,11 +39,11 @@ fun TransactionDetailScreen(
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val accountMap = remember(accounts) { accounts.associateBy { it.id } }
 
-    // [新增] 1. 获取实时分类数据
+    // 1) 获取实时分类数据
     val expenseMainCategories by viewModel.expenseMainCategoriesState.collectAsState()
     val incomeMainCategories by viewModel.incomeMainCategoriesState.collectAsState()
 
-    // [新增] 2. 构建样式查找表 (分类名 -> 图标, 颜色)
+    // 2) 构建样式查找表 (分类名 -> 图标, 颜色)
     val categoryStyleMap = remember(expenseMainCategories, incomeMainCategories) {
         val map = mutableMapOf<String, Pair<ImageVector, Color>>()
         (expenseMainCategories + incomeMainCategories).forEach { main ->
@@ -57,6 +58,7 @@ fun TransactionDetailScreen(
         expenses.find { it.id == expenseId }
     }
 
+    // 转账：找同一时间的另一条转账记录（进/出）
     val relatedTransferExpense = remember(currentExpense, expenses) {
         if (currentExpense?.category?.startsWith("转账") == true) {
             expenses.find {
@@ -64,36 +66,24 @@ fun TransactionDetailScreen(
                         it.date.time == currentExpense.date.time &&
                         it.category.startsWith("转账")
             }
-        } else {
-            null
-        }
+        } else null
     }
 
     val (transferOut, transferIn) = remember(currentExpense, relatedTransferExpense) {
         if (currentExpense != null && relatedTransferExpense != null) {
-            if (currentExpense.amount < 0) {
-                currentExpense to relatedTransferExpense
-            } else {
-                relatedTransferExpense to currentExpense
-            }
-        } else {
-            null to null
-        }
+            if (currentExpense.amount < 0) currentExpense to relatedTransferExpense
+            else relatedTransferExpense to currentExpense
+        } else null to null
     }
 
     val transactionFee = remember(transferOut, transferIn) {
         if (transferOut != null && transferIn != null) {
-            val accOut = accountMap[transferOut.accountId]
-            val accIn = accountMap[transferIn.accountId]
-            // 简单计算：转出绝对值 - 转入绝对值
             val fee = abs(transferOut.amount) - abs(transferIn.amount)
             if (fee > 0.01) fee else 0.0
-        } else {
-            0.0
-        }
+        } else 0.0
     }
 
-    val outAccountBalance = remember(expenses, transferOut) {
+    val outAccountBalance = remember(expenses, transferOut, accountMap) {
         if (transferOut != null) {
             val account = accountMap[transferOut.accountId]
             val sum = expenses.filter { it.accountId == transferOut.accountId }.sumOf { it.amount }
@@ -101,7 +91,7 @@ fun TransactionDetailScreen(
         } else 0.0
     }
 
-    val inAccountBalance = remember(expenses, transferIn) {
+    val inAccountBalance = remember(expenses, transferIn, accountMap) {
         if (transferIn != null) {
             val account = accountMap[transferIn.accountId]
             val sum = expenses.filter { it.accountId == transferIn.accountId }.sumOf { it.amount }
@@ -109,7 +99,7 @@ fun TransactionDetailScreen(
         } else 0.0
     }
 
-    // [修改] 3. 确定显示的图标和颜色
+    // 3) 确定显示的图标和颜色
     var displayIcon: ImageVector? = null
     var displayColor: Color = MaterialTheme.colorScheme.primary
 
@@ -122,22 +112,28 @@ fun TransactionDetailScreen(
             displayIcon = style.first
             displayColor = style.second
         } else {
-            // 如果没找到(极少见), 使用默认
             displayIcon = Icons.Default.HelpOutline
             displayColor = if (currentExpense.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
         }
     }
 
-    val dateFormat = remember { SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault()) }
-    val shortDateFormat = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault()) }
+    // 4) 日期格式：使用系统 Locale 的 best pattern，避免韩语出现汉字
+    val locale = Locale.getDefault()
+    val fullPattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "yMMMdHms") }
+    val shortPattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "yMMMd") }
+    val dateFormat = remember(locale, fullPattern) { SimpleDateFormat(fullPattern, locale) }
+    val shortDateFormat = remember(locale, shortPattern) { SimpleDateFormat(shortPattern, locale) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("详情") },
+                title = { Text(stringResource(R.string.detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
                 }
             )
@@ -157,7 +153,7 @@ fun TransactionDetailScreen(
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("编辑")
+                    Text(stringResource(R.string.edit))
                 }
                 Button(
                     onClick = {
@@ -172,14 +168,19 @@ fun TransactionDetailScreen(
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("删除")
+                    Text(stringResource(R.string.delete))
                 }
             }
         }
     ) { innerPadding ->
         if (currentExpense == null) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text("未找到记录")
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(stringResource(R.string.record_not_found))
             }
         } else {
             Column(
@@ -190,25 +191,25 @@ fun TransactionDetailScreen(
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // [修改] 4. 使用动态获取的 Icon 和 Color 渲染
+                // 顶部图标+标题
                 if (displayIcon != null) {
                     Box(
                         modifier = Modifier
                             .size(64.dp)
-                            .background(displayColor.copy(alpha = 0.15f), CircleShape) // 浅色背景
+                            .background(displayColor.copy(alpha = 0.15f), CircleShape)
                             .padding(12.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = displayIcon!!,
                             contentDescription = null,
-                            tint = displayColor, // 深色图标
+                            tint = displayColor,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = if (transferOut != null) "内部转账" else currentExpense.category,
+                        text = if (transferOut != null) stringResource(R.string.internal_transfer) else currentExpense.category,
                         style = MaterialTheme.typography.headlineSmall
                     )
                     Spacer(Modifier.height(24.dp))
@@ -220,70 +221,94 @@ fun TransactionDetailScreen(
                         val accountOut = accountMap[transferOut.accountId]
                         val accountIn = accountMap[transferIn.accountId]
 
-                        DetailRow(label = "类型", value = "转账")
+                        DetailRow(label = stringResource(R.string.type_label), value = stringResource(R.string.type_transfer))
 
-                        // 转出详情
+                        // 转出
                         DetailRow(
-                            label = "转出",
-                            value = "${accountOut?.currency ?: ""} ${String.format("%.2f", abs(transferOut.amount))}",
+                            label = stringResource(R.string.transfer_out),
+                            value = "${accountOut?.currency.orEmpty()} ${String.format(Locale.US, "%.2f", abs(transferOut.amount))}",
                             valueColor = Color(0xFFE53935)
                         )
                         DetailRow(
                             label = "",
-                            value = "${accountOut?.name} (余额: ${String.format("%.2f", outAccountBalance)})",
+                            value = stringResource(
+                                R.string.account_balance_format,
+                                accountOut?.name ?: "",
+                                outAccountBalance
+                            ),
                             isSubText = true
                         )
 
-                        // 转入详情
+                        // 转入
                         DetailRow(
-                            label = "转入",
-                            value = "${accountIn?.currency ?: ""} ${String.format("%.2f", abs(transferIn.amount))}",
+                            label = stringResource(R.string.transfer_in),
+                            value = "${accountIn?.currency.orEmpty()} ${String.format(Locale.US, "%.2f", abs(transferIn.amount))}",
                             valueColor = Color(0xFF4CAF50)
                         )
                         DetailRow(
                             label = "",
-                            value = "${accountIn?.name} (余额: ${String.format("%.2f", inAccountBalance)})",
+                            value = stringResource(
+                                R.string.account_balance_format,
+                                accountIn?.name ?: "",
+                                inAccountBalance
+                            ),
                             isSubText = true
                         )
 
                         if (transactionFee > 0) {
                             DetailRow(
-                                label = "手续费",
-                                value = "${accountOut?.currency ?: ""} ${String.format("%.2f", transactionFee)}",
+                                label = stringResource(R.string.fee_label),
+                                value = "${accountOut?.currency.orEmpty()} ${String.format(Locale.US, "%.2f", transactionFee)}",
                                 valueColor = MaterialTheme.colorScheme.error
                             )
                         }
-
                     } else {
                         val account = accountMap[currentExpense.accountId]
-                        DetailRow(label = "类型", value = if (currentExpense.amount < 0) "支出" else "收入")
 
                         DetailRow(
-                            label = "金额",
-                            value = "${account?.currency ?: ""} ${abs(currentExpense.amount)}",
+                            label = stringResource(R.string.type_label),
+                            value = if (currentExpense.amount < 0)
+                                stringResource(R.string.type_expense)
+                            else
+                                stringResource(R.string.type_income)
+                        )
+
+                        DetailRow(
+                            label = stringResource(R.string.amount_label),
+                            value = "${account?.currency.orEmpty()} ${String.format(Locale.US, "%.2f", abs(currentExpense.amount))}",
                             valueColor = if (currentExpense.amount > 0) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
                         )
 
                         if (account != null && account.currency != defaultCurrency) {
                             val converted = ExchangeRates.convert(abs(currentExpense.amount), account.currency, defaultCurrency)
                             DetailRow(
-                                label = "折合",
-                                value = "≈ $defaultCurrency ${String.format(Locale.US, "%.2f", converted)}"
+                                label = stringResource(R.string.converted_label),
+                                value = stringResource(
+                                    R.string.converted_amount_format,
+                                    defaultCurrency,
+                                    converted
+                                )
                             )
                         }
 
-                        DetailRow(label = "账户", value = account?.name ?: "未知账户")
+                        DetailRow(
+                            label = stringResource(R.string.account_label),
+                            value = account?.name ?: stringResource(R.string.unknown_account)
+                        )
                     }
 
-                    DetailRow(label = "日期", value = shortDateFormat.format(currentExpense.date))
+                    DetailRow(
+                        label = stringResource(R.string.date_label),
+                        value = shortDateFormat.format(currentExpense.date)
+                    )
 
                     val remark = if (transferOut != null) transferOut.remark else currentExpense.remark
                     if (!remark.isNullOrBlank()) {
-                        DetailRow(label = "备注", value = remark)
+                        DetailRow(label = stringResource(R.string.remark_label), value = remark)
                     }
 
                     Text(
-                        text = "(添加于 ${dateFormat.format(currentExpense.date)})",
+                        text = stringResource(R.string.added_at_format, dateFormat.format(currentExpense.date)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 16.dp)
@@ -303,7 +328,8 @@ private fun DetailRow(
 ) {
     val verticalPadding = if (isSubText) 0.dp else 12.dp
     val labelText = if (isSubText) "" else label
-    val finalValueColor = if (isSubText) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f) else valueColor
+    val finalValueColor =
+        if (isSubText) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f) else valueColor
     val valueStyle = if (isSubText) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge
 
     Row(

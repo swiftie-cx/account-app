@@ -1,360 +1,448 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- ========================================================= -->
+    <!-- App -->
+    <!-- ========================================================= -->
     <string name="app_name">拾光账本</string>
-    <string name="nav_details">明细</string>
-    <string name="nav_chart">图表</string>
-    <string name="nav_budget">预算</string>
+
+    <!-- ========================================================= -->
+    <!-- 底部导航 -->
+    <!-- ========================================================= -->
     <string name="nav_assets">资产</string>
+    <string name="nav_budget">预算</string>
+    <string name="nav_chart">图表</string>
+    <string name="nav_details">明细</string>
     <string name="nav_me">我的</string>
-    <string name="confirm">确定</string>
-    <string name="cancel">取消</string>
-    <string name="save">保存</string>
-    <string name="edit">编辑</string>
-    <string name="delete">删除</string>
+
+    <!-- ========================================================= -->
+    <!-- 通用操作 -->
+    <!-- ========================================================= -->
     <string name="add">添加</string>
-    <string name="search">搜索</string>
-    <string name="back">返回</string>
-    <string name="finish">完成</string>
-    <string name="reset">重置</string>
-    <string name="unknown">未知</string>
-    <string name="next_step">下一步</string>
     <string name="add_again">再记</string>
+    <string name="back">返回</string>
+    <string name="cancel">取消</string>
+    <string name="confirm">确定</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="finish">完成</string>
+    <string name="next_step">下一步</string>
+    <string name="reset">重置</string>
+    <string name="save">保存</string>
+    <string name="search">搜索</string>
+    <string name="unknown">未知</string>
+
+    <!-- ========================================================= -->
+    <!-- 类型 / 基础标签 -->
+    <!-- ========================================================= -->
+    <string name="balance">结余</string>
+    <string name="expense_label">支出</string>
+    <string name="income_label">收入</string>
+    <string name="transfer_in_app">内部转账</string>
+    <string name="type_all">全部</string>
     <string name="type_expense">支出</string>
     <string name="type_income">收入</string>
     <string name="type_transfer">转账</string>
-    <string name="type_all">全部</string>
-    <string name="balance">结余</string>
-    <string name="transfer_in_app">内部转账</string>
-    <string name="time_day">日</string>
-    <string name="time_week">周</string>
-    <string name="time_month">月</string>
-    <string name="time_year">年</string>
-    <string name="time_custom">自定义</string>
-    <string name="time_week_current">本周</string>
-    <string name="time_month_current">本月</string>
-    <string name="time_year_current">本年</string>
-    <string name="today">今天</string>
-    <string name="date">日期</string>
-    <string name="month_balance">本月结余</string>
-    <string name="income_label">收入</string>
-    <string name="expense_label">支出</string>
+
+    <!-- ========================================================= -->
+    <!-- 搜索 / 空状态 -->
+    <!-- ========================================================= -->
     <string name="no_records">本周期没有记录</string>
     <string name="search_hint">搜索备注、分类</string>
-    <string name="trend_chart">趋势变化</string>
+
+    <!-- ========================================================= -->
+    <!-- 概览 / 图表（顶层标题） -->
+    <!-- ========================================================= -->
     <string name="category_composition">分类构成</string>
+    <string name="month_balance">本月结余</string>
     <string name="total_amount">总额</string>
-    <string name="view_profile">查看个人信息</string>
-    <string name="account_cash">现金</string>
+    <string name="trend_chart">趋势变化</string>
+
+    <!-- ========================================================= -->
+    <!-- 账户 / 资产（总览） -->
+    <!-- ========================================================= -->
     <string name="account_card">银行卡</string>
+    <string name="account_cash">现金</string>
     <string name="account_credit">信用卡</string>
-    <string name="account_investment">投资</string>
-    <string name="account_ewallet">电子钱包</string>
     <string name="account_default">默认</string>
+    <string name="account_ewallet">电子钱包</string>
+    <string name="account_investment">投资</string>
     <string name="current_balance">当前余额</string>
     <string name="net_assets">净资产</string>
     <string name="total_assets">总资产</string>
     <string name="total_liabilities">总负债</string>
+    <string name="view_profile">查看个人信息</string>
+
+    <!-- ========================================================= -->
+    <!-- 记账 / 编辑（字段） -->
+    <!-- ========================================================= -->
+    <string name="amount_label">金额</string>
+    <string name="category_label">分类</string>
+    <string name="currency">货币</string>
+    <string name="date">日期</string>
+    <string name="date_label">日期</string>
+    <string name="exclude_from_budget">不计入预算</string>
+    <string name="fee_label">手续费</string>
+    <string name="manual_mode">手动修改金额 (不自动换算)</string>
+    <string name="remark_hint">点击写备注...</string>
+    <string name="remark_label">备注</string>
+    <string name="select_category">选择分类</string>
+    <string name="select_icon">选择图标</string>
+    <string name="transfer_in_account">转入账户</string>
+    <string name="transfer_mode_in_fixed">转入固定(额外手续费)</string>
+    <string name="transfer_mode_out_fixed">转出固定(含手续费)</string>
+    <string name="transfer_out_account">转出账户</string>
+
+    <!-- ========================================================= -->
+    <!-- 账户管理 -->
+    <!-- ========================================================= -->
+    <string name="account_name">账户名称</string>
+    <string name="account_type">类型</string>
     <string name="add_account">添加账户</string>
     <string name="manage_account">管理账户</string>
     <string name="select_account">选择账户</string>
-    <string name="account_name">账户名称</string>
-    <string name="account_type">类型</string>
-    <string name="currency">货币</string>
-    <string name="select_icon">选择图标</string>
-    <string name="select_category">选择分类</string>
-    <string name="amount_label">金额</string>
-    <string name="remark_label">备注</string>
-    <string name="remark_hint">点击写备注...</string>
-    <string name="category_label">分类</string>
-    <string name="date_label">日期</string>
-    <string name="transfer_out_account">转出账户</string>
-    <string name="transfer_in_account">转入账户</string>
-    <string name="fee_label">手续费</string>
-    <string name="manual_mode">手动修改金额 (不自动换算)</string>
-    <string name="transfer_mode_out_fixed">转出固定(含手续费)</string>
-    <string name="transfer_mode_in_fixed">转入固定(额外手续费)</string>
-    <string name="exclude_from_budget">不计入预算</string>
-    <string name="select_date_range">选择日期范围</string>
-    <string name="select_date">选择日期</string>
-    <string name="end_date">结束日期</string>
-    <string name="settings_title">设置</string>
+
+    <!-- ========================================================= -->
+    <!-- 设置（主项） -->
+    <!-- ========================================================= -->
+    <string name="click_to_login">点击登录</string>
+    <string name="delete_account">注销账号</string>
+    <string name="group_data">数据设置</string>
     <string name="group_general">常规设置</string>
     <string name="group_security">安全设置</string>
-    <string name="group_data">数据设置</string>
+    <string name="login_hint">登录以同步数据</string>
+    <string name="logout">退出登录</string>
+    <string name="me_title">我的</string>
     <string name="opt_category">类别设置</string>
-    <string name="opt_periodic">周期记账</string>
+    <string name="opt_clear_data">清空数据</string>
     <string name="opt_currency">默认货币</string>
     <string name="opt_language">语言设置</string>
-    <string name="opt_theme">主题风格</string>
+    <string name="opt_periodic">周期记账</string>
     <string name="opt_privacy">安全与隐私</string>
     <string name="opt_sync">数据备份与同步</string>
-    <string name="opt_clear_data">清空数据</string>
-    <string name="login_hint">登录以同步数据</string>
-    <string name="click_to_login">点击登录</string>
-    <string name="logout">退出登录</string>
-    <string name="delete_account">注销账号</string>
+    <string name="opt_theme">主题风格</string>
+    <string name="settings_title">设置</string>
     <string name="version">版本</string>
-    <string name="me_title">我的</string>
-    <string name="periodic_title">周期记账</string>
-    <string name="periodic_empty_hint">暂无周期记账任务</string>
-    <string name="repeat_frequency">重复周期</string>
-    <string name="end_rule">结束规则</string>
-    <string name="freq_day">每天</string>
-    <string name="freq_week">每周</string>
-    <string name="freq_month">每月</string>
-    <string name="freq_year">每年</string>
-    <string name="end_never">永不结束</string>
-    <string name="start_date">生效日期</string>
-    <string name="end_by_date">按日期结束重复</string>
-    <string name="end_by_count">按次数结束重复</string>
-    <string name="input_repeat_count">输入重复次数</string>
+
+    <!-- ========================================================= -->
+    <!-- 周期记账 -->
+    <!-- ========================================================= -->
     <string name="count">次数</string>
     <string name="count_label_unit">次后结束</string>
-    <string name="warning_cross_currency_transfer_periodic">周期转账暂不支持跨币种，请选择相同币种的账户。</string>
+    <string name="end_by_count">按次数结束重复</string>
+    <string name="end_by_date">按日期结束重复</string>
+    <string name="end_never">永不结束</string>
+    <string name="end_rule">结束规则</string>
+    <string name="freq_day">每天</string>
+    <string name="freq_month">每月</string>
+    <string name="freq_week">每周</string>
+    <string name="freq_year">每年</string>
+    <string name="input_repeat_count">输入重复次数</string>
+    <string name="periodic_empty_hint">暂无周期记账任务</string>
+    <string name="periodic_title">周期记账</string>
+    <string name="repeat_frequency">重复周期</string>
+    <string name="start_date">生效日期</string>
     <string name="switch_mode">切换模式</string>
-    <string name="prev_month">上个月</string>
+    <string name="warning_cross_currency_transfer_periodic">周期转账暂不支持跨币种，请选择相同币种的账户。</string>
+
+    <!-- ========================================================= -->
+    <!-- 日期 / 时间范围 -->
+    <!-- ========================================================= -->
+    <string name="end_date">结束日期</string>
     <string name="next_month">下个月</string>
-    <string name="prev_year_month">上一周期</string>
     <string name="next_year_month">下一周期</string>
-    <string name="language_title">语言设置</string>
-    <string name="lang_hint">切换语言后应用将自动重启</string>
-    <string name="lang_follow_system">跟随系统</string>
-    <string name="lang_zh">简体中文</string>
+    <string name="prev_month">上个月</string>
+    <string name="prev_year_month">上一周期</string>
+    <string name="select_date">选择日期</string>
+    <string name="select_date_range">选择日期范围</string>
+    <string name="time_custom">自定义</string>
+    <string name="time_day">日</string>
+    <string name="time_month">月</string>
+    <string name="time_month_current">本月</string>
+    <string name="time_month_short">月</string>
+    <string name="time_week">周</string>
+    <string name="time_week_current">本周</string>
+    <string name="time_week_short">周</string>
+    <string name="time_year">年</string>
+    <string name="time_year_current">本年</string>
+    <string name="time_year_short">年</string>
+    <string name="today">今天</string>
+
+    <!-- ========================================================= -->
+    <!-- 语言 -->
+    <!-- ========================================================= -->
     <string name="lang_en">English</string>
+    <string name="lang_follow_system">跟随系统</string>
+    <string name="lang_hint">切换语言后应用将自动重启</string>
     <string name="lang_ja">日本語</string>
     <string name="lang_ko">한국어</string>
-    <string name="dialog_clear_title">清空数据</string>
-    <string name="dialog_clear_msg">确定要清空所有数据吗？此操作不可撤销。</string>
+    <string name="lang_zh">简体中文</string>
+    <string name="language_title">语言设置</string>
+
+    <!-- ========================================================= -->
+    <!-- 对话框 -->
+    <!-- ========================================================= -->
     <string name="confirm_clear_code">确认清空</string>
-    <string name="dialog_final_title">最终确认</string>
-    <string name="dialog_final_msg">请输入下方文字以确认操作：</string>
-    <string name="dialog_confirm">确定</string>
+    <string name="confirm_delete_code">确认注销账号</string>
     <string name="dialog_cancel">取消</string>
-    <string name="error_password_mismatch">两次密码不一致</string>
-    <string name="success_save">保存成功</string>
-    <string name="dialog_delete_account_title">确认注销账号?</string>
+    <string name="dialog_clear_msg">确定要清空所有数据吗？此操作不可撤销。</string>
+    <string name="dialog_clear_title">清空数据</string>
+    <string name="dialog_confirm">确定</string>
     <string name="dialog_delete_account_msg1">请注意：此操作将永久删除您的账号。</string>
     <string name="dialog_delete_account_msg2">我们会清除云端所有数据，无法找回。</string>
     <string name="dialog_delete_account_msg3">本地数据将保留，但无法再进行云端同步。</string>
-    <string name="confirm_delete_code">确认注销账号</string>
-    <string name="cat_food">餐饮美食</string>
-    <string name="cat_shopping">购物消费</string>
-    <string name="cat_transport">交通出行</string>
-    <string name="cat_home">居家生活</string>
+    <string name="dialog_delete_account_title">确认注销账号?</string>
+    <string name="dialog_final_msg">请输入下方文字以确认操作：</string>
+    <string name="dialog_final_title">最终确认</string>
+    <string name="error_password_mismatch">两次密码不一致</string>
+    <string name="success_save">保存成功</string>
+
+    <!-- ========================================================= -->
+    <!-- 分类 -->
+    <!-- ========================================================= -->
     <string name="cat_entertainment">文化娱乐</string>
-    <string name="cat_medical_edu">医疗教育</string>
     <string name="cat_financial">金融转账</string>
-    <string name="sub_food">食物</string>
-    <string name="sub_snacks">零食</string>
-    <string name="sub_alcohol">酒</string>
-    <string name="sub_cigarette">烟</string>
-    <string name="sub_shopping">购物</string>
-    <string name="sub_clothes">衣服</string>
-    <string name="sub_electronics">电子</string>
-    <string name="sub_gift">礼物</string>
-    <string name="sub_beauty">美容</string>
-    <string name="sub_traffic">交通</string>
-    <string name="sub_car">汽车</string>
-    <string name="sub_repair">维修</string>
-    <string name="sub_travel">旅行</string>
-    <string name="sub_housing">住房</string>
-    <string name="sub_daily">居家</string>
-    <string name="sub_phone">手机</string>
-    <string name="sub_pets">宠物</string>
-    <string name="sub_service">服务</string>
-    <string name="sub_entertainment">娱乐</string>
-    <string name="sub_sports">运动</string>
-    <string name="sub_social">社交</string>
-    <string name="sub_movie">电影</string>
-    <string name="sub_drama">演出</string>
-    <string name="sub_education">教育</string>
-    <string name="sub_medical">医疗</string>
-    <string name="sub_child">孩子</string>
-    <string name="sub_book">书籍</string>
-    <string name="sub_donate">捐款</string>
-    <string name="sub_other">其他</string>
+    <string name="cat_food">餐饮美食</string>
+    <string name="cat_home">居家生活</string>
     <string name="cat_income_job">职业收入</string>
     <string name="cat_income_other">其他收入</string>
-    <string name="sub_salary">薪水</string>
-    <string name="sub_bonus">奖金</string>
-    <string name="sub_reimbursement">报销</string>
-    <string name="sub_part_time">兼职</string>
-    <string name="sub_finance">理财</string>
-    <string name="sub_gift_money">礼金</string>
-    <string name="sub_red_packet">红包</string>
-    <string name="sub_second_hand">二手</string>
+    <string name="cat_medical_edu">医疗教育</string>
+    <string name="cat_shopping">购物消费</string>
+    <string name="cat_transport">交通出行</string>
 
-    <string name="privacy_title">隐私密码</string>
-    <string name="privacy_pin_title">数字密码</string>
-    <string name="privacy_pin_desc">使用四位数字密码解锁应用</string>
-    <string name="privacy_pattern_title">手势密码</string>
-    <string name="privacy_pattern_desc">通过绘制图案解锁应用</string>
-    <string name="privacy_biometric_title">指纹解锁</string>
-    <string name="privacy_biometric_desc">使用指纹快速解锁</string>
-    <string name="privacy_biometric_require_title">无法启用指纹解锁</string>
-    <string name="privacy_biometric_require_text">启用指纹解锁前，请先设置数字密码或手势密码。</string>
-    <string name="got_it">知道了</string>
-    <string name="login_required_title">需要先登录</string>
-    <string name="login_required_text">设置应用锁前，请先登录账号。</string>
-    <string name="go_login">去登录</string>
-    <string name="privacy_enabled_success">开启成功</string>
-    <string name="pin_setup_title">设置数字密码</string>
-    <string name="pin_confirm_title">确认数字密码</string>
-    <string name="pin_prompt_input_4">请输入4位数字</string>
-    <string name="pin_prompt_confirm">请再次输入以确认</string>
-    <string name="pin_error_mismatch">两次密码不一致</string>
-    <string name="pattern_setup_title">绘制解锁图案</string>
-    <string name="pattern_confirm_title">再次绘制图案</string>
-    <string name="pattern_prompt_connect_4">连接至少4个点</string>
-    <string name="pattern_error_too_short">至少连接4个点</string>
-    <string name="pattern_error_mismatch">与上次绘制不一致</string>
-    <string name="lock_verify_password">请验证密码</string>
-    <string name="lock_error_wrong_pin">密码错误</string>
-    <string name="lock_error_wrong_pattern">图案错误</string>
-    <string name="lock_forgot_password">忘记密码？使用账号验证</string>
-    <string name="lock_biometric_not_supported">设备不支持指纹解锁，或尚未录入指纹</string>
+    <string name="sub_alcohol">酒</string>
+    <string name="sub_beauty">美容</string>
+    <string name="sub_bonus">奖金</string>
+    <string name="sub_book">书籍</string>
+    <string name="sub_car">汽车</string>
+    <string name="sub_child">孩子</string>
+    <string name="sub_cigarette">烟</string>
+    <string name="sub_clothes">衣服</string>
+    <string name="sub_daily">居家</string>
+    <string name="sub_donate">捐款</string>
+    <string name="sub_drama">演出</string>
+    <string name="sub_education">教育</string>
+    <string name="sub_electronics">电子</string>
+    <string name="sub_entertainment">娱乐</string>
+    <string name="sub_finance">理财</string>
+    <string name="sub_food">食物</string>
+    <string name="sub_gift">礼物</string>
+    <string name="sub_gift_money">礼金</string>
+    <string name="sub_housing">住房</string>
+    <string name="sub_medical">医疗</string>
+    <string name="sub_movie">电影</string>
+    <string name="sub_other">其他</string>
+    <string name="sub_part_time">兼职</string>
+    <string name="sub_pets">宠物</string>
+    <string name="sub_phone">手机</string>
+    <string name="sub_red_packet">红包</string>
+    <string name="sub_reimbursement">报销</string>
+    <string name="sub_repair">维修</string>
+    <string name="sub_salary">薪水</string>
+    <string name="sub_second_hand">二手</string>
+    <string name="sub_service">服务</string>
+    <string name="sub_shopping">购物</string>
+    <string name="sub_snacks">零食</string>
+    <string name="sub_social">社交</string>
+    <string name="sub_sports">运动</string>
+    <string name="sub_traffic">交通</string>
+    <string name="sub_travel">旅行</string>
+
+    <!-- ========================================================= -->
+    <!-- 应用锁 / 隐私 -->
+    <!-- ========================================================= -->
     <string name="bio_prompt_title">验证指纹</string>
+    <string name="go_login">去登录</string>
+    <string name="got_it">知道了</string>
+    <string name="lock_biometric_not_supported">设备不支持指纹解锁，或尚未录入指纹</string>
+    <string name="lock_error_wrong_pattern">图案错误</string>
+    <string name="lock_error_wrong_pin">密码错误</string>
+    <string name="lock_forgot_password">忘记密码？使用账号验证</string>
+    <string name="lock_verify_password">请验证密码</string>
+    <string name="login_required_text">设置应用锁前，请先登录账号。</string>
+    <string name="login_required_title">需要先登录</string>
+    <string name="pattern_confirm_title">再次绘制图案</string>
+    <string name="pattern_error_mismatch">与上次绘制不一致</string>
+    <string name="pattern_error_too_short">至少连接4个点</string>
+    <string name="pattern_prompt_connect_4">连接至少4个点</string>
+    <string name="pattern_setup_title">绘制解锁图案</string>
+    <string name="pin_confirm_title">确认数字密码</string>
+    <string name="pin_error_mismatch">两次密码不一致</string>
+    <string name="pin_prompt_confirm">请再次输入以确认</string>
+    <string name="pin_prompt_input_4">请输入4位数字</string>
+    <string name="pin_setup_title">设置数字密码</string>
+    <string name="privacy_biometric_desc">使用指纹快速解锁</string>
+    <string name="privacy_biometric_require_text">启用指纹解锁前，请先设置数字密码或手势密码。</string>
+    <string name="privacy_biometric_require_title">无法启用指纹解锁</string>
+    <string name="privacy_biometric_title">指纹解锁</string>
+    <string name="privacy_enabled_success">开启成功</string>
+    <string name="privacy_pattern_desc">通过绘制图案解锁应用</string>
+    <string name="privacy_pattern_title">手势密码</string>
+    <string name="privacy_pin_desc">使用四位数字密码解锁应用</string>
+    <string name="privacy_pin_title">数字密码</string>
+    <string name="privacy_title">隐私密码</string>
     <string name="unlock_dialog_title">安全验证</string>
     <string name="unlock_email_label">注册邮箱</string>
-    <string name="unlock_password_label">登录密码</string>
-    <string name="unlock_reset_sent">邮件已发送，请查收</string>
-    <string name="unlock_send_reset">忘记账号密码？发送重置邮件</string>
+    <string name="unlock_enter_account_password">请输入账号和密码</string>
     <string name="unlock_enter_email_first">请先输入邮箱地址</string>
+    <string name="unlock_password_label">登录密码</string>
     <string name="unlock_reset_link_sent">重置链接已发送至邮箱，请重置密码后在此登录</string>
     <string name="unlock_reset_lock_tip">为保障账户安全，验证通过后将重置应用锁设置。</string>
-    <string name="unlock_enter_account_password">请输入账号和密码</string>
+    <string name="unlock_reset_sent">邮件已发送，请查收</string>
+    <string name="unlock_send_reset">忘记账号密码？发送重置邮件</string>
     <string name="unlock_verify_and_unlock">验证并解锁</string>
 
-    <string name="login_title">欢迎回来</string>
-    <string name="login_subtitle">登录以同步您的账单数据</string>
-    <string name="label_email">电子邮箱</string>
-    <string name="label_email_short">邮箱</string>
-    <string name="label_password">密码</string>
-    <string name="action_forgot_password">忘记密码？</string>
-    <string name="action_login">立即登录</string>
-    <string name="text_no_account">还没有账号？</string>
-    <string name="action_go_register">去注册</string>
-
-    <string name="register_title">创建账号</string>
-    <string name="register_subtitle">注册即刻开启云端同步</string>
-    <string name="label_set_password">设置密码</string>
-    <string name="label_confirm_password">确认密码</string>
-    <string name="action_register_and_login">注册并登录</string>
-    <string name="error_password_min_6">密码长度至少为 6 位</string>
-    <string name="msg_register_success_verification_sent">注册成功，验证邮件已发送</string>
-
-    <string name="user_info_title">用户信息</string>
-    <string name="status_logged_in">已登录</string>
-    <string name="status_not_logged_in">未登录</string>
-    <string name="menu_change_password">修改密码</string>
-    <string name="menu_forgot_password">忘记密码</string>
-    <string name="action_logout">退出登录</string>
-    <string name="msg_logged_out">已退出登录</string>
-
+    <!-- ========================================================= -->
+    <!-- 登录 / 注册 / 用户信息 -->
+    <!-- ========================================================= -->
+    <string name="action_confirm_change">确认修改</string>
+    <string name="action_confirm_delete">确认注销</string>
     <string name="action_delete_account">注销账号</string>
+    <string name="action_forgot_password">忘记密码？</string>
+    <string name="action_go_register">去注册</string>
+    <string name="action_login">立即登录</string>
+    <string name="action_logout">退出登录</string>
+    <string name="action_next_step">下一步</string>
+    <string name="action_register_and_login">注册并登录</string>
+    <string name="action_send_reset_link">发送重置链接</string>
+    <string name="account_delete_confirm_phrase">确认注销账号</string>
+    <string name="change_password_title">修改密码</string>
     <string name="dialog_delete_account_warning1">请注意：此操作将永久删除您的账号。</string>
     <string name="dialog_delete_account_warning2">我们会清除云端所有数据，无法找回。</string>
     <string name="dialog_delete_account_warning3">本地数据将保留，但无法再进行云端同步。</string>
-    <string name="action_next_step">下一步</string>
-    <string name="dialog_final_confirm_title">最终安全确认</string>
     <string name="dialog_enter_text_to_confirm">请输入以下文字以确认注销账号：</string>
-    <string name="account_delete_confirm_phrase">确认注销账号</string>
+    <string name="dialog_final_confirm_title">最终安全确认</string>
+    <string name="error_enter_current_password">请输入当前密码</string>
+    <string name="error_enter_email">请输入邮箱</string>
+    <string name="error_new_password_mismatch">两次输入的密码不一致</string>
+    <string name="error_new_password_same_as_old">新密码不能与旧密码相同</string>
+    <string name="error_new_password_too_short">新密码长度不能少于6位</string>
+    <string name="error_password_min_6">密码长度至少为 6 位</string>
+    <string name="label_confirm_new_password">确认新密码</string>
+    <string name="label_confirm_password">确认密码</string>
+    <string name="label_current_password">当前密码</string>
+    <string name="label_email">电子邮箱</string>
+    <string name="label_email_short">邮箱</string>
+    <string name="label_new_password_min_6">新密码 (至少6位)</string>
+    <string name="label_password">密码</string>
+    <string name="label_set_password">设置密码</string>
+    <string name="login_subtitle">登录以同步您的账单数据</string>
+    <string name="login_title">欢迎回来</string>
+    <string name="menu_change_password">修改密码</string>
+    <string name="menu_forgot_password">忘记密码</string>
+    <string name="msg_logged_out">已退出登录</string>
+    <string name="msg_password_changed">密码修改成功</string>
+    <string name="msg_register_success_verification_sent">注册成功，验证邮件已发送</string>
+    <string name="msg_reset_email_sent">重置邮件已发送，请查收</string>
+    <string name="register_subtitle">注册即刻开启云端同步</string>
+    <string name="register_title">创建账号</string>
+    <string name="reset_password_hint">请输入您的注册邮箱，我们将向您发送重置密码的链接。</string>
+    <string name="reset_password_title">重置密码</string>
+    <string name="status_logged_in">已登录</string>
+    <string name="status_not_logged_in">未登录</string>
+    <string name="text_no_account">还没有账号？</string>
     <string name="toast_account_deleted">账号已注销</string>
     <string name="toast_reauth_required">为了安全，请重新登录后再操作</string>
-    <string name="action_confirm_delete">确认注销</string>
+    <string name="user_info_title">用户信息</string>
 
-    <string name="change_password_title">修改密码</string>
-    <string name="label_current_password">当前密码</string>
-    <string name="label_new_password_min_6">新密码 (至少6位)</string>
-    <string name="label_confirm_new_password">确认新密码</string>
-    <string name="error_new_password_mismatch">两次输入的密码不一致</string>
-    <string name="error_enter_current_password">请输入当前密码</string>
-    <string name="error_new_password_too_short">新密码长度不能少于6位</string>
-    <string name="error_new_password_same_as_old">新密码不能与旧密码相同</string>
-    <string name="msg_password_changed">密码修改成功</string>
-    <string name="action_confirm_change">确认修改</string>
-
-    <string name="reset_password_title">重置密码</string>
-    <string name="reset_password_hint">请输入您的注册邮箱，我们将向您发送重置密码的链接。</string>
-    <string name="msg_reset_email_sent">重置邮件已发送，请查收</string>
-    <string name="error_enter_email">请输入邮箱</string>
-    <string name="action_send_reset_link">发送重置链接</string>
+    <!-- ========================================================= -->
+    <!-- 货币选择 -->
+    <!-- ========================================================= -->
     <string name="select_default_currency">选择默认货币</string>
-    <string name="currency_name_cny">人民币</string>
-    <string name="currency_name_usd">美元</string>
-    <string name="currency_name_eur">欧元</string>
-    <string name="currency_name_jpy">日元</string>
-    <string name="currency_name_hkd">港币</string>
-    <string name="currency_name_gbp">英镑</string>
     <string name="currency_name_aud">澳元</string>
-    <string name="currency_name_cad">加元</string>
-    <string name="currency_name_sgd">新加坡元</string>
-    <string name="currency_name_twd">新台币</string>
-    <string name="currency_name_krw">韩元</string>
-    <string name="currency_name_thb">泰铢</string>
-    <string name="currency_name_myr">马来西亚林吉特</string>
-    <string name="currency_name_php">菲律宾比索</string>
-    <string name="currency_name_idr">印尼盾</string>
-    <string name="currency_name_inr">印度卢比</string>
-    <string name="currency_name_vnd">越南盾</string>
-    <string name="currency_name_chf">瑞士法郎</string>
-    <string name="currency_name_sek">瑞典克朗</string>
-    <string name="currency_name_nok">挪威克朗</string>
-    <string name="currency_name_dkk">丹麦克朗</string>
-    <string name="currency_name_rub">俄罗斯卢布</string>
-    <string name="currency_name_try">土耳其里拉</string>
-    <string name="currency_name_czk">捷克克朗</string>
-    <string name="currency_name_huf">匈牙利福林</string>
-    <string name="currency_name_pln">波兰兹罗提</string>
     <string name="currency_name_bgn">保加利亚列弗</string>
-    <string name="currency_name_ron">罗马尼亚列伊</string>
-    <string name="currency_name_nzd">新西兰元</string>
     <string name="currency_name_brl">巴西雷亚尔</string>
-    <string name="currency_name_mxn">墨西哥比索</string>
-    <string name="currency_name_zar">南非兰特</string>
+    <string name="currency_name_cad">加元</string>
+    <string name="currency_name_chf">瑞士法郎</string>
+    <string name="currency_name_cny">人民币</string>
+    <string name="currency_name_czk">捷克克朗</string>
+    <string name="currency_name_dkk">丹麦克朗</string>
+    <string name="currency_name_eur">欧元</string>
+    <string name="currency_name_gbp">英镑</string>
+    <string name="currency_name_hkd">港币</string>
+    <string name="currency_name_huf">匈牙利福林</string>
+    <string name="currency_name_idr">印尼盾</string>
     <string name="currency_name_ils">以色列新谢克尔</string>
+    <string name="currency_name_inr">印度卢比</string>
+    <string name="currency_name_jpy">日元</string>
+    <string name="currency_name_krw">韩元</string>
+    <string name="currency_name_mxn">墨西哥比索</string>
+    <string name="currency_name_myr">马来西亚林吉特</string>
+    <string name="currency_name_nok">挪威克朗</string>
+    <string name="currency_name_nzd">新西兰元</string>
+    <string name="currency_name_php">菲律宾比索</string>
+    <string name="currency_name_pln">波兰兹罗提</string>
+    <string name="currency_name_ron">罗马尼亚列伊</string>
+    <string name="currency_name_rub">俄罗斯卢布</string>
+    <string name="currency_name_sek">瑞典克朗</string>
+    <string name="currency_name_sgd">新加坡元</string>
+    <string name="currency_name_thb">泰铢</string>
+    <string name="currency_name_try">土耳其里拉</string>
+    <string name="currency_name_twd">新台币</string>
+    <string name="currency_name_usd">美元</string>
+    <string name="currency_name_vnd">越南盾</string>
+    <string name="currency_name_zar">南非兰特</string>
+
+    <!-- ========================================================= -->
+    <!-- 主题预览 -->
+    <!-- ========================================================= -->
+    <string name="add_transaction_mock">记一笔</string>
+    <string name="amount_mock">¥ 1,234.56</string>
+    <string name="month_expense_mock">本月支出</string>
+    <string name="selected_label">已选中</string>
     <string name="theme_preview_title">即时预览</string>
     <string name="theme_selection_title">选择配色方案</string>
-    <string name="month_expense_mock">本月支出</string>
-    <string name="amount_mock">¥ 1,234.56</string>
-    <string name="add_transaction_mock">记一笔</string>
-    <string name="selected_label">已选中</string>
-    <string name="sync_unknown_time">未知时间</string>
-    <string name="sync_title">云端同步</string>
+
+    <!-- ========================================================= -->
+    <!-- 云端同步 -->
+    <!-- ========================================================= -->
+    <string name="sync_cloud_time_label">云端备份时间: %1$s</string>
+    <string name="sync_conflict_msg1">本地和云端都存在数据。</string>
+    <string name="sync_conflict_msg2">请选择操作：</string>
+    <string name="sync_conflict_title">发现数据冲突</string>
     <string name="sync_current_account_label">当前账号: %1$s</string>
-    <string name="sync_not_logged_in">未登录</string>
     <string name="sync_description">点击同步将自动备份或恢复数据。\n如果两端都有数据，系统将询问处理方式。</string>
+    <string name="sync_merge_strategy">合并数据 (推荐)</string>
+    <string name="sync_not_logged_in">未登录</string>
+    <string name="sync_overwrite_cloud_strategy">以本地为准</string>
+    <string name="sync_overwrite_local_strategy">以云端为准</string>
     <string name="sync_retry">重试</string>
     <string name="sync_start">开始同步</string>
-    <string name="sync_conflict_title">发现数据冲突</string>
-    <string name="sync_conflict_msg1">本地和云端都存在数据。</string>
-    <string name="sync_cloud_time_label">云端备份时间: %1$s</string>
-    <string name="sync_conflict_msg2">请选择操作：</string>
-    <string name="sync_merge_strategy">合并数据 (推荐)</string>
-    <string name="sync_overwrite_local_strategy">以云端为准</string>
-    <string name="sync_overwrite_cloud_strategy">以本地为准</string>
-    <string name="category_settings_title">类别设置</string>
+    <string name="sync_title">云端同步</string>
+    <string name="sync_unknown_time">未知时间</string>
+
+    <!-- ========================================================= -->
+    <!-- 类别设置 -->
+    <!-- ========================================================= -->
     <string name="add_category">添加类别</string>
     <string name="category_reorder">排序</string>
+    <string name="category_settings_title">类别设置</string>
     <string name="subcategory_count_label">%1$d 个子分类</string>
     <string name="subcategory_management_title">%1$s - 子分类管理</string>
     <string name="subcategory_reorder_hint">长按右侧图标拖拽排序</string>
+
+    <!-- ========================================================= -->
+    <!-- 账户页面 / 记录 -->
+    <!-- ========================================================= -->
     <string name="account_detail_title">账户详情</string>
-    <string name="edit_account">编辑账户</string>
-    <string name="account_not_found">未找到账户信息</string>
-    <string name="transaction_records_title">交易记录</string>
-    <string name="no_transaction_records">暂无交易记录</string>
-    <string name="transaction_remark_format"> · %1$s</string>
-    <string name="account_management_title">账户管理</string>
     <string name="account_management_hint">长按拖拽排序，点击圆圈设为默认</string>
-    <string name="set_as_default">设为默认</string>
+    <string name="account_management_title">账户管理</string>
+    <string name="account_name_placeholder">账户名称</string>
+    <string name="account_not_found">未找到账户信息</string>
     <string name="account_reorder">账户排序</string>
     <string name="add_account_title">新建账户</string>
-    <string name="edit_account_title">编辑账户</string>
-    <string name="account_name_placeholder">账户名称</string>
-    <string name="balance_placeholder">0.00</string>
     <string name="balance_edit_hint">修改余额将自动生成一笔修正流水</string>
+    <string name="balance_placeholder">0.00</string>
+    <string name="edit_account">编辑账户</string>
+    <string name="edit_account_title">编辑账户</string>
+    <string name="no_transaction_records">暂无交易记录</string>
+    <string name="set_as_default">设为默认</string>
+    <string name="transaction_records_title">交易记录</string>
+    <string name="transaction_remark_format"> · %1$s</string>
 
+    <!-- ========================================================= -->
+    <!-- 账户类型（数组） -->
+    <!-- ========================================================= -->
     <string-array name="account_types">
         <item>现金</item>
         <item>银行卡</item>
@@ -363,6 +451,10 @@
         <item>电子钱包</item>
         <item>默认</item>
     </string-array>
+
+    <!-- ========================================================= -->
+    <!-- 预算 / 日历 / 格式 / 报表 -->
+    <!-- ========================================================= -->
     <string name="assets_title">资产</string>
     <string name="budget_base_currency">CNY</string>
     <string name="total_budget_category_name">总预算</string>
@@ -397,9 +489,6 @@
     <string name="date_format_full">yyyy年MM月dd日</string>
     <string name="date_format_year_month">yyyy年MM月</string>
     <string name="date_format_year">yyyy年</string>
-    <string name="time_week_short">周</string>
-    <string name="time_month_short">月</string>
-    <string name="time_year_short">年</string>
     <string name="chart_empty_state">本周期没有记录。</string>
     <string name="currency_amount_format_chart">%1$s %2$.2f</string>
     <string name="currency_amount_format">%1$s %2$.2f</string>
@@ -428,4 +517,58 @@
     <string name="remaining_amount_format">剩余: %1$s %2$.2f</string>
     <string name="overspent_amount_format">超额: %1$s %2$.2f</string>
     <string name="tag_exclude_from_budget">不计入预算</string>
+
+    <string name="calendar_month_balance">本月结余</string>
+
+    <string name="income_short">收</string>
+    <string name="expense_short">支</string>
+
+    <string name="weekday_fri">五</string>
+    <string name="weekday_mon">一</string>
+    <string name="weekday_sat">六</string>
+    <string name="weekday_sun">日</string>
+    <string name="weekday_thu">四</string>
+    <string name="weekday_tue">二</string>
+    <string name="weekday_wed">三</string>
+
+    <string name="daily_budget_label">日均预算</string>
+    <string name="budget_status_normal">正常</string>
+    <string name="budget_status_over">超支</string>
+
+    <!-- ========================================================= -->
+    <!-- 其他（注意：重复项按你的要求保留） -->
+    <!-- ========================================================= -->
+    <string name="ok">确定</string>
+    <string name="toggle_mode">切换模式</string>
+    <string name="previous">上一页</string>
+    <string name="next">下一页</string>
+
+    <!-- 顶部标题：%1$d=year, %2$s=monthLabel -->
+    <string name="year_month_title_format">%1$d年%2$s</string>
+
+    <!-- 数字月份：%1$d=month -->
+    <string name="month_number_format">%1$d月</string>
+    <string name="detail_title">详情</string>
+
+    <string name="record_not_found">未找到记录</string>
+
+    <string name="internal_transfer">内部转账</string>
+
+    <string name="type_label">类型</string>
+
+    <string name="converted_label">折合</string>
+    <string name="account_label">账户</string>
+
+    <string name="transfer_out">转出</string>
+    <string name="transfer_in">转入</string>
+
+    <string name="unknown_account">未知账户</string>
+
+    <!-- 账户名 + 余额 -->
+    <string name="account_balance_format">%1$s (余额: %2$.2f)</string>
+
+    <!-- ≈ DEFAULT 123.45 -->
+    <string name="converted_amount_format">≈ %1$s %2$.2f</string>
+    <string name="added_at_format">(添加于 %1$s)</string>
+
 </resources>

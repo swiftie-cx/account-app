@@ -17,9 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.swiftiecx.timeledger.R
+import java.text.DateFormatSymbols
+import java.util.Locale
 
 @Composable
 fun YearMonthPicker(
@@ -42,18 +46,16 @@ fun YearMonthPicker(
                 .wrapContentHeight()
         ) {
             Column(
-                // 底部 padding 收紧到 8.dp，顶部保持 16.dp 呼吸感
                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. 顶部大标题
+                // 1. 顶部大标题：yyyy年MM月 / MMM yyyy
                 Text(
-                    text = "${currentYear}年${currentMonth}月",
+                    text = stringResource(R.string.year_month_title_format, currentYear, monthLabel(currentMonth)),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
-                    // 进一步减小标题下方的留白
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
 
@@ -80,7 +82,7 @@ fun YearMonthPicker(
                         )
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "切换模式",
+                            contentDescription = stringResource(R.string.toggle_mode),
                             tint = if (isYearSelectionMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -88,39 +90,32 @@ fun YearMonthPicker(
                     // 右侧：翻页箭头
                     Row {
                         IconButton(
-                            onClick = {
-                                if (isYearSelectionMode) currentYear -= 12 else currentYear--
-                            },
+                            onClick = { if (isYearSelectionMode) currentYear -= 12 else currentYear-- },
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                null,
+                                contentDescription = stringResource(R.string.previous),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                         IconButton(
-                            onClick = {
-                                if (isYearSelectionMode) currentYear += 12 else currentYear++
-                            },
+                            onClick = { if (isYearSelectionMode) currentYear += 12 else currentYear++ },
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                null,
+                                contentDescription = stringResource(R.string.next),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
 
-                // 间距：控制栏与网格之间
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // 3. 网格内容区域
-                // 高度精确计算：4行 * 36dp + 3个间隙 * 8dp = 144 + 24 = 168dp
-                // 这样刚好容纳内容，没有任何多余垂直空白
                 Box(modifier = Modifier.height(168.dp)) {
                     if (isYearSelectionMode) {
                         YearGrid(
@@ -139,7 +134,6 @@ fun YearMonthPicker(
                     }
                 }
 
-                // 间距：网格与按钮之间 (极度收紧)
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // 4. 底部按钮
@@ -153,7 +147,7 @@ fun YearMonthPicker(
                         modifier = Modifier.height(36.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
-                        Text("取消", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.cancel), style = MaterialTheme.typography.labelLarge)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     Button(
@@ -161,7 +155,7 @@ fun YearMonthPicker(
                         modifier = Modifier.height(36.dp),
                         contentPadding = PaddingValues(horizontal = 20.dp)
                     ) {
-                        Text("确定", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.ok), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -172,6 +166,7 @@ fun YearMonthPicker(
 @Composable
 fun MonthGrid(selectedMonth: Int, onMonthSelected: (Int) -> Unit) {
     val months = (1..12).toList()
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -191,7 +186,7 @@ fun MonthGrid(selectedMonth: Int, onMonthSelected: (Int) -> Unit) {
                     .clickable { onMonthSelected(month) }
             ) {
                 Text(
-                    text = "${month}月",
+                    text = monthLabel(month),
                     color = textColor,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -232,5 +227,27 @@ fun YearGrid(selectedYear: Int, displayYearBase: Int, onYearSelected: (Int) -> U
                 )
             }
         }
+    }
+}
+
+/**
+ * 月份显示：
+ * - 中文/日文等：1月、2月…
+ * - 英文等：Jan, Feb...
+ */
+@Composable
+private fun monthLabel(month: Int): String {
+    val locale = Locale.getDefault()
+    val language = locale.language.lowercase(Locale.ROOT)
+
+    // 粗略判断中文/日文/韩文：继续用 “x月”
+    val useNumericMonth = language == "zh" || language == "ja" || language == "ko"
+
+    return if (useNumericMonth) {
+        stringResource(R.string.month_number_format, month)
+    } else {
+        val shortMonths = remember(locale) { DateFormatSymbols(locale).shortMonths }
+        // shortMonths: 0-based
+        shortMonths.getOrNull(month - 1)?.takeIf { it.isNotBlank() } ?: month.toString()
     }
 }

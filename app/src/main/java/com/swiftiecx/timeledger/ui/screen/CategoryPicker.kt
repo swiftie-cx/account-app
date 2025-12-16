@@ -1,6 +1,7 @@
 package com.swiftiecx.timeledger.ui.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,12 +36,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.ui.navigation.Category
 import com.swiftiecx.timeledger.ui.navigation.CategoryData
+
+private data class CategoryUi(
+    val title: String,
+    val icon: ImageVector,
+    val color: Color
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,20 +57,29 @@ fun CategorySelectionScreen(
     onDismiss: () -> Unit,
     onConfirm: (List<String>) -> Unit
 ) {
-    // [Fix] 使用 rememberSaveable 和 mutableIntStateOf 明确类型
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
-    // [i18n]
     val tabs = listOf(
         stringResource(R.string.type_expense),
         stringResource(R.string.type_income)
     )
 
     val context = LocalContext.current
-    // [Fix] 动态获取分类列表 (依赖 Context)
-    val allCategories = remember(context) {
-        val expenses = CategoryData.getExpenseCategories(context).flatMap { it.subCategories }
-        val incomes = CategoryData.getIncomeCategories(context).flatMap { it.subCategories }
+
+    // ✅ 保留“主分类颜色”，避免子分类全变同色
+    val allCategories: List<List<CategoryUi>> = remember(context) {
+        val expenses = CategoryData.getExpenseCategories(context)
+            .flatMap { main ->
+                main.subCategories.map { sub ->
+                    CategoryUi(title = sub.title, icon = sub.icon, color = main.color)
+                }
+            }
+        val incomes = CategoryData.getIncomeCategories(context)
+            .flatMap { main ->
+                main.subCategories.map { sub ->
+                    CategoryUi(title = sub.title, icon = sub.icon, color = main.color)
+                }
+            }
         listOf(expenses, incomes)
     }
 
@@ -70,7 +88,6 @@ fun CategorySelectionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                // [i18n] 替换 "选择"
                 title = { Text(stringResource(R.string.category_label)) },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
@@ -102,12 +119,13 @@ fun CategorySelectionScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 安全访问数组
                 val currentList = allCategories.getOrElse(selectedTab) { emptyList() }
 
                 items(currentList) { category ->
                     CategoryItem(
-                        category = category,
+                        title = category.title,
+                        icon = category.icon,
+                        baseColor = category.color,
                         isSelected = category.title in tempSelectedCategories,
                         onItemClick = { title ->
                             tempSelectedCategories = if (title in tempSelectedCategories) {
@@ -125,40 +143,70 @@ fun CategorySelectionScreen(
 
 @Composable
 private fun CategoryItem(
-    category: Category,
+    title: String,
+    icon: ImageVector,
+    baseColor: Color,
     isSelected: Boolean,
     onItemClick: (String) -> Unit
 ) {
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    // ✅ 未选中：淡底 + 分类色图标
+    // ✅ 选中：更明显的淡底 + 彩色描边 + 右上角勾
+    val bg = if (isSelected) baseColor.copy(alpha = 0.18f) else baseColor.copy(alpha = 0.10f)
+    val iconTint = baseColor
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
-            .clickable { onItemClick(category.title) }
-            .padding(4.dp)
+            .clickable { onItemClick(title) }
+            .padding(2.dp)
     ) {
         Box(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(backgroundColor),
+                .background(bg)
+                .then(
+                    if (isSelected) Modifier.border(2.dp, baseColor, CircleShape) else Modifier
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = category.icon,
-                contentDescription = category.title,
-                tint = contentColor,
-                modifier = Modifier.size(32.dp)
+                imageVector = icon,
+                contentDescription = title,
+                tint = iconTint,
+                modifier = Modifier.size(30.dp)
             )
+
+            if (isSelected) {
+                // 右上角勾：让“选中”一眼可见
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(baseColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(4.dp))
+
+        Spacer(modifier = Modifier.height(6.dp))
+
         Text(
-            text = category.title,
+            text = title,
             style = MaterialTheme.typography.bodySmall,
-            color = contentColor,
-            maxLines = 1
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
 }

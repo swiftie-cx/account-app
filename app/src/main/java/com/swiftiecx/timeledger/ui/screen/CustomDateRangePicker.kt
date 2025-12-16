@@ -1,13 +1,13 @@
-// timeledger/ui/screen/CustomDateRangePicker.kt
 package com.swiftiecx.timeledger.ui.screen
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape // [关键修复] 导入 CircleShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -44,7 +44,7 @@ fun CustomDateRangePicker(
 
     val calendar = remember { Calendar.getInstance() }
 
-    // 初始化显示的年月
+    // 初始化显示的年月（从 startDate 推断，否则当前月）
     var displayYear by remember {
         mutableIntStateOf(
             if (initialStartDate != null) {
@@ -78,7 +78,7 @@ fun CustomDateRangePicker(
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. 顶部标题栏
+                // 1) 顶部标题（单选/范围）
                 if (isSingleSelection) {
                     SingleDateHeader(startDate)
                 } else {
@@ -87,7 +87,7 @@ fun CustomDateRangePicker(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 2. 月份切换控制栏
+                // 2) 月份切换控制栏
                 MonthController(
                     year = displayYear,
                     month = displayMonth,
@@ -111,12 +111,12 @@ fun CustomDateRangePicker(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 3. 星期表头
+                // 3) 星期表头（跟随 Locale 的一周起始日）
                 WeekHeader()
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 4. 日历网格
+                // 4) 日历网格
                 CalendarGrid(
                     year = displayYear,
                     month = displayMonth,
@@ -129,17 +129,25 @@ fun CustomDateRangePicker(
                             endDate = null
                         } else {
                             val clickedDate = dateMillis
-                            if (startDate == null) {
-                                startDate = clickedDate
-                            } else if (endDate == null) {
-                                if (clickedDate < startDate!!) {
+                            when {
+                                startDate == null -> {
                                     startDate = clickedDate
-                                } else {
-                                    endDate = clickedDate
+                                    endDate = null
                                 }
-                            } else {
-                                startDate = clickedDate
-                                endDate = null
+                                endDate == null -> {
+                                    if (clickedDate < startDate!!) {
+                                        startDate = clickedDate
+                                    } else if (clickedDate == startDate!!) {
+                                        // 同一天：视为只选了 start
+                                        endDate = null
+                                    } else {
+                                        endDate = clickedDate
+                                    }
+                                }
+                                else -> {
+                                    startDate = clickedDate
+                                    endDate = null
+                                }
                             }
                         }
                     }
@@ -147,21 +155,22 @@ fun CustomDateRangePicker(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // 5. 底部按钮
+                // 5) 底部按钮
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        // [i18n]
-                        Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(R.string.cancel),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { onConfirm(startDate, endDate) },
                         enabled = startDate != null
                     ) {
-                        // [i18n]
                         Text(stringResource(R.string.confirm))
                     }
                 }
@@ -172,18 +181,20 @@ fun CustomDateRangePicker(
 
 @Composable
 fun SingleDateHeader(date: Long?) {
-    // [Fix] 使用 Locale.getDefault()
-    val dateFormat = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault()) }
+    val locale = Locale.getDefault()
+    // ✅ 不写死中文格式，完全跟随系统语言
+    val pattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "yMMMd") }
+    val dateFormat = remember(locale, pattern) { SimpleDateFormat(pattern, locale) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
-        // [i18n]
         Text(
-            text = stringResource(R.string.select_date), // 假设 strings.xml 有 select_date
+            text = stringResource(R.string.select_date),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = if (date != null) dateFormat.format(Date(date)) else stringResource(R.string.select_date), // [i18n] 再次使用 select_date
+            text = if (date != null) dateFormat.format(Date(date)) else stringResource(R.string.select_date),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -193,8 +204,10 @@ fun SingleDateHeader(date: Long?) {
 
 @Composable
 fun RangeHeader(startDate: Long?, endDate: Long?) {
-    // [Fix] 使用 Locale.getDefault()
-    val dateFormat = remember { SimpleDateFormat("MM月dd日", Locale.getDefault()) }
+    val locale = Locale.getDefault()
+    // ✅ 用 "MMMd"（如 Dec 16 / 12月16日 / 12.16 等），跟随系统语言
+    val pattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "MMMd") }
+    val dateFormat = remember(locale, pattern) { SimpleDateFormat(pattern, locale) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -202,16 +215,15 @@ fun RangeHeader(startDate: Long?, endDate: Long?) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            // [i18n]
             Text(
-                text = stringResource(R.string.select_date_range), // 假设 strings.xml 有 select_date_range
+                text = stringResource(R.string.select_date_range),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row {
                 Text(
-                    text = if (startDate != null) dateFormat.format(Date(startDate)) else stringResource(R.string.start_date), // [i18n]
+                    text = if (startDate != null) dateFormat.format(Date(startDate)) else stringResource(R.string.start_date),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (startDate != null) MaterialTheme.colorScheme.primary else Color.Gray
@@ -222,7 +234,7 @@ fun RangeHeader(startDate: Long?, endDate: Long?) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (endDate != null) dateFormat.format(Date(endDate)) else stringResource(R.string.end_date), // [i18n] 假设 strings.xml 有 end_date
+                    text = if (endDate != null) dateFormat.format(Date(endDate)) else stringResource(R.string.end_date),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = if (endDate != null) MaterialTheme.colorScheme.primary else Color.Gray
@@ -233,10 +245,18 @@ fun RangeHeader(startDate: Long?, endDate: Long?) {
 }
 
 @Composable
-fun MonthController(year: Int, month: Int, onPrevClick: () -> Unit, onNextClick: () -> Unit) {
-    // [Fix] 使用 Locale.getDefault()
-    val monthFormat = remember { SimpleDateFormat("yyyy年MM月", Locale.getDefault()) }
-    val calendar = remember { Calendar.getInstance().apply { set(year, month - 1, 1) } }
+fun MonthController(
+    year: Int,
+    month: Int,
+    onPrevClick: () -> Unit,
+    onNextClick: () -> Unit
+) {
+    val locale = Locale.getDefault()
+    // ✅ 用 "yMMM"（如 Dec 2025 / 2025년 12월 / 2025年12月），跟随系统语言
+    val pattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "yMMM") }
+    val monthFormat = remember(locale, pattern) { SimpleDateFormat(pattern, locale) }
+
+    val cal = remember { Calendar.getInstance() }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -244,37 +264,54 @@ fun MonthController(year: Int, month: Int, onPrevClick: () -> Unit, onNextClick:
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onPrevClick) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.prev_month)) // [i18n]
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.prev_month)
+            )
         }
 
         Text(
-            // [Fix] 动态生成月份文本
-            text = monthFormat.format(calendar.apply { set(year, month - 1, 1) }.time),
+            text = monthFormat.format(
+                cal.apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month - 1)
+                    set(Calendar.DAY_OF_MONTH, 1)
+                }.time
+            ),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
 
         IconButton(onClick = onNextClick) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.next_month)) // [i18n]
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = stringResource(R.string.next_month)
+            )
         }
     }
 }
 
 @Composable
 fun WeekHeader() {
-    // [Fix] 使用 Locale.getDefault() 来获取本地化的星期几名称
-    val days = remember {
-        val format = SimpleDateFormat("EEEEE", Locale.getDefault()) // EEEEE for single letter (e.g., S, M, T)
-        val cal = Calendar.getInstance()
-        val daysList = mutableListOf<String>()
-        // 确保从周日或周一开始，具体取决于 Locale
-        cal.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY) // 先设置为周日
+    val locale = Locale.getDefault()
+    val cal = remember { Calendar.getInstance(locale) }
+
+    // ✅ 单字母/窄格式（S M T… / 日 一 二… / 월 화…）
+    val pattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "EEEEE") }
+    val dayFormat = remember(locale, pattern) { SimpleDateFormat(pattern, locale) }
+
+    val days = remember(locale) {
+        val list = mutableListOf<String>()
+        val tmp = cal.clone() as Calendar
+        // ✅ 从本地的一周起始日开始（有的国家周一开始）
+        tmp.set(Calendar.DAY_OF_WEEK, tmp.firstDayOfWeek)
         repeat(7) {
-            daysList.add(format.format(cal.time))
-            cal.add(Calendar.DAY_OF_MONTH, 1)
+            list.add(dayFormat.format(tmp.time))
+            tmp.add(Calendar.DAY_OF_MONTH, 1)
         }
-        daysList
+        list
     }
+
     Row(modifier = Modifier.fillMaxWidth()) {
         days.forEach { day ->
             Text(
@@ -288,7 +325,6 @@ fun WeekHeader() {
     }
 }
 
-// CalendarGrid 和 DayCell 逻辑复杂，暂不修改，但它们的引用已修复
 @Composable
 fun CalendarGrid(
     year: Int,
@@ -303,8 +339,11 @@ fun CalendarGrid(
     calendar.set(Calendar.MILLISECOND, 0)
 
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-    val emptySlots = firstDayOfWeek - calendar.firstDayOfWeek
+    val firstDayOfMonth = calendar.get(Calendar.DAY_OF_WEEK)
+
+    // ✅ 修复：避免负数，保证 0..6
+    val emptySlots = (firstDayOfMonth - calendar.firstDayOfWeek + 7) % 7
+
     val totalSlots = emptySlots + daysInMonth
     val list = (0 until totalSlots).toList()
 
@@ -318,20 +357,24 @@ fun CalendarGrid(
                 Box(modifier = Modifier.size(40.dp))
             } else {
                 val day = index - emptySlots + 1
-                calendar.set(year, month - 1, day)
+                calendar.set(year, month - 1, day, 0, 0, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
                 val currentMillis = calendar.timeInMillis
 
-                val isStart = startDate != null && isSameDay(currentMillis, startDate!!)
-                val isEnd = !isSingleSelection && endDate != null && isSameDay(currentMillis, endDate!!)
-                val isInRange = !isSingleSelection && startDate != null && endDate != null &&
-                        currentMillis > startDate!! && currentMillis < endDate!!
+                val isStart = startDate != null && isSameDay(currentMillis, startDate)
+                val isEnd = !isSingleSelection && endDate != null && isSameDay(currentMillis, endDate)
+                val isInRange = !isSingleSelection &&
+                        startDate != null &&
+                        endDate != null &&
+                        currentMillis > startDate &&
+                        currentMillis < endDate
 
                 DayCell(
                     day = day,
                     isStart = isStart,
                     isEnd = isEnd,
                     isInRange = isInRange,
-                    isSingleSelection = isSingleSelection, // 传入单选标志
+                    isSingleSelection = isSingleSelection,
                     onClick = { onDateClick(currentMillis) }
                 )
             }
@@ -345,7 +388,7 @@ fun DayCell(
     isStart: Boolean,
     isEnd: Boolean,
     isInRange: Boolean,
-    isSingleSelection: Boolean, // 新增参数
+    isSingleSelection: Boolean,
     onClick: () -> Unit
 ) {
     val rangeColor = MaterialTheme.colorScheme.primaryContainer
@@ -379,9 +422,10 @@ fun DayCell(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(vertical = 4.dp)
-                        .background(rangeColor,
-                            if(isStart) RoundedCornerShape(topStart=50.dp, bottomStart=50.dp)
-                            else RoundedCornerShape(topEnd=50.dp, bottomEnd=50.dp)
+                        .background(
+                            rangeColor,
+                            if (isStart) RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp)
+                            else RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)
                         )
                 )
             }
@@ -397,12 +441,10 @@ fun DayCell(
             )
         }
 
-        // 文字颜色处理：选中为白色，未选中为主题文字色
         val isSelected = isStart || (!isSingleSelection && isEnd)
         Text(
             text = day.toString(),
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurface,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }

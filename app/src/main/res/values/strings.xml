@@ -1,360 +1,448 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- ========================================================= -->
+    <!-- App -->
+    <!-- ========================================================= -->
     <string name="app_name">TimeLedger</string>
-    <string name="nav_details">Details</string>
-    <string name="nav_chart">Charts</string>
-    <string name="nav_budget">Budget</string>
+
+    <!-- ========================================================= -->
+    <!-- Bottom Navigation -->
+    <!-- ========================================================= -->
     <string name="nav_assets">Assets</string>
+    <string name="nav_budget">Budget</string>
+    <string name="nav_chart">Charts</string>
+    <string name="nav_details">Details</string>
     <string name="nav_me">Me</string>
-    <string name="confirm">Confirm</string>
-    <string name="cancel">Cancel</string>
-    <string name="save">Save</string>
-    <string name="edit">Edit</string>
-    <string name="delete">Delete</string>
+
+    <!-- ========================================================= -->
+    <!-- Common Actions -->
+    <!-- ========================================================= -->
     <string name="add">Add</string>
-    <string name="search">Search</string>
-    <string name="back">Back</string>
-    <string name="finish">Done</string>
-    <string name="reset">Reset</string>
-    <string name="unknown">Unknown</string>
-    <string name="next_step">Next</string>
     <string name="add_again">Add again</string>
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="finish">Done</string>
+    <string name="next_step">Next</string>
+    <string name="reset">Reset</string>
+    <string name="save">Save</string>
+    <string name="search">Search</string>
+    <string name="unknown">Unknown</string>
+
+    <!-- ========================================================= -->
+    <!-- Type / Basic Labels -->
+    <!-- ========================================================= -->
+    <string name="balance">Balance</string>
+    <string name="expense_label">Expense</string>
+    <string name="income_label">Income</string>
+    <string name="transfer_in_app">Internal transfer</string>
+    <string name="type_all">All</string>
     <string name="type_expense">Expense</string>
     <string name="type_income">Income</string>
     <string name="type_transfer">Transfer</string>
-    <string name="type_all">All</string>
-    <string name="balance">Balance</string>
-    <string name="transfer_in_app">Internal transfer</string>
-    <string name="time_day">Day</string>
-    <string name="time_week">Week</string>
-    <string name="time_month">Month</string>
-    <string name="time_year">Year</string>
-    <string name="time_custom">Custom</string>
-    <string name="time_week_current">This week</string>
-    <string name="time_month_current">This month</string>
-    <string name="time_year_current">This year</string>
-    <string name="today">Today</string>
-    <string name="date">Date</string>
-    <string name="month_balance">Monthly balance</string>
-    <string name="income_label">Income</string>
-    <string name="expense_label">Expense</string>
+
+    <!-- ========================================================= -->
+    <!-- Search / Empty State -->
+    <!-- ========================================================= -->
     <string name="no_records">No records in this period</string>
     <string name="search_hint">Search notes, categories</string>
-    <string name="trend_chart">Trend</string>
+
+    <!-- ========================================================= -->
+    <!-- Overview / Charts (Top-level labels) -->
+    <!-- ========================================================= -->
     <string name="category_composition">Category breakdown</string>
+    <string name="month_balance">Monthly balance</string>
     <string name="total_amount">Total</string>
-    <string name="view_profile">View profile</string>
-    <string name="account_cash">Cash</string>
+    <string name="trend_chart">Trend</string>
+
+    <!-- ========================================================= -->
+    <!-- Account / Assets (Summary) -->
+    <!-- ========================================================= -->
     <string name="account_card">Bank card</string>
+    <string name="account_cash">Cash</string>
     <string name="account_credit">Credit card</string>
-    <string name="account_investment">Investment</string>
-    <string name="account_ewallet">E-wallet</string>
     <string name="account_default">Default</string>
+    <string name="account_ewallet">E-wallet</string>
+    <string name="account_investment">Investment</string>
     <string name="current_balance">Current balance</string>
     <string name="net_assets">Net assets</string>
     <string name="total_assets">Total assets</string>
     <string name="total_liabilities">Total liabilities</string>
+    <string name="view_profile">View profile</string>
+
+    <!-- ========================================================= -->
+    <!-- Add / Edit Transaction (Fields) -->
+    <!-- ========================================================= -->
+    <string name="amount_label">Amount</string>
+    <string name="category_label">Category</string>
+    <string name="currency">Currency</string>
+    <string name="date">Date</string>
+    <string name="date_label">Date</string>
+    <string name="exclude_from_budget">Exclude from budget</string>
+    <string name="fee_label">Fee</string>
+    <string name="manual_mode">Manual amount (no auto conversion)</string>
+    <string name="remark_hint">Tap to add a note...</string>
+    <string name="remark_label">Note</string>
+    <string name="select_category">Select category</string>
+    <string name="select_icon">Select icon</string>
+    <string name="transfer_in_account">To account</string>
+    <string name="transfer_mode_in_fixed">Fixed in (extra fee)</string>
+    <string name="transfer_mode_out_fixed">Fixed out (incl. fee)</string>
+    <string name="transfer_out_account">From account</string>
+
+    <!-- ========================================================= -->
+    <!-- Accounts (Manage / Edit) -->
+    <!-- ========================================================= -->
+    <string name="account_name">Account name</string>
+    <string name="account_type">Type</string>
     <string name="add_account">Add account</string>
     <string name="manage_account">Manage accounts</string>
     <string name="select_account">Select account</string>
-    <string name="account_name">Account name</string>
-    <string name="account_type">Type</string>
-    <string name="currency">Currency</string>
-    <string name="select_icon">Select icon</string>
-    <string name="select_category">Select category</string>
-    <string name="amount_label">Amount</string>
-    <string name="remark_label">Note</string>
-    <string name="remark_hint">Tap to add a note...</string>
-    <string name="category_label">Category</string>
-    <string name="date_label">Date</string>
-    <string name="transfer_out_account">From account</string>
-    <string name="transfer_in_account">To account</string>
-    <string name="fee_label">Fee</string>
-    <string name="manual_mode">Manual amount (no auto conversion)</string>
-    <string name="transfer_mode_out_fixed">Fixed out (incl. fee)</string>
-    <string name="transfer_mode_in_fixed">Fixed in (extra fee)</string>
-    <string name="exclude_from_budget">Exclude from budget</string>
-    <string name="select_date_range">Select date range</string>
-    <string name="select_date">Select date</string>
-    <string name="end_date">End date</string>
-    <string name="settings_title">Settings</string>
+
+    <!-- ========================================================= -->
+    <!-- Settings (Main) -->
+    <!-- ========================================================= -->
+    <string name="click_to_login">Tap to sign in</string>
+    <string name="delete_account">Delete account</string>
+    <string name="group_data">Data</string>
     <string name="group_general">General</string>
     <string name="group_security">Security</string>
-    <string name="group_data">Data</string>
+    <string name="login_hint">Sign in to sync</string>
+    <string name="logout">Sign out</string>
+    <string name="me_title">Me</string>
     <string name="opt_category">Categories</string>
-    <string name="opt_periodic">Recurring</string>
+    <string name="opt_clear_data">Clear data</string>
     <string name="opt_currency">Default currency</string>
     <string name="opt_language">Language</string>
-    <string name="opt_theme">Theme</string>
+    <string name="opt_periodic">Recurring</string>
     <string name="opt_privacy">Security &amp; privacy</string>
     <string name="opt_sync">Backup &amp; sync</string>
-    <string name="opt_clear_data">Clear data</string>
-    <string name="login_hint">Sign in to sync</string>
-    <string name="click_to_login">Tap to sign in</string>
-    <string name="logout">Sign out</string>
-    <string name="delete_account">Delete account</string>
+    <string name="opt_theme">Theme</string>
+    <string name="settings_title">Settings</string>
     <string name="version">Version</string>
-    <string name="me_title">Me</string>
-    <string name="periodic_title">Recurring transactions</string>
-    <string name="periodic_empty_hint">No recurring tasks</string>
-    <string name="repeat_frequency">Repeat</string>
-    <string name="end_rule">End rule</string>
-    <string name="freq_day">Daily</string>
-    <string name="freq_week">Weekly</string>
-    <string name="freq_month">Monthly</string>
-    <string name="freq_year">Yearly</string>
-    <string name="end_never">Never</string>
-    <string name="start_date">Start date</string>
-    <string name="end_by_date">End by date</string>
-    <string name="end_by_count">End after count</string>
-    <string name="input_repeat_count">Enter repeat count</string>
+
+    <!-- ========================================================= -->
+    <!-- Recurring -->
+    <!-- ========================================================= -->
     <string name="count">Count</string>
     <string name="count_label_unit">times</string>
-    <string name="warning_cross_currency_transfer_periodic">Cross-currency recurring transfers are not supported. Please select accounts with the same currency.</string>
+    <string name="end_by_count">End after count</string>
+    <string name="end_by_date">End by date</string>
+    <string name="end_never">Never</string>
+    <string name="end_rule">End rule</string>
+    <string name="freq_day">Daily</string>
+    <string name="freq_month">Monthly</string>
+    <string name="freq_week">Weekly</string>
+    <string name="freq_year">Yearly</string>
+    <string name="input_repeat_count">Enter repeat count</string>
+    <string name="periodic_empty_hint">No recurring tasks</string>
+    <string name="periodic_title">Recurring transactions</string>
+    <string name="repeat_frequency">Repeat</string>
+    <string name="start_date">Start date</string>
     <string name="switch_mode">Switch mode</string>
-    <string name="prev_month">Previous month</string>
+    <string name="warning_cross_currency_transfer_periodic">Cross-currency recurring transfers are not supported. Please select accounts with the same currency.</string>
+
+    <!-- ========================================================= -->
+    <!-- Date / Period -->
+    <!-- ========================================================= -->
+    <string name="end_date">End date</string>
     <string name="next_month">Next month</string>
-    <string name="prev_year_month">Previous period</string>
     <string name="next_year_month">Next period</string>
-    <string name="language_title">Language</string>
-    <string name="lang_hint">The app will restart after switching language</string>
-    <string name="lang_follow_system">Follow system</string>
-    <string name="lang_zh">Simplified Chinese</string>
+    <string name="prev_month">Previous month</string>
+    <string name="prev_year_month">Previous period</string>
+    <string name="select_date">Select date</string>
+    <string name="select_date_range">Select date range</string>
+    <string name="time_custom">Custom</string>
+    <string name="time_day">Day</string>
+    <string name="time_month">Month</string>
+    <string name="time_month_current">This month</string>
+    <string name="time_month_short">Month</string>
+    <string name="time_week">Week</string>
+    <string name="time_week_current">This week</string>
+    <string name="time_week_short">Week</string>
+    <string name="time_year">Year</string>
+    <string name="time_year_current">This year</string>
+    <string name="time_year_short">Year</string>
+    <string name="today">Today</string>
+
+    <!-- ========================================================= -->
+    <!-- Language -->
+    <!-- ========================================================= -->
     <string name="lang_en">English</string>
+    <string name="lang_follow_system">Follow system</string>
+    <string name="lang_hint">The app will restart after switching language</string>
     <string name="lang_ja">Japanese</string>
     <string name="lang_ko">Korean</string>
-    <string name="dialog_clear_title">Clear data</string>
-    <string name="dialog_clear_msg">Clear all data? This cannot be undone.</string>
+    <string name="lang_zh">Simplified Chinese</string>
+    <string name="language_title">Language</string>
+
+    <!-- ========================================================= -->
+    <!-- Dialogs -->
+    <!-- ========================================================= -->
     <string name="confirm_clear_code">CLEAR</string>
-    <string name="dialog_final_title">Final confirmation</string>
-    <string name="dialog_final_msg">Type the text below to confirm:</string>
-    <string name="dialog_confirm">Confirm</string>
+    <string name="confirm_delete_code">DELETE</string>
     <string name="dialog_cancel">Cancel</string>
-    <string name="error_password_mismatch">Passwords do not match</string>
-    <string name="success_save">Saved</string>
-    <string name="dialog_delete_account_title">Delete account?</string>
+    <string name="dialog_clear_msg">Clear all data? This cannot be undone.</string>
+    <string name="dialog_clear_title">Clear data</string>
+    <string name="dialog_confirm">Confirm</string>
     <string name="dialog_delete_account_msg1">This will permanently delete your account.</string>
     <string name="dialog_delete_account_msg2">All cloud data will be erased and cannot be recovered.</string>
     <string name="dialog_delete_account_msg3">Local data will remain but sync will be disabled.</string>
-    <string name="confirm_delete_code">DELETE</string>
-    <string name="cat_food">Food &amp; Dining</string>
-    <string name="cat_shopping">Shopping</string>
-    <string name="cat_transport">Transport</string>
-    <string name="cat_home">Home</string>
+    <string name="dialog_delete_account_title">Delete account?</string>
+    <string name="dialog_final_msg">Type the text below to confirm:</string>
+    <string name="dialog_final_title">Final confirmation</string>
+    <string name="error_password_mismatch">Passwords do not match</string>
+    <string name="success_save">Saved</string>
+
+    <!-- ========================================================= -->
+    <!-- Categories -->
+    <!-- ========================================================= -->
     <string name="cat_entertainment">Entertainment</string>
-    <string name="cat_medical_edu">Health &amp; Education</string>
     <string name="cat_financial">Finance &amp; Transfer</string>
-    <string name="sub_food">Food</string>
-    <string name="sub_snacks">Snacks</string>
-    <string name="sub_alcohol">Alcohol</string>
-    <string name="sub_cigarette">Cigarettes</string>
-    <string name="sub_shopping">Shopping</string>
-    <string name="sub_clothes">Clothing</string>
-    <string name="sub_electronics">Electronics</string>
-    <string name="sub_gift">Gifts</string>
-    <string name="sub_beauty">Beauty</string>
-    <string name="sub_traffic">Transit</string>
-    <string name="sub_car">Car</string>
-    <string name="sub_repair">Repair</string>
-    <string name="sub_travel">Travel</string>
-    <string name="sub_housing">Housing</string>
-    <string name="sub_daily">Daily</string>
-    <string name="sub_phone">Phone</string>
-    <string name="sub_pets">Pets</string>
-    <string name="sub_service">Services</string>
-    <string name="sub_entertainment">Entertainment</string>
-    <string name="sub_sports">Sports</string>
-    <string name="sub_social">Social</string>
-    <string name="sub_movie">Movies</string>
-    <string name="sub_drama">Shows</string>
-    <string name="sub_education">Education</string>
-    <string name="sub_medical">Medical</string>
-    <string name="sub_child">Kids</string>
-    <string name="sub_book">Books</string>
-    <string name="sub_donate">Donations</string>
-    <string name="sub_other">Other</string>
+    <string name="cat_food">Food &amp; Dining</string>
+    <string name="cat_home">Home</string>
     <string name="cat_income_job">Job income</string>
     <string name="cat_income_other">Other income</string>
-    <string name="sub_salary">Salary</string>
-    <string name="sub_bonus">Bonus</string>
-    <string name="sub_reimbursement">Reimbursement</string>
-    <string name="sub_part_time">Part-time</string>
-    <string name="sub_finance">Investments</string>
-    <string name="sub_gift_money">Gift money</string>
-    <string name="sub_red_packet">Red packet</string>
-    <string name="sub_second_hand">Second-hand</string>
+    <string name="cat_medical_edu">Health &amp; Education</string>
+    <string name="cat_shopping">Shopping</string>
+    <string name="cat_transport">Transport</string>
 
-    <string name="privacy_title">Privacy passcode</string>
-    <string name="privacy_pin_title">PIN</string>
-    <string name="privacy_pin_desc">Unlock with a 4-digit PIN</string>
-    <string name="privacy_pattern_title">Pattern</string>
-    <string name="privacy_pattern_desc">Unlock with a pattern</string>
-    <string name="privacy_biometric_title">Fingerprint unlock</string>
-    <string name="privacy_biometric_desc">Unlock quickly with fingerprint</string>
-    <string name="privacy_biometric_require_title">"Can't enable fingerprint"</string>
-    <string name="privacy_biometric_require_text">Set a PIN or pattern before enabling fingerprint unlock.</string>
-    <string name="got_it">Got it</string>
-    <string name="login_required_title">Sign in required</string>
-    <string name="login_required_text">Sign in before setting up App Lock.</string>
-    <string name="go_login">Sign in</string>
-    <string name="privacy_enabled_success">Enabled</string>
-    <string name="pin_setup_title">Set PIN</string>
-    <string name="pin_confirm_title">Confirm PIN</string>
-    <string name="pin_prompt_input_4">Enter 4 digits</string>
-    <string name="pin_prompt_confirm">Re-enter to confirm</string>
-    <string name="pin_error_mismatch">PINs do not match</string>
-    <string name="pattern_setup_title">Draw pattern</string>
-    <string name="pattern_confirm_title">Draw again</string>
-    <string name="pattern_prompt_connect_4">Connect at least 4 dots</string>
-    <string name="pattern_error_too_short">Connect at least 4 dots</string>
-    <string name="pattern_error_mismatch">Pattern does not match</string>
-    <string name="lock_verify_password">Verify to continue</string>
-    <string name="lock_error_wrong_pin">Incorrect PIN</string>
-    <string name="lock_error_wrong_pattern">Incorrect pattern</string>
-    <string name="lock_forgot_password">Forgot passcode? Verify with account</string>
-    <string name="lock_biometric_not_supported">Fingerprint not available or not enrolled</string>
+    <string name="sub_alcohol">Alcohol</string>
+    <string name="sub_beauty">Beauty</string>
+    <string name="sub_bonus">Bonus</string>
+    <string name="sub_book">Books</string>
+    <string name="sub_car">Car</string>
+    <string name="sub_child">Kids</string>
+    <string name="sub_cigarette">Cigarettes</string>
+    <string name="sub_clothes">Clothing</string>
+    <string name="sub_daily">Daily</string>
+    <string name="sub_donate">Donations</string>
+    <string name="sub_drama">Shows</string>
+    <string name="sub_education">Education</string>
+    <string name="sub_electronics">Electronics</string>
+    <string name="sub_entertainment">Entertainment</string>
+    <string name="sub_finance">Investments</string>
+    <string name="sub_food">Food</string>
+    <string name="sub_gift">Gifts</string>
+    <string name="sub_gift_money">Gift money</string>
+    <string name="sub_housing">Housing</string>
+    <string name="sub_medical">Medical</string>
+    <string name="sub_movie">Movies</string>
+    <string name="sub_other">Other</string>
+    <string name="sub_part_time">Part-time</string>
+    <string name="sub_pets">Pets</string>
+    <string name="sub_phone">Phone</string>
+    <string name="sub_red_packet">Red packet</string>
+    <string name="sub_reimbursement">Reimbursement</string>
+    <string name="sub_repair">Repair</string>
+    <string name="sub_salary">Salary</string>
+    <string name="sub_second_hand">Second-hand</string>
+    <string name="sub_service">Services</string>
+    <string name="sub_shopping">Shopping</string>
+    <string name="sub_snacks">Snacks</string>
+    <string name="sub_social">Social</string>
+    <string name="sub_sports">Sports</string>
+    <string name="sub_traffic">Transit</string>
+    <string name="sub_travel">Travel</string>
+
+    <!-- ========================================================= -->
+    <!-- App Lock / Privacy -->
+    <!-- ========================================================= -->
     <string name="bio_prompt_title">Fingerprint verification</string>
+    <string name="go_login">Sign in</string>
+    <string name="got_it">Got it</string>
+    <string name="lock_biometric_not_supported">Fingerprint not available or not enrolled</string>
+    <string name="lock_error_wrong_pattern">Incorrect pattern</string>
+    <string name="lock_error_wrong_pin">Incorrect PIN</string>
+    <string name="lock_forgot_password">Forgot passcode? Verify with account</string>
+    <string name="lock_verify_password">Verify to continue</string>
+    <string name="login_required_text">Sign in before setting up App Lock.</string>
+    <string name="login_required_title">Sign in required</string>
+    <string name="pattern_confirm_title">Draw again</string>
+    <string name="pattern_error_mismatch">Pattern does not match</string>
+    <string name="pattern_error_too_short">Connect at least 4 dots</string>
+    <string name="pattern_prompt_connect_4">Connect at least 4 dots</string>
+    <string name="pattern_setup_title">Draw pattern</string>
+    <string name="pin_confirm_title">Confirm PIN</string>
+    <string name="pin_error_mismatch">PINs do not match</string>
+    <string name="pin_prompt_confirm">Re-enter to confirm</string>
+    <string name="pin_prompt_input_4">Enter 4 digits</string>
+    <string name="pin_setup_title">Set PIN</string>
+    <string name="privacy_biometric_desc">Unlock quickly with fingerprint</string>
+    <string name="privacy_biometric_require_text">Set a PIN or pattern before enabling fingerprint unlock.</string>
+    <string name="privacy_biometric_require_title">"Can't enable fingerprint"</string>
+    <string name="privacy_biometric_title">Fingerprint unlock</string>
+    <string name="privacy_enabled_success">Enabled</string>
+    <string name="privacy_pattern_desc">Unlock with a pattern</string>
+    <string name="privacy_pattern_title">Pattern</string>
+    <string name="privacy_pin_desc">Unlock with a 4-digit PIN</string>
+    <string name="privacy_pin_title">PIN</string>
+    <string name="privacy_title">Privacy passcode</string>
     <string name="unlock_dialog_title">Security check</string>
     <string name="unlock_email_label">Email</string>
-    <string name="unlock_password_label">Password</string>
-    <string name="unlock_reset_sent">Email sent. Check your inbox.</string>
-    <string name="unlock_send_reset">Forgot password? Send reset email</string>
+    <string name="unlock_enter_account_password">Enter email and password</string>
     <string name="unlock_enter_email_first">Enter email first</string>
+    <string name="unlock_password_label">Password</string>
     <string name="unlock_reset_link_sent">Reset link sent. Reset your password then sign in here.</string>
     <string name="unlock_reset_lock_tip">For security, verification will reset app lock settings.</string>
-    <string name="unlock_enter_account_password">Enter email and password</string>
+    <string name="unlock_reset_sent">Email sent. Check your inbox.</string>
+    <string name="unlock_send_reset">Forgot password? Send reset email</string>
     <string name="unlock_verify_and_unlock">Verify &amp; unlock</string>
 
-    <string name="login_title">Welcome back</string>
-    <string name="login_subtitle">Sign in to sync your ledger data</string>
-    <string name="label_email">Email</string>
-    <string name="label_email_short">Email</string>
-    <string name="label_password">Password</string>
-    <string name="action_forgot_password">Forgot password?</string>
-    <string name="action_login">Log in</string>
-    <string name="text_no_account">"Don't have an account?"</string>
-    <string name="action_go_register">Sign up</string>
-
-    <string name="register_title">Create account</string>
-    <string name="register_subtitle">Register to enable cloud sync</string>
-    <string name="label_set_password">Set password</string>
-    <string name="label_confirm_password">Confirm password</string>
-    <string name="action_register_and_login">Sign up and log in</string>
-    <string name="error_password_min_6">Password must be at least 6 characters</string>
-    <string name="msg_register_success_verification_sent">Registration successful. Verification email sent.</string>
-
-    <string name="user_info_title">User info</string>
-    <string name="status_logged_in">Logged in</string>
-    <string name="status_not_logged_in">Not logged in</string>
-    <string name="menu_change_password">Change password</string>
-    <string name="menu_forgot_password">Forgot password</string>
-    <string name="action_logout">Log out</string>
-    <string name="msg_logged_out">Logged out</string>
-
+    <!-- ========================================================= -->
+    <!-- Auth / Account (Login/Register/User) -->
+    <!-- ========================================================= -->
+    <string name="action_confirm_change">Confirm</string>
+    <string name="action_confirm_delete">Confirm deletion</string>
     <string name="action_delete_account">Delete account</string>
+    <string name="action_forgot_password">Forgot password?</string>
+    <string name="action_go_register">Sign up</string>
+    <string name="action_login">Log in</string>
+    <string name="action_logout">Log out</string>
+    <string name="action_next_step">Next</string>
+    <string name="action_register_and_login">Sign up and log in</string>
+    <string name="action_send_reset_link">Send reset link</string>
+    <string name="account_delete_confirm_phrase">CONFIRM DELETE</string>
+    <string name="change_password_title">Change password</string>
     <string name="dialog_delete_account_warning1">Please note: this will permanently delete your account.</string>
     <string name="dialog_delete_account_warning2">All cloud data will be erased and cannot be recovered.</string>
     <string name="dialog_delete_account_warning3">Local data will remain, but cloud sync will no longer be available.</string>
-    <string name="action_next_step">Next</string>
-    <string name="dialog_final_confirm_title">Final security check</string>
     <string name="dialog_enter_text_to_confirm">Type the following text to confirm account deletion:</string>
-    <string name="account_delete_confirm_phrase">CONFIRM DELETE</string>
+    <string name="dialog_final_confirm_title">Final security check</string>
+    <string name="error_enter_current_password">Please enter current password</string>
+    <string name="error_enter_email">Please enter email</string>
+    <string name="error_new_password_mismatch">The two passwords do not match</string>
+    <string name="error_new_password_same_as_old">New password cannot be the same as the old password</string>
+    <string name="error_new_password_too_short">New password must be at least 6 characters</string>
+    <string name="error_password_min_6">Password must be at least 6 characters</string>
+    <string name="label_confirm_new_password">Confirm new password</string>
+    <string name="label_confirm_password">Confirm password</string>
+    <string name="label_current_password">Current password</string>
+    <string name="label_email">Email</string>
+    <string name="label_email_short">Email</string>
+    <string name="label_new_password_min_6">New password (min 6)</string>
+    <string name="label_password">Password</string>
+    <string name="label_set_password">Set password</string>
+    <string name="login_subtitle">Sign in to sync your ledger data</string>
+    <string name="login_title">Welcome back</string>
+    <string name="menu_change_password">Change password</string>
+    <string name="menu_forgot_password">Forgot password</string>
+    <string name="msg_logged_out">Logged out</string>
+    <string name="msg_password_changed">Password updated</string>
+    <string name="msg_register_success_verification_sent">Registration successful. Verification email sent.</string>
+    <string name="msg_reset_email_sent">Reset email sent. Please check your inbox.</string>
+    <string name="register_subtitle">Register to enable cloud sync</string>
+    <string name="register_title">Create account</string>
+    <string name="reset_password_hint">"Enter your registered email and we'll send a password reset link."</string>
+    <string name="reset_password_title">Reset password</string>
+    <string name="status_logged_in">Logged in</string>
+    <string name="status_not_logged_in">Not logged in</string>
+    <string name="text_no_account">"Don't have an account?"</string>
     <string name="toast_account_deleted">Account deleted</string>
     <string name="toast_reauth_required">For security, please sign in again.</string>
-    <string name="action_confirm_delete">Confirm deletion</string>
+    <string name="user_info_title">User info</string>
 
-    <string name="change_password_title">Change password</string>
-    <string name="label_current_password">Current password</string>
-    <string name="label_new_password_min_6">New password (min 6)</string>
-    <string name="label_confirm_new_password">Confirm new password</string>
-    <string name="error_new_password_mismatch">The two passwords do not match</string>
-    <string name="error_enter_current_password">Please enter current password</string>
-    <string name="error_new_password_too_short">New password must be at least 6 characters</string>
-    <string name="error_new_password_same_as_old">New password cannot be the same as the old password</string>
-    <string name="msg_password_changed">Password updated</string>
-    <string name="action_confirm_change">Confirm</string>
-
-    <string name="reset_password_title">Reset password</string>
-    <string name="reset_password_hint">"Enter your registered email and we'll send a password reset link."</string>
-    <string name="msg_reset_email_sent">Reset email sent. Please check your inbox.</string>
-    <string name="error_enter_email">Please enter email</string>
-    <string name="action_send_reset_link">Send reset link</string>
+    <!-- ========================================================= -->
+    <!-- Currency Selection -->
+    <!-- ========================================================= -->
     <string name="select_default_currency">Select Default Currency</string>
-    <string name="currency_name_cny">Chinese Yuan</string>
-    <string name="currency_name_usd">US Dollar</string>
-    <string name="currency_name_eur">Euro</string>
-    <string name="currency_name_jpy">Japanese Yen</string>
-    <string name="currency_name_hkd">Hong Kong Dollar</string>
-    <string name="currency_name_gbp">British Pound</string>
     <string name="currency_name_aud">Australian Dollar</string>
-    <string name="currency_name_cad">Canadian Dollar</string>
-    <string name="currency_name_sgd">Singapore Dollar</string>
-    <string name="currency_name_twd">New Taiwan Dollar</string>
-    <string name="currency_name_krw">South Korean Won</string>
-    <string name="currency_name_thb">Thai Baht</string>
-    <string name="currency_name_myr">Malaysian Ringgit</string>
-    <string name="currency_name_php">Philippine Peso</string>
-    <string name="currency_name_idr">Indonesian Rupiah</string>
-    <string name="currency_name_inr">Indian Rupee</string>
-    <string name="currency_name_vnd">Vietnamese Dong</string>
-    <string name="currency_name_chf">Swiss Franc</string>
-    <string name="currency_name_sek">Swedish Krona</string>
-    <string name="currency_name_nok">Norwegian Krone</string>
-    <string name="currency_name_dkk">Danish Krone</string>
-    <string name="currency_name_rub">Russian Ruble</string>
-    <string name="currency_name_try">Turkish Lira</string>
-    <string name="currency_name_czk">Czech Koruna</string>
-    <string name="currency_name_huf">Hungarian Forint</string>
-    <string name="currency_name_pln">Polish Zloty</string>
     <string name="currency_name_bgn">Bulgarian Lev</string>
-    <string name="currency_name_ron">Romanian Leu</string>
-    <string name="currency_name_nzd">New Zealand Dollar</string>
     <string name="currency_name_brl">Brazilian Real</string>
-    <string name="currency_name_mxn">Mexican Peso</string>
-    <string name="currency_name_zar">South African Rand</string>
+    <string name="currency_name_cad">Canadian Dollar</string>
+    <string name="currency_name_chf">Swiss Franc</string>
+    <string name="currency_name_cny">Chinese Yuan</string>
+    <string name="currency_name_czk">Czech Koruna</string>
+    <string name="currency_name_dkk">Danish Krone</string>
+    <string name="currency_name_eur">Euro</string>
+    <string name="currency_name_gbp">British Pound</string>
+    <string name="currency_name_hkd">Hong Kong Dollar</string>
+    <string name="currency_name_huf">Hungarian Forint</string>
+    <string name="currency_name_idr">Indonesian Rupiah</string>
     <string name="currency_name_ils">Israeli New Shekel</string>
+    <string name="currency_name_inr">Indian Rupee</string>
+    <string name="currency_name_jpy">Japanese Yen</string>
+    <string name="currency_name_krw">South Korean Won</string>
+    <string name="currency_name_mxn">Mexican Peso</string>
+    <string name="currency_name_myr">Malaysian Ringgit</string>
+    <string name="currency_name_nok">Norwegian Krone</string>
+    <string name="currency_name_nzd">New Zealand Dollar</string>
+    <string name="currency_name_php">Philippine Peso</string>
+    <string name="currency_name_pln">Polish Zloty</string>
+    <string name="currency_name_ron">Romanian Leu</string>
+    <string name="currency_name_rub">Russian Ruble</string>
+    <string name="currency_name_sek">Swedish Krona</string>
+    <string name="currency_name_sgd">Singapore Dollar</string>
+    <string name="currency_name_thb">Thai Baht</string>
+    <string name="currency_name_try">Turkish Lira</string>
+    <string name="currency_name_twd">New Taiwan Dollar</string>
+    <string name="currency_name_usd">US Dollar</string>
+    <string name="currency_name_vnd">Vietnamese Dong</string>
+    <string name="currency_name_zar">South African Rand</string>
+
+    <!-- ========================================================= -->
+    <!-- Theme Preview -->
+    <!-- ========================================================= -->
+    <string name="add_transaction_mock">Log a transaction</string>
+    <string name="amount_mock">¥ 1,234.56</string>
+    <string name="month_expense_mock">Monthly Expense</string>
+    <string name="selected_label">Selected</string>
     <string name="theme_preview_title">Live Preview</string>
     <string name="theme_selection_title">Select Color Scheme</string>
-    <string name="month_expense_mock">Monthly Expense</string>
-    <string name="amount_mock">¥ 1,234.56</string>
-    <string name="add_transaction_mock">Log a transaction</string>
-    <string name="selected_label">Selected</string>
-    <string name="sync_unknown_time">Unknown time</string>
-    <string name="sync_title">Cloud Sync</string>
+
+    <!-- ========================================================= -->
+    <!-- Sync -->
+    <!-- ========================================================= -->
+    <string name="sync_cloud_time_label">Cloud backup time: %1$s</string>
+    <string name="sync_conflict_msg1">Data exists both locally and in the cloud.</string>
+    <string name="sync_conflict_msg2">Please select an action:</string>
+    <string name="sync_conflict_title">Data Conflict Found</string>
     <string name="sync_current_account_label">Current account: %1$s</string>
-    <string name="sync_not_logged_in">Not logged in</string>
     <string name="sync_description">Tap Sync to automatically backup or restore data.\nIf data exists on both ends, the system will ask for action.</string>
+    <string name="sync_merge_strategy">Merge Data (Recommended)</string>
+    <string name="sync_not_logged_in">Not logged in</string>
+    <string name="sync_overwrite_cloud_strategy">Use Local Data</string>
+    <string name="sync_overwrite_local_strategy">Use Cloud Data</string>
     <string name="sync_retry">Retry</string>
     <string name="sync_start">Start Sync</string>
-    <string name="sync_conflict_title">Data Conflict Found</string>
-    <string name="sync_conflict_msg1">Data exists both locally and in the cloud.</string>
-    <string name="sync_cloud_time_label">Cloud backup time: %1$s</string>
-    <string name="sync_conflict_msg2">Please select an action:</string>
-    <string name="sync_merge_strategy">Merge Data (Recommended)</string>
-    <string name="sync_overwrite_local_strategy">Use Cloud Data</string>
-    <string name="sync_overwrite_cloud_strategy">Use Local Data</string>
-    <string name="category_settings_title">Category Settings</string>
+    <string name="sync_title">Cloud Sync</string>
+    <string name="sync_unknown_time">Unknown time</string>
+
+    <!-- ========================================================= -->
+    <!-- Category Settings -->
+    <!-- ========================================================= -->
     <string name="add_category">Add Category</string>
     <string name="category_reorder">Reorder</string>
+    <string name="category_settings_title">Category Settings</string>
     <string name="subcategory_count_label">%1$d subcategories</string>
     <string name="subcategory_management_title">%1$s - Subcategory Management</string>
     <string name="subcategory_reorder_hint">Long press the icon on the right to reorder</string>
+
+    <!-- ========================================================= -->
+    <!-- Account Screens / Records -->
+    <!-- ========================================================= -->
     <string name="account_detail_title">Account Details</string>
-    <string name="edit_account">Edit Account</string>
-    <string name="account_not_found">Account information not found</string>
-    <string name="transaction_records_title">Transaction Records</string>
-    <string name="no_transaction_records">No transaction records</string>
-    <string name="transaction_remark_format"> · %1$s</string>
-    <string name="account_management_title">Account Management</string>
     <string name="account_management_hint">Long press to drag and reorder, tap the circle to set as default</string>
-    <string name="set_as_default">Set as default</string>
+    <string name="account_management_title">Account Management</string>
+    <string name="account_name_placeholder">Account Name</string>
+    <string name="account_not_found">Account information not found</string>
     <string name="account_reorder">Reorder account</string>
     <string name="add_account_title">New Account</string>
-    <string name="edit_account_title">Edit Account</string>
-    <string name="account_name_placeholder">Account Name</string>
-    <string name="balance_placeholder">0.00</string>
     <string name="balance_edit_hint">Modifying the balance will automatically generate a correctional entry.</string>
+    <string name="balance_placeholder">0.00</string>
+    <string name="edit_account">Edit Account</string>
+    <string name="edit_account_title">Edit Account</string>
+    <string name="no_transaction_records">No transaction records</string>
+    <string name="set_as_default">Set as default</string>
+    <string name="transaction_records_title">Transaction Records</string>
+    <string name="transaction_remark_format"> · %1$s</string>
 
+    <!-- ========================================================= -->
+    <!-- Account Types (Array) -->
+    <!-- ========================================================= -->
     <string-array name="account_types">
         <item>Cash</item>
         <item>Bank card</item>
@@ -363,6 +451,10 @@
         <item>E-wallet</item>
         <item>Default</item>
     </string-array>
+
+    <!-- ========================================================= -->
+    <!-- Budget / Calendar / Formats / Reports -->
+    <!-- ========================================================= -->
     <string name="assets_title">Assets</string>
     <string name="budget_base_currency">CNY</string>
     <string name="total_budget_category_name">Total Budget</string>
@@ -396,9 +488,6 @@
     <string name="date_format_full">yyyy-MM-dd</string>
     <string name="date_format_year_month">yyyy MMM</string>
     <string name="date_format_year">yyyy</string>
-    <string name="time_week_short">Week</string>
-    <string name="time_month_short">Month</string>
-    <string name="time_year_short">Year</string>
     <string name="chart_empty_state">No records for this period.</string>
     <string name="currency_amount_format_chart">%1$s %2$.2f</string>
     <string name="currency_amount_format">%1$s %2$.2f</string>
@@ -427,4 +516,55 @@
     <string name="remaining_amount_format">Remaining: %1$s %2$.2f</string>
     <string name="overspent_amount_format">Overspent: %1$s %2$.2f</string>
     <string name="tag_exclude_from_budget">ExcludeFromBudget</string>
+
+    <string name="calendar_month_balance">Balance this month</string>
+
+    <string name="income_short">In</string>
+    <string name="expense_short">Out</string>
+
+    <string name="weekday_fri">Fri</string>
+    <string name="weekday_mon">Mon</string>
+    <string name="weekday_sat">Sat</string>
+    <string name="weekday_sun">Sun</string>
+    <string name="weekday_thu">Thu</string>
+    <string name="weekday_tue">Tue</string>
+    <string name="weekday_wed">Wed</string>
+
+    <string name="daily_budget_label">Daily budget</string>
+    <string name="budget_status_normal">Normal</string>
+    <string name="budget_status_over">Over</string>
+
+    <!-- ========================================================= -->
+    <!-- Misc (Note: duplicates kept as-is per your requirement) -->
+    <!-- ========================================================= -->
+    <string name="ok">OK</string>
+    <string name="toggle_mode">Toggle mode</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+
+    <!-- Title: %1$d=year, %2$s=monthLabel -->
+    <string name="year_month_title_format">%2$s %1$d</string>
+
+    <!-- Numeric month fallback (if ever used) -->
+    <string name="month_number_format">M%1$d</string>
+    <string name="detail_title">Details</string>
+
+    <string name="record_not_found">Record not found</string>
+
+    <string name="internal_transfer">Internal transfer</string>
+
+    <string name="type_label">Type</string>
+
+    <string name="converted_label">Converted</string>
+    <string name="account_label">Account</string>
+
+    <string name="transfer_out">From</string>
+    <string name="transfer_in">To</string>
+
+    <string name="unknown_account">Unknown account</string>
+
+    <string name="account_balance_format">%1$s (Balance: %2$.2f)</string>
+    <string name="converted_amount_format">≈ %1$s %2$.2f</string>
+    <string name="added_at_format">(Added at %1$s)</string>
+
 </resources>
