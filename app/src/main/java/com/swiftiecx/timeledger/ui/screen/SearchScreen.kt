@@ -38,8 +38,8 @@ import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.Expense
-import com.swiftiecx.timeledger.ui.navigation.CategoryData // [关键]
-import com.swiftiecx.timeledger.ui.navigation.CategoryHelper
+import com.swiftiecx.timeledger.ui.navigation.CategoryData
+import com.swiftiecx.timeledger.ui.navigation.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
@@ -104,11 +104,41 @@ fun SearchScreen(
 
     val accountMap = remember(allAccounts) { allAccounts.associateBy { it.id } }
 
-    // [Fix] 动态构建图标 Map
+    // 动态构建：iconMap + colorMap（同时支持 title 和 key）
     val categoryIconMap = remember(context) {
-        val expenses = CategoryData.getExpenseCategories(context).flatMap { it.subCategories }
-        val incomes = CategoryData.getIncomeCategories(context).flatMap { it.subCategories }
-        (expenses + incomes).associate { it.title to it.icon }
+        val expenseMains = CategoryData.getExpenseCategories(context)
+        val incomeMains = CategoryData.getIncomeCategories(context)
+
+        fun buildIconMap(mains: List<MainCategory>): Map<String, ImageVector> {
+            val map = mutableMapOf<String, ImageVector>()
+            mains.forEach { main ->
+                main.subCategories.forEach { sub ->
+                    map[sub.title] = sub.icon
+                    map[sub.key] = sub.icon
+                }
+            }
+            return map
+        }
+
+        buildIconMap(expenseMains) + buildIconMap(incomeMains)
+    }
+
+    val categoryColorMap = remember(context) {
+        val expenseMains = CategoryData.getExpenseCategories(context)
+        val incomeMains = CategoryData.getIncomeCategories(context)
+
+        fun buildColorMap(mains: List<MainCategory>): Map<String, Color> {
+            val map = mutableMapOf<String, Color>()
+            mains.forEach { main ->
+                main.subCategories.forEach { sub ->
+                    map[sub.title] = main.color
+                    map[sub.key] = main.color
+                }
+            }
+            return map
+        }
+
+        buildColorMap(expenseMains) + buildColorMap(incomeMains)
     }
 
     val dynamicTitle = remember(initialCategory, customDateRangeMillis) {
@@ -352,7 +382,7 @@ fun SearchScreen(
                             onValueChange = { localSearchText = it },
                             placeholder = { Text(stringResource(R.string.search_hint), style = MaterialTheme.typography.bodyMedium) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                            trailingIcon = if(localSearchText.isNotEmpty()) {
+                            trailingIcon = if (localSearchText.isNotEmpty()) {
                                 { IconButton(onClick = { localSearchText = "" }) { Icon(Icons.Default.Close, null) } }
                             } else null,
                             modifier = Modifier
@@ -371,7 +401,7 @@ fun SearchScreen(
                         Spacer(Modifier.height(16.dp))
 
                         FilterChipRow(
-                            title = stringResource(R.string.account_type), // 需要确保 strings.xml 里有这个，或者用 "Type"
+                            title = stringResource(R.string.account_type),
                             labels = typeFilters,
                             selectedIndex = selectedTypeIndex,
                             onChipSelected = { selectedTypeIndex = it }
@@ -388,7 +418,7 @@ fun SearchScreen(
                         Spacer(Modifier.height(8.dp))
 
                         FilterChipRow(
-                            title = stringResource(R.string.date_label), // 借用 Date
+                            title = stringResource(R.string.date_label),
                             labels = timeFilters,
                             selectedIndex = selectedTimeIndex,
                             onChipSelected = { index ->
@@ -424,14 +454,13 @@ fun SearchScreen(
                     when (item) {
                         is Expense -> {
                             val account = accountMap[item.accountId]
-                            // 动态获取大类颜色
-                            val typeInt = if (item.amount < 0) 0 else 1
-                            val categoryColor = CategoryHelper.getCategoryColor(item.category, typeInt, context)
+                            val themeColor = categoryColorMap[item.category] ?: Color(0xFF90A4AE)
 
                             ExpenseItem(
                                 expense = item,
                                 icon = categoryIconMap[item.category],
                                 account = account,
+                                categoryThemeColor = themeColor,
                                 onClick = { navController.navigate(Routes.transactionDetailRoute(item.id)) }
                             )
                         }
@@ -483,7 +512,7 @@ private fun FilterChipRow(
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     border = FilterChipDefaults.filterChipBorder(
-                        borderColor = if(isSelected) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        borderColor = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                         enabled = true, selected = isSelected
                     )
                 )
@@ -524,7 +553,7 @@ private fun CategoryFilterRow(
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     border = FilterChipDefaults.filterChipBorder(
-                        borderColor = if(selectedCategories.isEmpty()) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        borderColor = if (selectedCategories.isEmpty()) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                         enabled = true, selected = selectedCategories.isEmpty()
                     )
                 )
@@ -557,8 +586,8 @@ private fun CategoryFilterRow(
     }
 }
 
-// TransferItem 和 ExpenseItem 保持不变
-// (为了节省篇幅，这里假设它们已存在，且逻辑未变。注意 ExpenseItem 里的颜色获取逻辑已改为外部传入，符合之前的重构)
+// TransferItem 和 ExpenseItem
+
 @Composable
 private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
     val transferColor = MaterialTheme.colorScheme.primary
@@ -655,15 +684,11 @@ private fun ExpenseItem(
     expense: Expense,
     icon: ImageVector?,
     account: Account?,
+    categoryThemeColor: Color,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
     val isExpense = expense.amount < 0
     val amountColor = if (isExpense) Color(0xFFE53935) else Color(0xFF4CAF50)
-
-    val typeInt = if (isExpense) 0 else 1
-    // [Fix] 动态获取颜色
-    val categoryThemeColor = CategoryHelper.getCategoryColor(expense.category, typeInt, context)
 
     val iconContainerColor = categoryThemeColor.copy(alpha = 0.15f)
     val iconTintColor = categoryThemeColor
@@ -694,7 +719,7 @@ private fun ExpenseItem(
             }
         }
 
-        Spacer(Modifier.size(16.dp))
+        Spacer(modifier = Modifier.size(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(

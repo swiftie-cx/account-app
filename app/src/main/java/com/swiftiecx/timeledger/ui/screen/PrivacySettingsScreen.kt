@@ -1,4 +1,6 @@
 package com.swiftiecx.timeledger.ui.screen
+import androidx.compose.ui.res.stringResource
+import com.swiftiecx.timeledger.R
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel // (新增) 导入VM
 import kotlinx.coroutines.delay
 
@@ -38,6 +41,8 @@ fun PrivacySettingsScreen(
     navController: NavHostController,
     viewModel: ExpenseViewModel // (新增) 接收 VM
 ) {
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+
     // --- 状态管理 (从 ViewModel 初始化) ---
     val currentType = viewModel.getPrivacyType()
     var isPinEnabled by remember { mutableStateOf(currentType == "PIN") }
@@ -48,13 +53,27 @@ fun PrivacySettingsScreen(
     var showPatternSetupDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
+    // 应用锁设置前必须先登录
+    var showLoginRequireDialog by remember { mutableStateOf(false) }
+
+    // 指纹解锁需要先设置数字/手势密码
+    var showBiometricRequireDialog by remember { mutableStateOf(false) }
+
+    // 兼容旧数据：如果没有设置隐私密码，却误开启了指纹开关，自动关闭
+    LaunchedEffect(isPinEnabled, isPatternEnabled) {
+        if (!isPinEnabled && !isPatternEnabled && isBiometricEnabled) {
+            isBiometricEnabled = false
+            viewModel.setBiometricEnabled(false)
+        }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("隐私密码") },
+                title = { Text(stringResource(R.string.privacy_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -70,12 +89,18 @@ fun PrivacySettingsScreen(
         ) {
             // 1. 数字密码
             PrivacySection(
-                title = "数字密码",
-                description = "使用四位数字密码解锁应用",
+                title = stringResource(R.string.privacy_pin_title),
+                description = stringResource(R.string.privacy_pin_desc),
                 isChecked = isPinEnabled,
                 onCheckedChange = { checked ->
                     if (checked) {
-                        showPinSetupDialog = true
+                        if (!isLoggedIn) {
+                            // 未登录：不允许设置应用锁
+                            isPinEnabled = false
+                            showLoginRequireDialog = true
+                        } else {
+                            showPinSetupDialog = true
+                        }
                     } else {
                         // 关闭
                         isPinEnabled = false
@@ -94,12 +119,17 @@ fun PrivacySettingsScreen(
 
             // 2. 手势密码
             PrivacySection(
-                title = "手势密码",
-                description = "通过绘制图案解锁应用",
+                title = stringResource(R.string.privacy_pattern_title),
+                description = stringResource(R.string.privacy_pattern_desc),
                 isChecked = isPatternEnabled,
                 onCheckedChange = { checked ->
                     if (checked) {
-                        showPatternSetupDialog = true
+                        if (!isLoggedIn) {
+                            isPatternEnabled = false
+                            showLoginRequireDialog = true
+                        } else {
+                            showPatternSetupDialog = true
+                        }
                     } else {
                         isPatternEnabled = false
                         isBiometricEnabled = false
@@ -128,17 +158,35 @@ fun PrivacySettingsScreen(
                         Icon(Icons.Default.Fingerprint, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
-                            Text("指纹解锁", style = MaterialTheme.typography.titleMedium)
-                            Text("使用指纹快速解锁", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.privacy_biometric_title), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.privacy_biometric_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Switch(
                         checked = isBiometricEnabled,
-                        onCheckedChange = {
-                            isBiometricEnabled = it
-                            viewModel.setBiometricEnabled(it)
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                if (!isLoggedIn) {
+                                    isBiometricEnabled = false
+                                    viewModel.setBiometricEnabled(false)
+                                    showLoginRequireDialog = true
+                                    return@Switch
+                                }
+                                if (!isPinEnabled && !isPatternEnabled) {
+                                    // 没有设置数字/手势密码时，不允许开启
+                                    isBiometricEnabled = false
+                                    viewModel.setBiometricEnabled(false)
+                                    showBiometricRequireDialog = true
+                                } else {
+                                    isBiometricEnabled = true
+                                    viewModel.setBiometricEnabled(true)
+                                }
+                            } else {
+                                isBiometricEnabled = false
+                                viewModel.setBiometricEnabled(false)
+                            }
                         },
-                        enabled = isPinEnabled || isPatternEnabled
+                        enabled = true
                     )
                 }
             }
@@ -184,12 +232,39 @@ fun PrivacySettingsScreen(
     if (showSuccessDialog) {
         SuccessAnimationDialog(onDismiss = { showSuccessDialog = false })
     }
-}
 
-// ... SuccessAnimationDialog, AnimatedCheckmark, SetupPinDialog, SetupPatternDialog ...
-// (保持原有的 Dialog 代码不变，注意 InteractivePinPad 和 InteractivePatternLock 现在从 PrivacyComponents 导入，无需在此文件中重新定义)
-// 为了代码简洁，请保留之前的 SuccessAnimationDialog, AnimatedCheckmark, SetupPinDialog, SetupPatternDialog 代码块
-// 但请删除 InteractivePinPad 和 InteractivePatternLock 的定义，因为它们已经移到了 PrivacyComponents.kt
+    if (showBiometricRequireDialog) {
+        AlertDialog(
+            onDismissRequest = { showBiometricRequireDialog = false },
+            title = { Text(stringResource(R.string.privacy_biometric_require_title)) },
+            text = { Text(stringResource(R.string.privacy_biometric_require_text)) },
+            confirmButton = {
+                TextButton(onClick = { showBiometricRequireDialog = false }) {
+                    Text(stringResource(R.string.got_it))
+                }
+            }
+        )
+    }
+
+    if (showLoginRequireDialog) {
+        AlertDialog(
+            onDismissRequest = { showLoginRequireDialog = false },
+            title = { Text(stringResource(R.string.login_required_title)) },
+            text = { Text(stringResource(R.string.login_required_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLoginRequireDialog = false
+                        navController.navigate(Routes.LOGIN)
+                    }
+                ) { Text(stringResource(R.string.go_login)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLoginRequireDialog = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+}
 
 @Composable
 fun SuccessAnimationDialog(onDismiss: () -> Unit) {
@@ -202,7 +277,7 @@ fun SuccessAnimationDialog(onDismiss: () -> Unit) {
             Column(modifier = Modifier.padding(32.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 AnimatedCheckmark()
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "开启成功", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(text = stringResource(R.string.privacy_enabled_success), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -235,18 +310,21 @@ fun SetupPinDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var currentPin by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
+    // ✅ 回调里不能用 stringResource：提前取好
+    val pinMismatchText = stringResource(R.string.pin_error_mismatch)
+
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { if (step == 1) onDismiss() else { step = 1; currentPin = ""; errorMsg = null } }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
+                    IconButton(onClick = { if (step == 1) onDismiss() else { step = 1; currentPin = ""; errorMsg = null } }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                     Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismiss) { Text("取消") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 }
                 Spacer(Modifier.height(40.dp))
-                Text(text = if (step == 1) "设置数字密码" else "确认数字密码", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(text = if (step == 1) stringResource(R.string.pin_setup_title) else stringResource(R.string.pin_confirm_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text(text = errorMsg ?: if (step == 1) "请输入4位数字" else "请再次输入以确认", color = if (errorMsg != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = errorMsg ?: if (step == 1) stringResource(R.string.pin_prompt_input_4) else stringResource(R.string.pin_prompt_confirm), color = if (errorMsg != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(40.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     repeat(4) { index -> Box(modifier = Modifier.size(16.dp).background(if (index < currentPin.length) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, CircleShape)) }
@@ -257,7 +335,13 @@ fun SetupPinDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
                         currentPin += num; errorMsg = null
                         if (currentPin.length == 4) {
                             if (step == 1) { firstPin = currentPin; currentPin = ""; step = 2 }
-                            else { if (currentPin == firstPin) onConfirm(currentPin) else { errorMsg = "两次密码不一致"; currentPin = "" } }
+                            else {
+                                if (currentPin == firstPin) onConfirm(currentPin)
+                                else {
+                                    errorMsg = pinMismatchText   // ✅ 改
+                                    currentPin = ""
+                                }
+                            }
                         }
                     }
                 }, onDeleteClick = { if (currentPin.isNotEmpty()) currentPin = currentPin.dropLast(1) })
@@ -274,25 +358,37 @@ fun SetupPatternDialog(onDismiss: () -> Unit, onConfirm: (List<Int>) -> Unit) {
     var currentPattern by remember { mutableStateOf<List<Int>>(emptyList()) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
+    // ✅ 回调里不能用 stringResource：提前取好
+    val patternTooShortText = stringResource(R.string.pattern_error_too_short)
+    val patternMismatchText = stringResource(R.string.pattern_error_mismatch)
+
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { if (step == 1) onDismiss() else { step = 1; currentPattern = emptyList(); errorMsg = null } }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
+                    IconButton(onClick = { if (step == 1) onDismiss() else { step = 1; currentPattern = emptyList(); errorMsg = null } }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                     Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismiss) { Text("取消") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 }
                 Spacer(Modifier.height(40.dp))
-                Text(text = if (step == 1) "绘制解锁图案" else "再次绘制图案", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(text = if (step == 1) stringResource(R.string.pattern_setup_title) else stringResource(R.string.pattern_confirm_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text(text = errorMsg ?: "连接至少4个点", color = if (errorMsg != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = errorMsg ?: stringResource(R.string.pattern_prompt_connect_4), color = if (errorMsg != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
                 Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(16.dp), contentAlignment = Alignment.Center) {
                     InteractivePatternLock(onPatternComplete = { pattern ->
-                        if (pattern.size < 4) { errorMsg = "至少连接4个点"; currentPattern = emptyList() }
-                        else {
+                        if (pattern.size < 4) {
+                            errorMsg = patternTooShortText    // ✅ 改
+                            currentPattern = emptyList()
+                        } else {
                             if (step == 1) { firstPattern = pattern; currentPattern = emptyList(); step = 2; errorMsg = null }
-                            else { if (pattern == firstPattern) onConfirm(pattern) else { errorMsg = "与上次绘制不一致"; currentPattern = emptyList() } }
+                            else {
+                                if (pattern == firstPattern) onConfirm(pattern)
+                                else {
+                                    errorMsg = patternMismatchText // ✅ 改
+                                    currentPattern = emptyList()
+                                }
+                            }
                         }
                     })
                 }

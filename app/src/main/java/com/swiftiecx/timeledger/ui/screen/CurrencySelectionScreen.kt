@@ -10,9 +10,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
 
 data class Currency(val code: String, val name: String, val symbol: String)
 
@@ -22,55 +24,55 @@ fun CurrencySelectionScreen(navController: NavController, onCurrencySelected: (S
     // 手动排序：主流货币置顶，其他按字母/区域排序
     val currencies = listOf(
         // --- 主流常用 ---
-        Currency("CNY", "人民币", "¥"),
-        Currency("USD", "美元", "$"),
-        Currency("EUR", "欧元", "€"),
-        Currency("JPY", "日元", "¥"),
-        Currency("HKD", "港币", "HK$"),
-        Currency("GBP", "英镑", "£"),
-        Currency("AUD", "澳元", "A$"),
-        Currency("CAD", "加元", "C$"),
-        Currency("SGD", "新加坡元", "S$"),
-        Currency("TWD", "新台币", "NT$"),
+        Currency("CNY", stringResource(R.string.currency_name_cny), "¥"),
+        Currency("USD", stringResource(R.string.currency_name_usd), "$"),
+        Currency("EUR", stringResource(R.string.currency_name_eur), "€"),
+        Currency("JPY", stringResource(R.string.currency_name_jpy), "¥"),
+        Currency("HKD", stringResource(R.string.currency_name_hkd), "HK$"),
+        Currency("GBP", stringResource(R.string.currency_name_gbp), "£"),
+        Currency("AUD", stringResource(R.string.currency_name_aud), "A$"),
+        Currency("CAD", stringResource(R.string.currency_name_cad), "C$"),
+        Currency("SGD", stringResource(R.string.currency_name_sgd), "S$"),
+        Currency("TWD", stringResource(R.string.currency_name_twd), "NT$"),
 
         // --- 亚洲其他 ---
-        Currency("KRW", "韩元", "₩"),
-        Currency("THB", "泰铢", "฿"),
-        Currency("MYR", "马来西亚林吉特", "RM"),
-        Currency("PHP", "菲律宾比索", "₱"),
-        Currency("IDR", "印尼盾", "Rp"),
-        Currency("INR", "印度卢比", "₹"),
-        Currency("VND", "越南盾", "₫"),
+        Currency("KRW", stringResource(R.string.currency_name_krw), "₩"),
+        Currency("THB", stringResource(R.string.currency_name_thb), "฿"),
+        Currency("MYR", stringResource(R.string.currency_name_myr), "RM"),
+        Currency("PHP", stringResource(R.string.currency_name_php), "₱"),
+        Currency("IDR", stringResource(R.string.currency_name_idr), "Rp"),
+        Currency("INR", stringResource(R.string.currency_name_inr), "₹"),
+        Currency("VND", stringResource(R.string.currency_name_vnd), "₫"),
 
         // --- 欧洲其他 ---
-        Currency("CHF", "瑞士法郎", "Fr"),
-        Currency("SEK", "瑞典克朗", "kr"),
-        Currency("NOK", "挪威克朗", "kr"),
-        Currency("DKK", "丹麦克朗", "kr"),
-        Currency("RUB", "俄罗斯卢布", "₽"),
-        Currency("TRY", "土耳其里拉", "₺"),
-        Currency("CZK", "捷克克朗", "Kč"),
-        Currency("HUF", "匈牙利福林", "Ft"),
-        Currency("PLN", "波兰兹罗提", "zł"),
-        Currency("BGN", "保加利亚列弗", "лв"),
-        Currency("RON", "罗马尼亚列伊", "lei"),
+        Currency("CHF", stringResource(R.string.currency_name_chf), "Fr"),
+        Currency("SEK", stringResource(R.string.currency_name_sek), "kr"),
+        Currency("NOK", stringResource(R.string.currency_name_nok), "kr"),
+        Currency("DKK", stringResource(R.string.currency_name_dkk), "kr"),
+        Currency("RUB", stringResource(R.string.currency_name_rub), "₽"),
+        Currency("TRY", stringResource(R.string.currency_name_try), "₺"),
+        Currency("CZK", stringResource(R.string.currency_name_czk), "Kč"),
+        Currency("HUF", stringResource(R.string.currency_name_huf), "Ft"),
+        Currency("PLN", stringResource(R.string.currency_name_pln), "zł"),
+        Currency("BGN", stringResource(R.string.currency_name_bgn), "лв"),
+        Currency("RON", stringResource(R.string.currency_name_ron), "lei"),
 
         // --- 美洲/大洋洲/非洲其他 ---
-        Currency("NZD", "新西兰元", "NZ$"),
-        Currency("BRL", "巴西雷亚尔", "R$"),
-        Currency("MXN", "墨西哥比索", "Mex$"),
-        Currency("ZAR", "南非兰特", "R"),
-        Currency("ILS", "以色列新谢克尔", "₪")
+        Currency("NZD", stringResource(R.string.currency_name_nzd), "NZ$"),
+        Currency("BRL", stringResource(R.string.currency_name_brl), "R$"),
+        Currency("MXN", stringResource(R.string.currency_name_mxn), "Mex$"),
+        Currency("ZAR", stringResource(R.string.currency_name_zar), "R"),
+        Currency("ILS", stringResource(R.string.currency_name_ils), "₪")
     )
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("选择默认货币", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.select_default_currency), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(

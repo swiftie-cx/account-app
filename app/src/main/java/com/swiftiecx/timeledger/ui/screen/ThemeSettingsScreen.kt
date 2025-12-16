@@ -18,10 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
 import com.swiftiecx.timeledger.ui.viewmodel.ThemeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,10 +48,10 @@ fun ThemeSettingsScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("主题风格") },
+                title = { Text(stringResource(R.string.opt_theme)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -74,7 +76,7 @@ fun ThemeSettingsScreen(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("即时预览", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 12.dp))
+                    Text(stringResource(R.string.theme_preview_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 12.dp))
 
                     // 使用自定义的配色方案包裹预览组件
                     MaterialTheme(colorScheme = previewColorScheme) {
@@ -84,7 +86,7 @@ fun ThemeSettingsScreen(
             }
 
             Text(
-                text = "选择配色",
+                stringResource(R.string.theme_selection_title),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
@@ -127,7 +129,7 @@ fun PreviewMockUI() {
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
-                text = "拾光账本",
+                text = stringResource(R.string.app_name), // [i18n]
                 color = MaterialTheme.colorScheme.onPrimary, // 主色上的文字颜色
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -144,12 +146,12 @@ fun PreviewMockUI() {
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "本月支出",
+                        text = stringResource(R.string.month_expense_mock), // [i18n]
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "¥ 1,234.56",
+                        text = stringResource(R.string.amount_mock), // [i18n]
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary // 使用主色强调
@@ -165,7 +167,7 @@ fun PreviewMockUI() {
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("记一笔", color = MaterialTheme.colorScheme.onPrimary)
+                Text(stringResource(R.string.add_transaction_mock), color = MaterialTheme.colorScheme.onPrimary) // [i18n]
             }
         }
     }
@@ -192,7 +194,7 @@ fun ThemeOptionItem(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "已选中",
+                    contentDescription = stringResource(R.string.selected_label), // [i18n]
                     tint = Color.White,
                     modifier = Modifier.size(32.dp)
                 )

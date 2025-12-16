@@ -22,11 +22,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
@@ -46,6 +48,10 @@ fun DetailsScreen(
     navController: NavHostController,
     defaultCurrency: String
 ) {
+    // --- 资源获取 ---
+    val transferTypeString = stringResource(R.string.type_transfer)
+    val appName = stringResource(R.string.app_name)
+
     // --- 日期状态 ---
     val calendar = Calendar.getInstance()
     var selectedYear by remember { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
@@ -65,7 +71,6 @@ fun DetailsScreen(
     }
 
     // [关键修改] 构建 "分类名 -> (图标, 颜色)" 的查找表
-    // 这样无论是新加的"水果"还是旧的"购物"，都能查到对应的图标和大类颜色
     val categoryStyleMap = remember(expenseMainCategories, incomeMainCategories) {
         val map = mutableMapOf<String, Pair<ImageVector, Color>>()
         (expenseMainCategories + incomeMainCategories).forEach { main ->
@@ -87,9 +92,9 @@ fun DetailsScreen(
     }
 
     // --- 2. 预处理列表 (转账逻辑保持不变) ---
-    val displayItems = remember(monthlyExpenses, accountMap) {
-        val transferExpenses = monthlyExpenses.filter { it.category.startsWith("转账") }
-        val regularExpenses = monthlyExpenses.filter { !it.category.startsWith("转账") }
+    val displayItems = remember(monthlyExpenses, accountMap, transferTypeString) {
+        val transferExpenses = monthlyExpenses.filter { it.category.startsWith(transferTypeString) }
+        val regularExpenses = monthlyExpenses.filter { !it.category.startsWith(transferTypeString) }
 
         val processedTransfers = transferExpenses
             .groupBy { it.date }
@@ -127,13 +132,28 @@ fun DetailsScreen(
         }
     }
 
-    // --- 3. 计算总额 ---
-    val (incomeList, expenseList) = remember(displayItems) {
-        displayItems.filterIsInstance<Expense>().partition { it.amount > 0 }
+    // --- 3. 计算总额 (BUG 修复区域) ---
+    val allExpensesForSum = remember(monthlyExpenses, accountMap, defaultCurrency) {
+        monthlyExpenses.mapNotNull { expense ->
+            val account = accountMap[expense.accountId]
+            if (account != null) {
+                // BUG FIX: 转换金额到 defaultCurrency
+                val convertedAmount = ExchangeRates.convert(expense.amount, account.currency, defaultCurrency)
+                convertedAmount to expense.amount // 返回 (兑换后金额, 原始金额)
+            } else {
+                null
+            }
+        }
     }
-    val totalIncome = remember(incomeList) { incomeList.sumOf { it.amount } }
-    val totalExpense = remember(expenseList) { expenseList.sumOf { it.amount } }
+
+    val totalIncome = remember(allExpensesForSum) {
+        allExpensesForSum.filter { it.first > 0 }.sumOf { it.first }
+    }
+    val totalExpense = remember(allExpensesForSum) {
+        allExpensesForSum.filter { it.first < 0 }.sumOf { it.first }
+    }
     val balance = totalIncome + totalExpense
+
 
     // --- 4. 分组 ---
     val groupedItems = remember(displayItems) {
@@ -166,6 +186,7 @@ fun DetailsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             DetailsTopAppBar(
+                appName = appName,
                 onSearchClick = { navController.navigate(Routes.SEARCH) },
                 onCalendarClick = { navController.navigate(Routes.CALENDAR) }
             )
@@ -184,15 +205,32 @@ fun DetailsScreen(
                     expense = totalExpense,
                     income = totalIncome,
                     balance = balance,
+                    defaultCurrency = defaultCurrency, // [新增]
                     onMonthClick = { showMonthPicker = true }
                 )
             }
 
             groupedItems.forEach { (dateStr, itemsOnDate) ->
                 stickyHeader {
-                    val dailyTotalExpense = itemsOnDate.filterIsInstance<Expense>().filter { it.amount < 0 && !it.category.startsWith("转账") }.sumOf { abs(it.amount) }
-                    val dailyTotalIncome = itemsOnDate.filterIsInstance<Expense>().filter { it.amount > 0 && !it.category.startsWith("转账") }.sumOf { it.amount }
-                    DateHeader(dateStr = dateStr, dailyExpense = dailyTotalExpense, dailyIncome = dailyTotalIncome)
+                    // BUG FIX: Daily total 同样需要进行汇率转换
+                    val dailyTotalExpense = itemsOnDate.filterIsInstance<Expense>()
+                        .filter { it.amount < 0 && !it.category.startsWith(transferTypeString) }
+                        .sumOf { expense ->
+                            val account = accountMap[expense.accountId]
+                            if (account != null) ExchangeRates.convert(abs(expense.amount), account.currency, defaultCurrency) else 0.0
+                        }
+                    val dailyTotalIncome = itemsOnDate.filterIsInstance<Expense>()
+                        .filter { it.amount > 0 && !it.category.startsWith(transferTypeString) }
+                        .sumOf { expense ->
+                            val account = accountMap[expense.accountId]
+                            if (account != null) ExchangeRates.convert(expense.amount, account.currency, defaultCurrency) else 0.0
+                        }
+                    DateHeader(
+                        dateStr = dateStr,
+                        dailyExpense = dailyTotalExpense,
+                        dailyIncome = dailyTotalIncome,
+                        defaultCurrency = defaultCurrency // [新增]
+                    )
                 }
 
                 items(itemsOnDate) { item ->
@@ -217,6 +255,7 @@ fun DetailsScreen(
                         }
                         is DisplayTransferItem -> TransferItem(
                             item = item,
+                            defaultCurrency = defaultCurrency, // [新增]
                             onClick = {
                                 navController.navigate(Routes.transactionDetailRoute(item.expenseId))
                             }
@@ -228,12 +267,10 @@ fun DetailsScreen(
     }
 }
 
-// ... SummaryHeader, DateHeader, DetailsTopAppBar, TransferItem 保持不变 ...
-// (为了节省篇幅，这里假设它们已存在且未变动，请保留原文件中的这些组件)
 
 @Composable
 private fun SummaryHeader(
-    year: Int, month: Int, expense: Double, income: Double, balance: Double, onMonthClick: () -> Unit
+    year: Int, month: Int, expense: Double, income: Double, balance: Double, defaultCurrency: String, onMonthClick: () -> Unit
 ) {
     val themeColor = MaterialTheme.colorScheme.primary
 
@@ -263,7 +300,7 @@ private fun SummaryHeader(
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = "${year}年${month}月",
+                        text = stringResource(R.string.month_format, year, month),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
@@ -271,7 +308,7 @@ private fun SummaryHeader(
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         Icons.Default.KeyboardArrowDown,
-                        contentDescription = "选择月份",
+                        contentDescription = stringResource(R.string.select_month),
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(16.dp)
                     )
@@ -279,13 +316,14 @@ private fun SummaryHeader(
 
                 Column {
                     Text(
-                        text = "本月结余",
+                        text = stringResource(R.string.month_balance),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = String.format("%.2f", balance),
+                        // 直接传入 balance (Double 类型)，让 strings.xml 里的 %.2f 去格式化它
+                        text = stringResource(R.string.currency_amount_format, defaultCurrency, balance),
                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -301,10 +339,10 @@ private fun SummaryHeader(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(6.dp).background(Color(0xFF4CAF50), CircleShape))
                             Spacer(Modifier.width(6.dp))
-                            Text("收入", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.income_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(
-                            text = String.format("%.2f", income),
+                            text = stringResource(R.string.amount_format, income),
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -314,10 +352,10 @@ private fun SummaryHeader(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(6.dp).background(Color(0xFFE53935), CircleShape))
                             Spacer(Modifier.width(6.dp))
-                            Text("支出", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.expense_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(
-                            text = String.format("%.2f", abs(expense)),
+                            text = stringResource(R.string.amount_format, abs(expense)),
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -329,14 +367,16 @@ private fun SummaryHeader(
 }
 
 @Composable
-fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
-    val displayFormat = remember { SimpleDateFormat("dd日", Locale.CHINESE) }
-    val weekFormat = remember { SimpleDateFormat("EEE", Locale.CHINESE) }
+fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double, defaultCurrency: String) {
+    val displayFormat = remember { SimpleDateFormat("dd日", Locale.getDefault()) }
+    val weekFormat = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
     val originalFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val dateObj = originalFormat.parse(dateStr)
 
     val dayStr = dateObj?.let { displayFormat.format(it) } ?: dateStr
     val weekStr = dateObj?.let { weekFormat.format(it) } ?: ""
+    val currencyFormat = stringResource(R.string.amount_no_decimal_format)
+
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -363,7 +403,7 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
 
             if (dailyIncome > 0) {
                 Text(
-                    text = "收 ${String.format("%.0f", dailyIncome)}",
+                    text = stringResource(R.string.daily_income_format, String.format(currencyFormat, dailyIncome)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -371,7 +411,7 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
             }
             if (dailyExpense > 0) {
                 Text(
-                    text = "支 ${String.format("%.0f", dailyExpense)}",
+                    text = stringResource(R.string.daily_expense_format, String.format(currencyFormat, dailyExpense)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -381,8 +421,10 @@ fun DateHeader(dateStr: String, dailyExpense: Double, dailyIncome: Double) {
 }
 
 @Composable
-private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
+private fun TransferItem(item: DisplayTransferItem, defaultCurrency: String, onClick: () -> Unit) {
     val transferColor = MaterialTheme.colorScheme.primary
+    val feeAmount = abs(item.fee)
+    val convertedFee = ExchangeRates.convert(feeAmount, item.fromAccount.currency, defaultCurrency)
 
     Row(
         modifier = Modifier
@@ -400,7 +442,7 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.CompareArrows,
-                contentDescription = "转账",
+                contentDescription = stringResource(R.string.type_transfer),
                 modifier = Modifier.size(22.dp),
                 tint = transferColor
             )
@@ -412,7 +454,7 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
             // 【修改】标题栏：增加手续费标签
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "内部转账",
+                    text = stringResource(R.string.transfer_in_app),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -425,7 +467,7 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            text = "手续费 ${String.format("%.2f", item.fee)}",
+                            text = stringResource(R.string.fee_format, String.format("%.2f", convertedFee)),
                             style = MaterialTheme.typography.labelSmall, // 小字体
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
@@ -463,8 +505,10 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
         }
 
         // 显示的是到账金额
+        // BUG FIX: 到账金额也需要转换到默认货币进行显示
+        val convertedToAmount = ExchangeRates.convert(item.toAmount, item.toAccount.currency, defaultCurrency)
         Text(
-            text = String.format("%.2f", item.toAmount),
+            text = stringResource(R.string.amount_format, convertedToAmount),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
@@ -476,23 +520,24 @@ private fun TransferItem(item: DisplayTransferItem, onClick: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DetailsTopAppBar(
+    appName: String,
     onSearchClick: () -> Unit,
     onCalendarClick: () -> Unit
 ) {
     TopAppBar(
         title = {
             Text(
-                "拾光账本",
+                appName,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge
             )
         },
         actions = {
             IconButton(onClick = onSearchClick) {
-                Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurface)
+                Icon(Icons.Default.Search, stringResource(R.string.search), tint = MaterialTheme.colorScheme.onSurface)
             }
             IconButton(onClick = onCalendarClick) {
-                Icon(Icons.Default.DateRange, "日历", tint = MaterialTheme.colorScheme.onSurface)
+                Icon(Icons.Default.DateRange, stringResource(R.string.calendar_nav_title), tint = MaterialTheme.colorScheme.onSurface)
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -521,6 +566,13 @@ private fun ExpenseItem(
     val iconTintColor = categoryColor
 
     val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.getDefault()) }
+
+    // BUG FIX: 修正显示金额，使其始终显示 defaultCurrency
+    val displayAmount = if (account != null) {
+        ExchangeRates.convert(expense.amount, account.currency, defaultCurrency)
+    } else {
+        expense.amount // Fallback
+    }
 
     Row(
         modifier = Modifier
@@ -559,11 +611,9 @@ private fun ExpenseItem(
             val subText = buildString {
                 append(dateFormat.format(expense.date))
                 if (!expense.remark.isNullOrBlank()) {
-                    append(" · ")
-                    append(expense.remark)
+                    append(stringResource(R.string.transaction_remark_format, expense.remark!!))
                 } else if (account != null) {
-                    append(" · ")
-                    append(account.name)
+                    append(stringResource(R.string.transaction_account_format, account.name))
                 }
             }
             Text(
@@ -576,18 +626,20 @@ private fun ExpenseItem(
         }
 
         Column(horizontalAlignment = Alignment.End) {
+            // BUG FIX: 显示已经转换的金额
             Text(
-                text = if (isExpense) String.format("%.2f", expense.amount) else "+${String.format("%.2f", expense.amount)}",
+                text = stringResource(R.string.amount_format, displayAmount),
                 color = amountColor, // 金额颜色
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
 
+            // 兑换提示 (如果当前交易的账户货币不是默认货币)
             if (account != null && account.currency != defaultCurrency) {
-                val convertedAmount = ExchangeRates.convert(abs(expense.amount), account.currency, defaultCurrency)
+                val absOriginalAmount = abs(expense.amount)
                 Text(
-                    text = "≈ $defaultCurrency ${String.format(Locale.US, "%.2f", convertedAmount)}",
+                    text = stringResource(R.string.original_amount_approx_format, account.currency, String.format(Locale.US, "%.2f", absOriginalAmount)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline
                 )

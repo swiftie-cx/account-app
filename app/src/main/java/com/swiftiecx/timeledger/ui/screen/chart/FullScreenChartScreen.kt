@@ -13,9 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
+import kotlin.math.abs // [新增] 引入 abs
 import kotlin.text.startsWith
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,13 +31,24 @@ fun FullScreenChartScreen(
     endDate: Long,
     transactionType: Int // 0: 支出, 1: 收入, 2: 结余
 ) {
+    // [新增] 跨币种所需数据
+    val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+    val defaultCurrency by viewModel.defaultCurrency.collectAsState(initial = "CNY")
+    val accountMap = remember(allAccounts) { allAccounts.associateBy { it.id } }
+
+    val transferTypeString = stringResource(R.string.type_transfer) // [i18n]
+
     // 1. 强制横屏逻辑
     val context = LocalContext.current
     DisposableEffect(Unit) {
         val activity = context as? Activity
+        // 保存原始方向
+        val originalOrientation = activity?.requestedOrientation
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
         onDispose {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            // 恢复原始方向
+            activity?.requestedOrientation = originalOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
@@ -41,16 +56,17 @@ fun FullScreenChartScreen(
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
     // 重新计算图表数据
-    val lineData = remember(allExpenses, startDate, endDate, transactionType) {
+    // [BUG 修复] 引入 accountMap 和 defaultCurrency
+    val lineData = remember(allExpenses, startDate, endDate, transactionType, accountMap, defaultCurrency) {
         // 第一步：筛选日期范围
         val dateFiltered = allExpenses.filter { it.date.time in startDate..endDate }
 
-        // 第二步：筛选交易类型 (防止收入支出混杂)
+        // 第二步：筛选交易类型
         val typeFiltered = dateFiltered.filter { expense ->
             when (transactionType) {
-                0 -> expense.amount < 0 && !expense.category.startsWith("转账") // 支出
-                1 -> expense.amount > 0 && !expense.category.startsWith("转账") // 收入
-                else -> !expense.category.startsWith("转账") // 结余
+                0 -> expense.amount < 0 && !expense.category.startsWith(transferTypeString) // 支出
+                1 -> expense.amount > 0 && !expense.category.startsWith(transferTypeString) // 收入
+                else -> !expense.category.startsWith(transferTypeString) // 结余
             }
         }
 
@@ -60,8 +76,15 @@ fun FullScreenChartScreen(
             else -> TransactionType.EXPENSE
         }
 
-        // 强制使用自定义逻辑
-        prepareCustomLineChartData(typeFiltered, startDate, endDate, typeEnum)
+        // 强制使用自定义逻辑, 并传入兑换参数
+        prepareCustomLineChartData(
+            data = typeFiltered,
+            startDate = startDate,
+            endDate = endDate,
+            transactionType = typeEnum,
+            accountMap = accountMap, // [传入]
+            defaultCurrency = defaultCurrency // [传入]
+        )
     }
 
     // 3. 计算画布宽度
@@ -82,15 +105,22 @@ fun FullScreenChartScreen(
         }
     }
 
+    // [i18n] 顶部标题
+    val chartTitle = when(transactionType) {
+        0 -> stringResource(R.string.chart_trend_expense)
+        1 -> stringResource(R.string.chart_trend_income)
+        else -> stringResource(R.string.chart_trend_balance)
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("全屏趋势图", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.chart_fullscreen_title_format, chartTitle), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = "${lineData.size} 个数据点",
+                            text = stringResource(R.string.chart_data_points_format, lineData.size),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -98,7 +128,7 @@ fun FullScreenChartScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -113,7 +143,7 @@ fun FullScreenChartScreen(
         ) {
             if (lineData.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("暂无数据")
+                    Text(stringResource(R.string.chart_no_data))
                 }
             } else {
                 Row(

@@ -28,11 +28,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
@@ -49,18 +52,23 @@ fun AddAccountScreen(
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
+    // 【修正位置】账户类型从资源数组中加载，位于 Composable 顶层
+    val accountTypes = stringArrayResource(R.array.account_types).toList()
+    // 【修正位置】获取信用卡类型的字符串
+    val creditCardType = stringArrayResource(R.array.account_types)[2]
+
     // --- 状态管理 ---
     var accountName by remember { mutableStateOf("") }
     var balanceInput by remember { mutableStateOf("") }
 
-    val accountTypes = listOf("现金", "银行卡", "信用卡", "投资", "电子钱包", "默认")
-    var selectedType by remember { mutableStateOf(accountTypes[0]) }
+    // 初始化时使用已加载的资源数组
+    var selectedType by remember { mutableStateOf(accountTypes.first()) }
 
     val currencies = listOf(
         "CNY", "USD", "EUR", "JPY", "HKD", "GBP", "AUD", "CAD",
         "SGD", "TWD", "KRW"
     )
-    var selectedCurrency by remember { mutableStateOf(currencies[0]) }
+    var selectedCurrency by remember { mutableStateOf(currencies.first()) }
 
     val icons = IconMapper.allIcons
     // 默认选中第一个图标
@@ -103,10 +111,10 @@ fun AddAccountScreen(
         containerColor = bgColor,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(if (accountId == null) "新建账户" else "编辑账户", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(if (accountId == null) R.string.add_account_title else R.string.edit_account_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -123,7 +131,7 @@ fun AddAccountScreen(
                                         currency = selectedCurrency,
                                         initialBalance = newBalanceVal,
                                         iconName = selectedIcon!!,
-                                        isLiability = (selectedType == "信用卡")
+                                        isLiability = (selectedType == creditCardType)
                                     )
                                     viewModel.insertAccount(account)
                                 } else {
@@ -134,7 +142,7 @@ fun AddAccountScreen(
                                         currency = selectedCurrency,
                                         initialBalance = 0.0,
                                         iconName = selectedIcon!!,
-                                        isLiability = (selectedType == "信用卡")
+                                        isLiability = (selectedType == creditCardType)
                                     )
                                     viewModel.updateAccountWithNewBalance(accountToUpdate, newBalanceVal)
                                 }
@@ -143,7 +151,7 @@ fun AddAccountScreen(
                         },
                         enabled = accountName.isNotBlank()
                     ) {
-                        Icon(Icons.Default.Check, contentDescription = "保存", tint = primaryColor)
+                        Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save), tint = primaryColor)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = bgColor)
@@ -161,7 +169,7 @@ fun AddAccountScreen(
         ) {
             // 1. 实时预览卡片 (核心美化点)
             AccountPreviewCard(
-                name = if (accountName.isBlank()) "账户名称" else accountName,
+                name = if (accountName.isBlank()) stringResource(R.string.account_name_placeholder) else accountName,
                 balance = balanceInput,
                 currency = selectedCurrency,
                 iconName = selectedIcon,
@@ -181,7 +189,7 @@ fun AddAccountScreen(
                     OutlinedTextField(
                         value = accountName,
                         onValueChange = { accountName = it },
-                        label = { Text("名称") },
+                        label = { Text(stringResource(R.string.account_name)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
@@ -193,7 +201,7 @@ fun AddAccountScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(modifier = Modifier.weight(1f)) {
                             DropdownInput(
-                                label = "类型",
+                                label = stringResource(R.string.account_type),
                                 options = accountTypes,
                                 selectedOption = selectedType,
                                 onOptionSelected = { selectedType = it }
@@ -201,7 +209,7 @@ fun AddAccountScreen(
                         }
                         Box(modifier = Modifier.weight(1f)) {
                             DropdownInput(
-                                label = "货币",
+                                label = stringResource(R.string.currency),
                                 options = currencies,
                                 selectedOption = selectedCurrency,
                                 onOptionSelected = { selectedCurrency = it }
@@ -215,14 +223,14 @@ fun AddAccountScreen(
                     OutlinedTextField(
                         value = balanceInput,
                         onValueChange = { balanceInput = it },
-                        label = { Text("当前余额") },
-                        placeholder = { Text("0.00") },
+                        label = { Text(stringResource(R.string.current_balance)) },
+                        placeholder = { Text(stringResource(R.string.balance_placeholder)) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         supportingText = if (accountId != null) {
-                            { Text("修改余额将自动生成一笔修正流水", fontSize = 10.sp) }
+                            { Text(stringResource(R.string.balance_edit_hint), fontSize = 10.sp) }
                         } else null
                     )
                 }
@@ -231,7 +239,7 @@ fun AddAccountScreen(
             // 3. 图标选择器
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "选择图标",
+                    text = stringResource(R.string.select_icon),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 8.dp, bottom = 12.dp)
@@ -333,10 +341,21 @@ fun AccountPreviewCard(
 
                 // 底部：余额
                 Column {
-                    Text(text = "当前余额", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.7f))
-                    Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "$currency $displayBalance",
+                        text = stringResource(R.string.current_balance),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Spacer(Modifier.height(4.dp))
+
+                    val balanceValue = remember(displayBalance) {
+                        displayBalance.trim()
+                            .replace(",", "")
+                            .toDoubleOrNull() ?: 0.0
+                    }
+
+                    Text(
+                        text = stringResource(R.string.currency_amount_format, currency, balanceValue),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White

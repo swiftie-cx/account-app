@@ -21,10 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
 import com.swiftiecx.timeledger.ui.navigation.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.CategoryType
@@ -39,7 +41,8 @@ import kotlin.collections.toMutableList
 @Composable
 fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("支出", "收入")
+    // [i18n] Tab 标题使用资源
+    val tabs = listOf(stringResource(R.string.type_expense), stringResource(R.string.type_income))
     val currentType = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
 
     // 获取大类数据源
@@ -62,10 +65,10 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("类别设置", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.category_settings_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
@@ -78,7 +81,7 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape
             ) {
-                Icon(Icons.Default.Add, contentDescription = "添加类别")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_category))
             }
         }
     ) { padding ->
@@ -140,7 +143,7 @@ fun CategorySettingsScreen(navController: NavController, viewModel: ExpenseViewM
                             handle = { modifier ->
                                 Icon(
                                     Icons.Default.DragHandle,
-                                    contentDescription = "排序",
+                                    contentDescription = stringResource(R.string.category_reorder),
                                     tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                     modifier = modifier.detectReorder(reorderState)
                                 )
@@ -210,7 +213,7 @@ fun MainCategorySettingCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "${mainCategory.subCategories.size} 个子分类",
+                    text = stringResource(R.string.subcategory_count_label, mainCategory.subCategories.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -259,7 +262,7 @@ fun SubCategorySheet(
         ) {
             // 标题栏
             Text(
-                text = "${mainCategory.title} - 子分类管理",
+                text = stringResource(R.string.subcategory_management_title, mainCategory.title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = mainCategory.color,
@@ -267,7 +270,7 @@ fun SubCategorySheet(
             )
 
             Text(
-                text = "长按右侧图标拖拽排序",
+                text = stringResource(R.string.subcategory_reorder_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(bottom = 8.dp).align(Alignment.CenterHorizontally)
@@ -317,7 +320,7 @@ fun SubCategorySheet(
                                     ) {
                                         Icon(
                                             Icons.Default.Delete,
-                                            contentDescription = "删除",
+                                            contentDescription = stringResource(R.string.delete),
                                             tint = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
                                             modifier = Modifier.size(20.dp)
                                         )
@@ -326,7 +329,7 @@ fun SubCategorySheet(
                                     // 拖拽把手
                                     Icon(
                                         Icons.Default.DragHandle,
-                                        contentDescription = "排序",
+                                        contentDescription = stringResource(R.string.category_reorder),
                                         tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                         modifier = Modifier.detectReorder(subReorderState)
                                     )

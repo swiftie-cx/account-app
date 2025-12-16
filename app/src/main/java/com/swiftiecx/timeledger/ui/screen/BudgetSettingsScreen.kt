@@ -24,8 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Budget
-import com.swiftiecx.timeledger.ui.navigation.CategoryData // [关键]
-import com.swiftiecx.timeledger.ui.navigation.CategoryHelper
+import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -43,21 +42,27 @@ fun BudgetSettingsScreen(
         viewModel.syncBudgetsFor(year, month)
     }
 
-    val budgets by viewModel.getBudgetsForMonth(year, month).collectAsState(initial = emptyList())
-    val budgetMap = remember(budgets) { budgets.associateBy { it.category } }
-
-    // [Fix] 动态获取支出分类名称列表
-    val expenseCategoryTitles = remember(context) {
-        CategoryData.getExpenseCategories(context).flatMap { it.subCategories }.map { it.title }
+    // [修正] 使用 CategoryData 获取 Key
+    val expenseCategoryKeys = remember(context) {
+        CategoryData.getExpenseCategories(context).flatMap { it.subCategories }.map { it.key }
     }
 
-    // 将总预算和全部分类分开处理
-    // 注意：数据库里存的 key 可能是 "总预算" (旧数据)，或者 "Total Budget" (新数据)
-    // 这里做个兼容查找
-    val totalBudget = budgetMap["总预算"] ?: budgetMap["Total Budget"]
+    val totalBudgetKey = stringResource(R.string.category_key_total_budget)
+
+    val budgets by viewModel.getBudgetsForMonth(year, month).collectAsState(initial = emptyList())
+
+    val budgetMap = remember(budgets, totalBudgetKey, expenseCategoryKeys) {
+        budgets.associateBy { it.category }
+            .mapKeys { (key, _) ->
+                if (key == "总预算" || key == "Total Budget") totalBudgetKey else key
+            }
+            .filter { (key, _) -> key == totalBudgetKey || key in expenseCategoryKeys }
+    }
+
+    val totalBudget = budgetMap[totalBudgetKey]
 
     var showBottomSheet by remember { mutableStateOf(false) }
-    var editingCategory by remember { mutableStateOf<String?>(null) }
+    var editingCategoryStableKey by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
@@ -65,8 +70,12 @@ fun BudgetSettingsScreen(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
             CenterAlignedTopAppBar(
-                // [i18n] "Budget Settings" (需要添加 strings.xml, 这里暂用 "Budget")
-                title = { Text("${year} - ${month} " + stringResource(R.string.nav_budget), fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.budget_screen_title, year, month),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -86,18 +95,17 @@ fun BudgetSettingsScreen(
             contentPadding = PaddingValues(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 1. 顶部：总预算大卡片
             item {
                 TotalBudgetSettingCard(
                     amount = totalBudget?.amount ?: 0.0,
                     onClick = {
-                        editingCategory = "总预算" // Key 保持为 "总预算" 以兼容旧逻辑，或者迁移数据
+                        editingCategoryStableKey = totalBudgetKey
                         showBottomSheet = true
                     }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.opt_category), // "Categories"
+                    text = stringResource(R.string.opt_category),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -105,40 +113,30 @@ fun BudgetSettingsScreen(
                 )
             }
 
-            // 2. 列表：各个分类预算
-            items(expenseCategoryTitles) { categoryTitle ->
-                val amount = budgetMap[categoryTitle]?.amount ?: 0.0
+            items(expenseCategoryKeys) { stableKey ->
+                val amount = budgetMap[stableKey]?.amount ?: 0.0
 
-                // 动态获取分类样式 (预算一般针对支出，所以 type 传 0)
-                val color = CategoryHelper.getCategoryColor(categoryTitle, 0, context)
-                val mainCat = CategoryHelper.getMainCategory(categoryTitle, context)
-                val icon = mainCat?.subCategories?.find { it.title == categoryTitle }?.icon
-                    ?: mainCat?.icon
-                    ?: Icons.Default.AccountBalanceWallet
+                // [修正] 使用 CategoryData 获取
+                val displayName = CategoryData.getDisplayName(stableKey, context)
+                val color = CategoryData.getColor(stableKey, 0, context)
+                val icon = CategoryData.getIcon(stableKey, context)
 
-                BudgetSettingItem(
-                    title = categoryTitle,
-                    amount = amount,
-                    color = color,
-                    icon = icon,
-                    onClick = {
-                        editingCategory = categoryTitle
-                        showBottomSheet = true
-                    }
-                )
+                BudgetSettingItem(displayName, amount, color, icon) {
+                    editingCategoryStableKey = stableKey
+                    showBottomSheet = true
+                }
             }
         }
     }
 
-    // --- 编辑弹窗 ---
-    if (showBottomSheet && editingCategory != null) {
+    if (showBottomSheet && editingCategoryStableKey != null) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
             dragHandle = { BottomSheetDefaults.DragHandle() },
         ) {
-            val currentAmount = budgetMap[editingCategory]?.amount ?: 0.0
+            val currentAmount = budgetMap[editingCategoryStableKey]?.amount ?: 0.0
             var amountStr by remember {
                 mutableStateOf(
                     if (currentAmount == 0.0) ""
@@ -148,18 +146,20 @@ fun BudgetSettingsScreen(
             }
             var isCalculation by remember { mutableStateOf(false) }
 
-            // [i18n] Display name mapping for Total Budget
-            val displayName = if (editingCategory == "总预算") stringResource(R.string.total_amount) else editingCategory
+            val displayName = if (editingCategoryStableKey == totalBudgetKey) {
+                stringResource(R.string.total_amount)
+            } else {
+                CategoryData.getDisplayName(editingCategoryStableKey!!, context)
+            }
 
             Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                // 弹窗标题栏
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Text(
-                        text = "${stringResource(R.string.edit)} $displayName",
+                        text = stringResource(R.string.edit_format, displayName),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -172,9 +172,8 @@ fun BudgetSettingsScreen(
                     )
                 }
 
-                Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                // 数字键盘 (复用，不需要改动)
                 NumericKeyboard(
                     onNumberClick = { if (amountStr == "0") amountStr = it else amountStr += it },
                     onOperatorClick = { operator ->
@@ -185,22 +184,20 @@ fun BudgetSettingsScreen(
                         amountStr = if (amountStr.length > 1) amountStr.dropLast(1) else ""
                         isCalculation = amountStr.contains("+") || amountStr.contains("-")
                     },
-                    onAgainClick = null,
                     onDoneClick = {
                         val newAmount = try {
                             if (isCalculation) evaluateExpression(amountStr) else (amountStr.toDoubleOrNull() ?: 0.0)
                         } catch (e: Exception) { 0.0 }
 
-                        val existingBudget = budgetMap[editingCategory!!]
+                        val existingBudget = budgetMap[editingCategoryStableKey!!]
                         val budget = Budget(
                             id = existingBudget?.id ?: 0,
-                            category = editingCategory!!,
+                            category = editingCategoryStableKey!!,
                             amount = newAmount,
                             year = year,
                             month = month
                         )
-                        // [重要] 这里不需要修改，ViewModel 会处理
-                        viewModel.saveBudget(budget, expenseCategoryTitles)
+                        viewModel.saveBudget(budget, expenseCategoryKeys)
                         scope.launch { sheetState.hide() }.invokeOnCompletion {
                             if (!sheetState.isVisible) showBottomSheet = false
                         }
@@ -221,115 +218,36 @@ fun BudgetSettingsScreen(
     }
 }
 
-// --- 组件：总预算卡片 ---
+// ... 复用之前的组件 ...
 @Composable
 fun TotalBudgetSettingCard(amount: Double, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary
-        ),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(24.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+    Card(onClick = onClick, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary), elevation = CardDefaults.cardElevation(4.dp)) {
+        Row(modifier = Modifier.padding(24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
-                // [i18n]
-                Text(
-                    text = stringResource(R.string.total_amount), // "Total"
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                )
+                Text(text = stringResource(R.string.total_amount), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = String.format(Locale.US, "%.0f", amount),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+                Text(text = stringResource(R.string.amount_no_decimal_format, amount), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
             }
-
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
+            Box(modifier = Modifier.size(48.dp).background(Color.White.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
+                Icon(imageVector = Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
 }
 
-// BudgetSettingItem 保持不变 (无需修改)
 @Composable
-fun BudgetSettingItem(
-    title: String,
-    amount: Double,
-    color: Color,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(20.dp)
-                )
+fun BudgetSettingItem(title: String, amount: Double, color: Color, icon: ImageVector, onClick: () -> Unit) {
+    Card(onClick = onClick, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(0.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+                Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
             }
-
             Spacer(modifier = Modifier.width(16.dp))
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
             if (amount > 0) {
-                Text(
-                    text = String.format(Locale.US, "%.0f", amount),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Text(text = stringResource(R.string.amount_no_decimal_format, amount), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             } else {
-                Text(
-                    text = "-",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                )
+                Text(text = "-", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
             }
         }
     }

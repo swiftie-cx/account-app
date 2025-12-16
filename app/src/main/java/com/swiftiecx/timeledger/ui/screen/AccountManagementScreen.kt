@@ -19,8 +19,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes
@@ -68,10 +70,10 @@ fun AccountManagementScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("账户管理") },
+                title = { Text(stringResource(R.string.account_management_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -84,7 +86,7 @@ fun AccountManagementScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "添加账户")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_account))
             }
         }
     ) { innerPadding ->
@@ -94,7 +96,7 @@ fun AccountManagementScreen(
                 .fillMaxSize()
         ) {
             Text(
-                "长按拖拽排序，点击圆圈设为默认",
+                stringResource(R.string.account_management_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp)
@@ -156,7 +158,7 @@ fun AccountItem(
             IconButton(onClick = onSetDefault) {
                 Icon(
                     imageVector = if (isDefault) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = "设为默认",
+                    contentDescription = stringResource(R.string.set_as_default),
                     tint = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                 )
             }
@@ -189,7 +191,7 @@ fun AccountItem(
             // 拖拽把手图标
             Icon(
                 Icons.Default.DragHandle,
-                contentDescription = "排序",
+                contentDescription = stringResource(R.string.account_reorder),
                 tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
             )
         }

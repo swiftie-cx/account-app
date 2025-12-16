@@ -2,7 +2,10 @@ package com.swiftiecx.timeledger.ui.screen.chart
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.swiftiecx.timeledger.data.Account
+import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
+import com.swiftiecx.timeledger.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -80,23 +83,56 @@ fun calculateDateRange(calendar: Calendar, mode: ChartMode): Pair<Long, Long> {
 
 fun Float.MathRound(): Int = round(this).toInt()
 
-fun prepareLineChartData(expenses: List<Expense>, chartMode: ChartMode, transactionType: TransactionType): List<LineChartPoint> {
+// [修改] 新增 AccountMap 和 defaultCurrency 参数
+fun prepareLineChartData(
+    expenses: List<Expense>,
+    chartMode: ChartMode,
+    transactionType: TransactionType,
+    accountMap: Map<Long, Account>, // [新增]
+    defaultCurrency: String // [新增]
+): List<LineChartPoint> {
     if (expenses.isEmpty()) return emptyList()
     val calendar = Calendar.getInstance()
-    // 注意：这里不需要取 expenses.first().date，而是应该根据 chartMode 生成完整的坐标轴
-    // 但为了简单兼容，原有逻辑是基于数据存在的日期。
-    // 如果想要更严谨的图表（即使某天没数据也显示0），需要重写这里。
-    // 目前保持原有逻辑，但建议确保日期范围正确。
 
-    // 为了简化，这里我们复用下面的 prepareCustomLineChartData 的逻辑核心，或者保持您原有的逻辑。
-    // 这里我保持您原有的逻辑，不做大改，以免引入新Bug。
+    val points = mutableListOf<LineChartPoint>()
+
+    // [BUG 修复] 定义金额兑换和汇总函数
+    val sumFunc: (List<Expense>) -> Float = { list ->
+        list.sumOf { expense ->
+            val account = accountMap[expense.accountId]
+            if (account != null) {
+                val amountToConvert = if (transactionType == TransactionType.INCOME) expense.amount else abs(expense.amount)
+                // 兑换到默认货币
+                ExchangeRates.convert(amountToConvert, account.currency, defaultCurrency)
+            } else {
+                0.0
+            }
+        }.toFloat()
+    }
+
+    // 如果是余额，需要特殊处理，因为余额是正负相加
+    val balanceSumFunc: (List<Expense>) -> Float = { list ->
+        list.sumOf { expense ->
+            val account = accountMap[expense.accountId]
+            if (account != null) {
+                ExchangeRates.convert(expense.amount, account.currency, defaultCurrency)
+            } else {
+                0.0
+            }
+        }.toFloat()
+    }
+
+    val finalSumFunc = if (transactionType == TransactionType.BALANCE) balanceSumFunc else sumFunc
+
+    // 假设日期是从第一个 expense 中获取的，用于初始化循环
     val sampleDate = expenses.first().date
     calendar.time = sampleDate
 
-    val points = mutableListOf<LineChartPoint>()
-    val sumFunc: (List<Expense>) -> Float = { list ->
-        if (transactionType == TransactionType.BALANCE) list.sumOf { it.amount }.toFloat() else list.sumOf { abs(it.amount) }.toFloat()
-    }
+    // [i18n] 日期格式
+    val dayFormat = SimpleDateFormat("dd", Locale.getDefault())
+    val monthLabelFormat = SimpleDateFormat("M月", Locale.getDefault())
+
+
     when (chartMode) {
         ChartMode.WEEK -> {
             calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
@@ -106,8 +142,8 @@ fun prepareLineChartData(expenses: List<Expense>, chartMode: ChartMode, transact
                 val dayStart = calendar.time
                 val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
                 val dayEnd = nextDayCal.time
-                val sum = sumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
-                val label = SimpleDateFormat("dd", Locale.CHINA).format(dayStart)
+                val sum = finalSumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
+                val label = dayFormat.format(dayStart) // [i18n]
                 points.add(LineChartPoint(label, sum, dayStart.time))
                 calendar.add(Calendar.DAY_OF_MONTH, 1)
             }
@@ -120,7 +156,7 @@ fun prepareLineChartData(expenses: List<Expense>, chartMode: ChartMode, transact
                 val dayStart = calendar.time
                 val nextDayCal = Calendar.getInstance().apply { time = dayStart; add(Calendar.DAY_OF_MONTH, 1) }
                 val dayEnd = nextDayCal.time
-                val sum = sumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
+                val sum = finalSumFunc(expenses.filter { it.date >= dayStart && it.date < dayEnd })
                 points.add(LineChartPoint(i.toString(), sum, dayStart.time))
                 calendar.add(Calendar.DAY_OF_MONTH, 1)
             }
@@ -132,8 +168,9 @@ fun prepareLineChartData(expenses: List<Expense>, chartMode: ChartMode, transact
                 val monthStart = calendar.time
                 val nextMonthCal = Calendar.getInstance().apply { time = monthStart; add(Calendar.MONTH, 1) }
                 val monthEnd = nextMonthCal.time
-                val sum = sumFunc(expenses.filter { it.date >= monthStart && it.date < monthEnd })
-                points.add(LineChartPoint("${i + 1}月", sum, monthStart.time))
+                val sum = finalSumFunc(expenses.filter { it.date >= monthStart && it.date < monthEnd })
+                val label = monthLabelFormat.format(monthStart) // [i18n]
+                points.add(LineChartPoint(label, sum, monthStart.time))
                 calendar.add(Calendar.MONTH, 1)
             }
         }
@@ -141,12 +178,14 @@ fun prepareLineChartData(expenses: List<Expense>, chartMode: ChartMode, transact
     return points
 }
 
-// [新增] 专门处理自定义范围的折线图数据生成 (修复报错的关键)
+// [修改] 新增 AccountMap 和 defaultCurrency 参数
 fun prepareCustomLineChartData(
     data: List<Expense>,
     startDate: Long,
     endDate: Long,
-    transactionType: TransactionType
+    transactionType: TransactionType,
+    accountMap: Map<Long, Account>, // [新增]
+    defaultCurrency: String // [新增]
 ): List<LineChartPoint> {
     if (data.isEmpty()) return emptyList()
 
@@ -174,16 +213,37 @@ fun prepareCustomLineChartData(
     endCalendar.set(Calendar.MINUTE, 59)
     endCalendar.set(Calendar.SECOND, 59)
 
-    // 定义金额汇总函数
+    // [BUG 修复] 定义金额兑换和汇总函数
     val sumFunc: (List<Expense>) -> Float = { list ->
-        if (transactionType == TransactionType.BALANCE)
-            list.sumOf { it.amount }.toFloat()
-        else
-            list.sumOf { abs(it.amount) }.toFloat()
+        list.sumOf { expense ->
+            val account = accountMap[expense.accountId]
+            if (account != null) {
+                val amountToConvert = if (transactionType == TransactionType.INCOME) expense.amount else abs(expense.amount)
+                // 兑换到默认货币
+                ExchangeRates.convert(amountToConvert, account.currency, defaultCurrency)
+            } else {
+                0.0
+            }
+        }.toFloat()
     }
 
-    val dateFormat = SimpleDateFormat("MM-dd", Locale.CHINA)
-    val monthFormat = SimpleDateFormat("yyyy-MM", Locale.CHINA)
+    // 如果是余额，需要特殊处理，因为余额是正负相加
+    val balanceSumFunc: (List<Expense>) -> Float = { list ->
+        list.sumOf { expense ->
+            val account = accountMap[expense.accountId]
+            if (account != null) {
+                ExchangeRates.convert(expense.amount, account.currency, defaultCurrency)
+            } else {
+                0.0
+            }
+        }.toFloat()
+    }
+
+    val finalSumFunc = if (transactionType == TransactionType.BALANCE) balanceSumFunc else sumFunc
+
+    // [i18n] 日期格式
+    val dateFormat = SimpleDateFormat("MM-dd", Locale.getDefault())
+    val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
 
     // 3. 循环生成点
     // 防止死循环，加一个安全计数
@@ -207,7 +267,7 @@ fun prepareCustomLineChartData(
         }
 
         // 筛选区间内的数据
-        val sum = sumFunc(data.filter { it.date.time in intervalStart until intervalEnd })
+        val sum = finalSumFunc(data.filter { it.date.time in intervalStart until intervalEnd })
 
         // 生成标签
         val label = if (isMonthly) {
@@ -230,7 +290,13 @@ fun prepareCustomLineChartData(
     return points
 }
 
-fun generateBalanceReportItems(data: List<Expense>, chartMode: ChartMode): List<BalanceReportItem> {
+// [修改] 新增 AccountMap 和 defaultCurrency 参数
+fun generateBalanceReportItems(
+    data: List<Expense>,
+    chartMode: ChartMode,
+    accountMap: Map<Long, Account>, // [新增]
+    defaultCurrency: String // [新增]
+): List<BalanceReportItem> {
     val calendar = Calendar.getInstance()
     val groupedByDate = data.groupBy { expense ->
         calendar.time = expense.date
@@ -238,15 +304,39 @@ fun generateBalanceReportItems(data: List<Expense>, chartMode: ChartMode): List<
         if (chartMode == ChartMode.YEAR) calendar.set(Calendar.DAY_OF_MONTH, 1)
         calendar.timeInMillis
     }
+
+    // [BUG 修复] 定义金额兑换函数
+    fun convertAndSum(expenses: List<Expense>, isIncome: Boolean): Double {
+        return expenses.sumOf { expense ->
+            val account = accountMap[expense.accountId]
+            if (account != null) {
+                // 收入或支出绝对值
+                val amountToConvert = if (isIncome) expense.amount else abs(expense.amount)
+                // 兑换到默认货币
+                ExchangeRates.convert(amountToConvert, account.currency, defaultCurrency)
+            } else {
+                0.0
+            }
+        }
+    }
+
+    // [i18n] 日期格式
+    val dayLabelFormat = SimpleDateFormat("dd日", Locale.getDefault())
+    val monthLabelFormat = SimpleDateFormat("M月", Locale.getDefault())
+
+
     return groupedByDate.entries.sortedByDescending { it.key }.map { (timeMillis, expenses) ->
         calendar.timeInMillis = timeMillis
         val timeLabel = when (chartMode) {
-            ChartMode.WEEK, ChartMode.MONTH -> calendar.get(Calendar.DAY_OF_MONTH).toString() + "日"
-            ChartMode.YEAR -> (calendar.get(Calendar.MONTH) + 1).toString() + "月"
+            ChartMode.WEEK, ChartMode.MONTH -> dayLabelFormat.format(calendar.time) // [i18n]
+            ChartMode.YEAR -> monthLabelFormat.format(calendar.time) // [i18n]
         }
-        val income = expenses.filter { it.amount > 0 }.sumOf { it.amount }
-        val expense = expenses.filter { it.amount < 0 }.sumOf { abs(it.amount) }
+
+        // [BUG 修复] 使用兑换后的金额进行计算
+        val income = convertAndSum(expenses.filter { it.amount > 0 }, true)
+        val expense = convertAndSum(expenses.filter { it.amount < 0 }, false)
         val balance = income - expense
+
         BalanceReportItem(timeLabel, income, expense, balance)
     }
 }

@@ -13,11 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.SyncStrategy
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import com.swiftiecx.timeledger.ui.viewmodel.SyncUiState
@@ -31,6 +33,9 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
     val syncState by viewModel.syncState.collectAsState()
     val userEmail by viewModel.userEmail.collectAsState(initial = "")
 
+    // 【修改 1】在 Composable 上下文获取资源字符串
+    val unknownTimeText = stringResource(R.string.sync_unknown_time)
+
     // 监听冲突状态，控制弹窗显示
     var showConflictDialog by remember { mutableStateOf(false) }
     var cloudTimeStr by remember { mutableStateOf("") }
@@ -38,7 +43,8 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
     LaunchedEffect(syncState) {
         if (syncState is SyncUiState.Conflict) {
             val time = (syncState as SyncUiState.Conflict).cloudTime
-            cloudTimeStr = if (time > 0) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(time)) else "未知时间"
+            // 【修改 2】使用普通变量 unknownTimeText
+            cloudTimeStr = if (time > 0) SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(time)) else unknownTimeText
             showConflictDialog = true
         }
     }
@@ -46,10 +52,10 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("云端同步") },
+                title = { Text(stringResource(R.string.sync_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 }
             )
@@ -82,7 +88,7 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
             Spacer(Modifier.height(32.dp))
 
             Text(
-                text = if (userEmail.isNotEmpty()) "当前账号: $userEmail" else "未登录",
+                text = if (userEmail.isNotEmpty()) stringResource(R.string.sync_current_account_label, userEmail) else stringResource(R.string.sync_not_logged_in),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -90,7 +96,7 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "点击同步将自动备份或恢复数据。\n如果两端都有数据，系统将询问处理方式。",
+                text = stringResource(R.string.sync_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -112,7 +118,7 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
                     Text(state.msg, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(24.dp))
                     Button(onClick = { viewModel.resetSyncState() }) {
-                        Text("完成")
+                        Text(stringResource(R.string.finish))
                     }
                 }
                 is SyncUiState.Error -> {
@@ -121,7 +127,7 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
                     Text(state.err, color = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.height(24.dp))
                     Button(onClick = { viewModel.startSync() }) {
-                        Text("重试")
+                        Text(stringResource(R.string.sync_retry))
                     }
                 }
                 else -> {
@@ -131,7 +137,7 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         enabled = userEmail.isNotEmpty()
                     ) {
-                        Text("开始同步", fontSize = 18.sp)
+                        Text(stringResource(R.string.sync_start), fontSize = 18.sp)
                     }
                 }
             }
@@ -146,14 +152,14 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
                 viewModel.resetSyncState() // 点外部取消，回到初始状态
             },
             icon = { Icon(Icons.Default.Warning, null) },
-            title = { Text("发现数据冲突") },
+            title = { Text(stringResource(R.string.sync_conflict_title)) },
             text = {
                 Column {
-                    Text("本地和云端都存在数据。")
+                    Text(stringResource(R.string.sync_conflict_msg1))
                     Spacer(Modifier.height(8.dp))
-                    Text("云端备份时间: $cloudTimeStr", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.sync_cloud_time_label, cloudTimeStr), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(16.dp))
-                    Text("请选择操作：", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.sync_conflict_msg2), fontWeight = FontWeight.Bold)
                 }
             },
             confirmButton = {
@@ -163,7 +169,7 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
                         viewModel.performSync(SyncStrategy.MERGE) // 智能合并
                     }
                 ) {
-                    Text("合并数据 (推荐)")
+                    Text(stringResource(R.string.sync_merge_strategy))
                 }
             },
             dismissButton = {
@@ -172,13 +178,13 @@ fun SyncScreen(navController: NavController, viewModel: ExpenseViewModel) {
                         showConflictDialog = false
                         viewModel.performSync(SyncStrategy.OVERWRITE_LOCAL)
                     }) {
-                        Text("以云端为准")
+                        Text(stringResource(R.string.sync_overwrite_local_strategy))
                     }
                     TextButton(onClick = {
                         showConflictDialog = false
                         viewModel.performSync(SyncStrategy.OVERWRITE_CLOUD)
                     }) {
-                        Text("以本地为准")
+                        Text(stringResource(R.string.sync_overwrite_cloud_strategy))
                     }
                 }
             }

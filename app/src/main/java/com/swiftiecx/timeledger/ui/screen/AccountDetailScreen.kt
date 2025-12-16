@@ -16,11 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector // 确保导入
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.Expense
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -81,10 +83,10 @@ fun AccountDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(account?.name ?: "账户详情") },
+                title = { Text(account?.name ?: stringResource(R.string.account_detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -94,7 +96,7 @@ fun AccountDetailScreen(
                             navController.navigate(Routes.addAccountRoute(account.id))
                         }
                     }) {
-                        Icon(Icons.Default.Edit, contentDescription = "编辑账户")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit_account))
                     }
                 }
             )
@@ -103,7 +105,7 @@ fun AccountDetailScreen(
     ) { innerPadding ->
         if (account == null) {
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text("未找到账户信息")
+                Text(stringResource(R.string.account_not_found))
             }
         } else {
             Column(
@@ -119,7 +121,7 @@ fun AccountDetailScreen(
 
                 // 2. 交易列表标题
                 Text(
-                    text = "交易记录",
+                    text = stringResource(R.string.transaction_records_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
@@ -133,7 +135,7 @@ fun AccountDetailScreen(
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("暂无交易记录", color = MaterialTheme.colorScheme.outline)
+                        Text(stringResource(R.string.no_transaction_records), color = MaterialTheme.colorScheme.outline)
                     }
                 } else {
                     LazyColumn(
@@ -197,7 +199,7 @@ fun AccountHeaderCard(account: Account, currentBalance: Double) {
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "当前余额",
+                text = stringResource(R.string.current_balance),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
             )
@@ -205,7 +207,7 @@ fun AccountHeaderCard(account: Account, currentBalance: Double) {
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "${account.currency} ${String.format(Locale.US, "%.2f", currentBalance)}",
+                text = stringResource(R.string.currency_amount_format, account.currency, String.format(Locale.US, "%.2f", currentBalance)),
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -262,7 +264,7 @@ fun AccountTransactionItem(
                     // 默认图标 (比如转账没有特定 category 图标时)
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.edit),
                         tint = iconTint,
                         modifier = Modifier.size(20.dp)
                     )
@@ -288,7 +290,7 @@ fun AccountTransactionItem(
                     )
                     if (!expense.remark.isNullOrBlank()) {
                         Text(
-                            text = " · ${expense.remark}",
+                            text = stringResource(R.string.transaction_remark_format, expense.remark!!),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                             maxLines = 1,
@@ -299,8 +301,9 @@ fun AccountTransactionItem(
             }
 
             // 金额
+            val amountText = if (isExpense) String.format("%.2f", expense.amount) else "+${String.format("%.2f", expense.amount)}"
             Text(
-                text = if (isExpense) String.format("%.2f", expense.amount) else "+${String.format("%.2f", expense.amount)}",
+                text = amountText,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = amountColor

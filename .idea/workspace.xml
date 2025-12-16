@@ -10,8 +10,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c17c1ccb-40de-4d86-974e-8d13a2938ae7" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/LanguageSettingsScreen.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/res/values-zh/strings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/checksums/checksums.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/md5-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/checksums/md5-checksums.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/sha1-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/checksums/sha1-checksums.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" afterDir="false" />
@@ -21,73 +22,33 @@
       <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/MainActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/Account.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/Account.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/AccountDao.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/AccountDao.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/AppDatabase.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/AppDatabase.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/Budget.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/Budget.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/BudgetDao.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/BudgetDao.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/Converters.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/Converters.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/EmailSender.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/EmailSender.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/ExchangeRates.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/ExchangeRates.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/Expense.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/Expense.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/ExpenseDao.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/ExpenseDao.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/ExpenseRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/ExpenseRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/PeriodicTransaction.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/PeriodicTransaction.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/PeriodicTransactionDao.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/PeriodicTransactionDao.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/data/network/FrankfurterApi.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/network/FrankfurterApi.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/navigation/BottomNavItem.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/BottomNavItem.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/navigation/Category.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/Category.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/navigation/IconMapper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/IconMapper.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/navigation/Routes.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/Routes.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/AccountDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountDetailScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/AccountManagementScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountManagementScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/AddAccountScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddAccountScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/AddCategoryScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddCategoryScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/AddPeriodicTransactionScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddPeriodicTransactionScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/AddTransactionComponents.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddTransactionComponents.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/AddTransactionScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddTransactionScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/AssetsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AssetsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/BudgetScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/BudgetScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/BudgetSettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/BudgetSettingsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/CalendarScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CalendarScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/CategoryPicker.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CategoryPicker.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/CategorySettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CategorySettingsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/ChartScreen.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/CurrencySelectionScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CurrencySelectionScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/CustomDateRangePicker.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CustomDateRangePicker.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/DailyDetailsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DailyDetailsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/DetailsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DetailsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/DisplayModels.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DisplayModels.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/LockScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/LockScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/MainScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/MainScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/NumericKeyboard.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/NumericKeyboard.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/PeriodicBookkeepingScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PeriodicBookkeepingScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/PrivacyComponents.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PrivacyComponents.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/PrivacySettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PrivacySettingsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/SearchScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SearchScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/SettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SettingsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/SyncScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SyncScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/ThemeSettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/ThemeSettingsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/TransactionDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/TransactionDetailScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/UserInfoScreens.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/UserInfoScreens.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/WelcomeScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/WelcomeScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/YearMonthPicker.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/YearMonthPicker.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/chart/CategoryChartDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/CategoryChartDetailScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/chart/ChartComponents.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartComponents.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/chart/ChartDashboard.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartDashboard.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/chart/ChartScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/chart/ChartUtils.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartUtils.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/chart/ChartVisuals.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartVisuals.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/screen/chart/FullScreenChartScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/FullScreenChartScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/viewmodel/ExpenseViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/viewmodel/ExpenseViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/viewmodel/ExpenseViewModelFactory.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/viewmodel/ExpenseViewModelFactory.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/ui/viewmodel/ThemeViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/viewmodel/ThemeViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/example/myapplication/worker/PeriodicWorker.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/worker/PeriodicWorker.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/Category.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/Category.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountDetailScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountManagementScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountManagementScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddAccountScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddAccountScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AssetsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AssetsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/BudgetScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/BudgetScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/BudgetSettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/BudgetSettingsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CategorySettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CategorySettingsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CurrencySelectionScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CurrencySelectionScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DetailsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DetailsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/LockScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/LockScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/MainScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/MainScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PrivacySettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PrivacySettingsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SearchScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SearchScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SyncScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SyncScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/ThemeSettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/ThemeSettingsScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/UserInfoScreens.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/UserInfoScreens.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/CategoryChartDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/CategoryChartDetailScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartComponents.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartComponents.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartDashboard.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartDashboard.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartUtils.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartUtils.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartVisuals.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/ChartVisuals.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/FullScreenChartScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/chart/FullScreenChartScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/viewmodel/ExpenseViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/viewmodel/ExpenseViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-zh/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-zh/strings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/themes.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/themes.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -134,6 +95,9 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="RESET_MODE" value="HARD" />
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="ProjectErrors" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 0
@@ -165,6 +129,7 @@
       <recent name="C:\Users\84247\AndroidStudioProjects\MyApplication\app" />
     </key>
     <key name="K2MoveDeclarationsDialog.RECENT_PACKAGE_KEY">
+      <recent name="com.swiftiecx.timeledger.ui.screen.chart" />
       <recent name="com.swiftiecx.timeledger" />
       <recent name="com.example.myapplication.ui.screen" />
       <recent name="com.example.myapplication.ui.viewmodel" />
@@ -287,12 +252,12 @@
         </entry>
         <entry key="com.swiftiecx.timeledger">
           <value>
-            <CheckInfo lastCheckTimestamp="1765774427508" />
+            <CheckInfo lastCheckTimestamp="1765865357026" />
           </value>
         </entry>
         <entry key="com.swiftiecx.timeledger.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1765774427509" />
+            <CheckInfo lastCheckTimestamp="1765865357026" />
           </value>
         </entry>
       </map>

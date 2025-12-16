@@ -16,8 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.swiftiecx.timeledger.R
+import kotlin.math.abs
 
 @Composable
 fun EmptyState() {
@@ -28,15 +31,17 @@ fun EmptyState() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(64.dp))
             Spacer(Modifier.height(16.dp))
-            Text("本周期没有记录", color = MaterialTheme.colorScheme.outline)
+            Text(stringResource(R.string.chart_empty_state), color = MaterialTheme.colorScheme.outline)
         }
     }
 }
 
+// [重要] 必须包含 currency 参数
 @Composable
 fun StatSelectionCard(
     title: String,
     amount: Double,
+    currency: String, // [关键参数]
     isSelected: Boolean,
     selectedBgColor: Color,
     unselectedBgColor: Color,
@@ -50,6 +55,8 @@ fun StatSelectionCard(
         label = "bgColor"
     )
     val elevation = if (isSelected) 0.dp else 2.dp
+
+    val displayAmount = if (isHighlight) amount else abs(amount)
 
     Surface(
         onClick = onClick,
@@ -72,7 +79,7 @@ fun StatSelectionCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = String.format("%.2f", amount),
+                text = stringResource(R.string.currency_amount_format_chart, currency, displayAmount),
                 style = if(isHighlight) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = textColor,
@@ -82,14 +89,16 @@ fun StatSelectionCard(
     }
 }
 
+// [重要] amount 必须是 Double，必须包含 currency 参数
 @Composable
 fun CategoryRankItem(
     name: String,
-    amount: Long,
+    amount: Double, // [关键修改] 类型是 Double
     percentage: Float,
     color: Color,
     ratio: Float,
     icon: ImageVector?,
+    currency: String, // [关键参数] 必须存在
     onClick: () -> Unit
 ) {
     Row(
@@ -118,9 +127,10 @@ fun CategoryRankItem(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Row {
-                    Text("${String.format("%.1f", percentage)}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.percent_format, percentage), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(amount.toString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                    // 这里使用传入的 currency
+                    Text(stringResource(R.string.currency_amount_no_decimal_format, currency, amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
@@ -143,21 +153,21 @@ fun CategoryRankItem(
     }
 }
 
-// --- [新增] 子类列表项组件 ---
+// [重要] 必须包含 currency 参数
 @Composable
 fun SubCategoryRankItem(
     stat: SubCategoryStat,
-    color: Color, // 继承大类的颜色
+    color: Color,
+    currency: String, // [关键参数]
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp, horizontal = 8.dp), // 稍微缩进一点
+            .padding(vertical = 8.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 子类不需要大图标，用一个小点或者空位即可，这里用一个小的半透明圆点
         Box(
             modifier = Modifier
                 .size(8.dp)
@@ -176,13 +186,13 @@ fun SubCategoryRankItem(
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = String.format("%.0f", stat.amount),
+                text = stringResource(R.string.currency_amount_no_decimal_format_small, currency, stat.amount),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
             )
             Text(
-                text = "${String.format("%.1f", stat.percentageOfParent)}%",
+                text = stringResource(R.string.percent_format, stat.percentageOfParent),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline
             )

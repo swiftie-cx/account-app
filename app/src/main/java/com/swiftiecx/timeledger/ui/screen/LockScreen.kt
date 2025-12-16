@@ -1,5 +1,8 @@
 package com.swiftiecx.timeledger.ui.screen
 
+import androidx.compose.ui.res.stringResource
+import com.swiftiecx.timeledger.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -22,6 +26,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 
 @Composable
@@ -30,8 +38,38 @@ fun LockScreen(
     onUnlockSuccess: () -> Unit
 ) {
     val privacyType = viewModel.getPrivacyType()
+    val biometricEnabled = viewModel.isBiometricEnabled()
     var inputPin by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf("") }
+
+    // i18n texts
+    val wrongPinText = stringResource(R.string.lock_error_wrong_pin)
+    val wrongPatternText = stringResource(R.string.lock_error_wrong_pattern)
+    val forgotButtonText = stringResource(R.string.lock_forgot_password)
+
+    // 指纹解锁：进入锁屏后自动弹出一次（用户可取消后继续用 PIN/手势）
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    var hasPromptedBiometric by remember { mutableStateOf(false) }
+
+    LaunchedEffect(privacyType, biometricEnabled) {
+        if (
+            privacyType != "NONE" &&
+            biometricEnabled &&
+            activity != null &&
+            !hasPromptedBiometric
+        ) {
+            hasPromptedBiometric = true
+            showBiometricPrompt(
+                activity = activity,
+                onSuccess = onUnlockSuccess,
+                onError = { msg ->
+                    // 只提示可读的错误，不阻断手动解锁
+                    errorMsg = msg
+                }
+            )
+        }
+    }
 
     // 控制弹窗显示
     var showEmailUnlockDialog by remember { mutableStateOf(false) }
@@ -58,7 +96,7 @@ fun LockScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "请验证密码",
+                text = stringResource(R.string.lock_verify_password),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -103,7 +141,7 @@ fun LockScreen(
                                     if (viewModel.verifyPin(inputPin)) {
                                         onUnlockSuccess()
                                     } else {
-                                        errorMsg = "密码错误"
+                                        errorMsg = wrongPinText
                                         inputPin = ""
                                     }
                                 }
@@ -126,7 +164,7 @@ fun LockScreen(
                             if (viewModel.verifyPattern(pattern)) {
                                 onUnlockSuccess()
                             } else {
-                                errorMsg = "图案错误"
+                                errorMsg = wrongPatternText
                             }
                         }
                     )
@@ -141,7 +179,7 @@ fun LockScreen(
                 onClick = { showEmailUnlockDialog = true },
                 border = null
             ) {
-                Text("忘记密码？使用账号验证")
+                Text(forgotButtonText)
             }
             Spacer(modifier = Modifier.height(20.dp))
         }
@@ -162,6 +200,58 @@ fun LockScreen(
     }
 }
 
+private fun showBiometricPrompt(
+    activity: FragmentActivity,
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+) {
+    val canAuthenticate = BiometricManager.from(activity).canAuthenticate(
+        BiometricManager.Authenticators.BIOMETRIC_STRONG
+    )
+
+    if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
+        onError(activity.getString(R.string.lock_biometric_not_supported))
+        return
+    }
+
+    val executor = ContextCompat.getMainExecutor(activity)
+
+    val prompt = BiometricPrompt(
+        activity,
+        executor,
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                onSuccess()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                // 用户取消不算错误，不提示
+                if (
+                    errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                    errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                    errorCode == BiometricPrompt.ERROR_CANCELED
+                ) {
+                    return
+                }
+                onError(errString.toString())
+            }
+
+            override fun onAuthenticationFailed() {
+                // 指纹不匹配：系统会提示，这里不强制追加文案
+            }
+        }
+    )
+
+    // 系统指纹弹窗样式不可自定义，这里尽量“少文字”以降低视觉干扰
+    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        .setTitle(activity.getString(R.string.bio_prompt_title))
+        .setNegativeButtonText(activity.getString(R.string.cancel))
+        .setConfirmationRequired(false)
+        .build()
+
+    prompt.authenticate(promptInfo)
+}
+
 /**
  * 现代化的验证弹窗 (适配 Firebase 异步登录 + 找回密码)
  */
@@ -171,6 +261,8 @@ fun UnlockByEmailDialog(
     onDismiss: () -> Unit,
     onUnlockSuccess: () -> Unit
 ) {
+    val context = LocalContext.current  // ✅ 新增：用于回调里取字符串
+
     val savedEmail by viewModel.userEmail.collectAsState()
 
     var email by remember { mutableStateOf(savedEmail) }
@@ -219,7 +311,7 @@ fun UnlockByEmailDialog(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "安全验证",
+                    text = stringResource(R.string.unlock_dialog_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -234,7 +326,7 @@ fun UnlockByEmailDialog(
                             email = it
                             uiMessage = null
                         },
-                        label = { Text("注册邮箱") },
+                        label = { Text(stringResource(R.string.unlock_email_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = MaterialTheme.shapes.medium,
@@ -248,7 +340,7 @@ fun UnlockByEmailDialog(
                             password = it
                             uiMessage = null
                         },
-                        label = { Text("登录密码") },
+                        label = { Text(stringResource(R.string.unlock_password_label)) },
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
@@ -265,13 +357,13 @@ fun UnlockByEmailDialog(
                     // 【新增】第二层救命稻草：如果连账号密码也忘了
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                         Text(
-                            text = if(isResetSent) "邮件已发送，请查收" else "忘记账号密码？发送重置邮件",
+                            text = if (isResetSent) stringResource(R.string.unlock_reset_sent) else stringResource(R.string.unlock_send_reset),
                             style = MaterialTheme.typography.bodySmall,
-                            color = if(isResetSent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                            color = if (isResetSent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.clickable(enabled = !isResetSent && !isLoading) {
-                                if(email.isBlank()) {
-                                    uiMessage = "请先输入邮箱地址"
+                                if (email.isBlank()) {
+                                    uiMessage = context.getString(R.string.unlock_enter_email_first) // ✅ 改
                                     isError = true
                                 } else {
                                     isLoading = true
@@ -280,7 +372,7 @@ fun UnlockByEmailDialog(
                                         onSuccess = {
                                             isLoading = false
                                             isResetSent = true
-                                            uiMessage = "重置链接已发送至邮箱，请重置密码后在此登录"
+                                            uiMessage = context.getString(R.string.unlock_reset_link_sent) // ✅ 改
                                             isError = false
                                         },
                                         onError = { msg ->
@@ -299,7 +391,9 @@ fun UnlockByEmailDialog(
 
                 // --- 消息提示区域 ---
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     if (uiMessage != null) {
@@ -316,7 +410,7 @@ fun UnlockByEmailDialog(
 
                 // 提示文案
                 Text(
-                    text = "为保障账户安全，验证通过后将重置应用锁设置。",
+                    text = stringResource(R.string.unlock_reset_lock_tip),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
@@ -329,7 +423,7 @@ fun UnlockByEmailDialog(
                 Button(
                     onClick = {
                         if (email.isBlank() || password.isBlank()) {
-                            uiMessage = "请输入账号和密码"
+                            uiMessage = context.getString(R.string.unlock_enter_account_password) // ✅ 改
                             isError = true
                         } else {
                             isLoading = true
@@ -361,7 +455,10 @@ fun UnlockByEmailDialog(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("验证并解锁", modifier = Modifier.padding(vertical = 4.dp))
+                        Text(
+                            stringResource(R.string.unlock_verify_and_unlock),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
                     }
                 }
 
@@ -373,7 +470,7 @@ fun UnlockByEmailDialog(
                     shape = MaterialTheme.shapes.medium,
                     enabled = !isLoading
                 ) {
-                    Text("取消")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         }

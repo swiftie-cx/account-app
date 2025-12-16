@@ -14,9 +14,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -85,7 +87,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         account = account,
                         currentBalance = currentBalance,
                         onClick = {
-                            // 【修改】跳转到详情页
                             navController.navigate(Routes.accountDetailRoute(account.id))
                         }
                     )
@@ -111,7 +112,7 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
-                    Text("添加账户", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.add_account), style = MaterialTheme.typography.titleMedium)
                 }
 
                 Button(
@@ -126,7 +127,7 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
-                    Text("管理账户", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.manage_account), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -147,7 +148,7 @@ private fun AssetHeaderSection(
     ) {
         // 大标题
         Text(
-            text = "资产",
+            text = stringResource(R.string.assets_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(vertical = 16.dp),
@@ -165,13 +166,15 @@ private fun AssetHeaderSection(
                 modifier = Modifier.padding(24.dp)
             ) {
                 Text(
-                    text = "净资产",
+                    text = stringResource(R.string.net_assets),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+                // 【修正1】使用 currency 和 netAssets，而不是不存在的 account
+                // 【修正2】直接传 Double，不使用 String.format
                 Text(
-                    text = "$currency ${String.format(Locale.US, "%.2f", netAssets)}",
+                    text = stringResource(R.string.currency_amount_format, currency, netAssets),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -185,13 +188,14 @@ private fun AssetHeaderSection(
                 ) {
                     Column {
                         Text(
-                            text = "资产",
+                            text = stringResource(R.string.total_assets),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.height(4.dp))
+                        // 【修正】直接传 Double
                         Text(
-                            text = "$currency ${String.format(Locale.US, "%.2f", assets)}",
+                            text = stringResource(R.string.currency_amount_format, currency, assets),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -200,13 +204,14 @@ private fun AssetHeaderSection(
 
                     Column {
                         Text(
-                            text = "负债",
+                            text = stringResource(R.string.total_liabilities),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
                         Spacer(Modifier.height(4.dp))
+                        // 【修正】直接传 Double
                         Text(
-                            text = "$currency ${String.format(Locale.US, "%.2f", liabilities)}",
+                            text = stringResource(R.string.currency_amount_format, currency, liabilities),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -267,8 +272,9 @@ fun AssetAccountItem(
 
             // 金额
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // 【修正】直接传 Double
                 Text(
-                    text = "${account.currency} ${String.format(Locale.US, "%.2f", currentBalance)}",
+                    text = stringResource(R.string.currency_amount_format, account.currency, currentBalance),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

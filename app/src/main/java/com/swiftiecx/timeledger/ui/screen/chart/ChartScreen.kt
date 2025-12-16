@@ -14,9 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.data.Account
+import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
 import com.swiftiecx.timeledger.ui.navigation.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes
@@ -28,6 +32,13 @@ import kotlin.text.startsWith
 
 @Composable
 fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
+    // [新增] 跨币种所需数据
+    val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+    val defaultCurrency by viewModel.defaultCurrency.collectAsState(initial = "CNY")
+    val accountMap = remember(allAccounts) { allAccounts.associateBy { it.id } }
+
+    val transferTypeString = stringResource(R.string.type_transfer) // [i18n]
+
     val allTransactions by viewModel.allExpenses.collectAsState(initial = emptyList())
 
     val expenseMainCategories by viewModel.expenseMainCategoriesState.collectAsState()
@@ -79,22 +90,36 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
         }
     }
 
-    // 3. 计算统计数据
-    val totalExpense = remember(currentPeriodExpenses) {
-        currentPeriodExpenses.filter { it.amount < 0 && !it.category.startsWith("转账") }.sumOf { abs(it.amount) }
+    // 3. 计算统计数据 (BUG 修复区域 - 引入汇率兑换)
+    val expensesForSum = remember(currentPeriodExpenses, accountMap, defaultCurrency, transferTypeString) {
+        currentPeriodExpenses
+            .filter { !it.category.startsWith(transferTypeString) }
+            .mapNotNull { expense ->
+                val account = accountMap[expense.accountId]
+                if (account != null) {
+                    // 兑换到默认货币
+                    ExchangeRates.convert(expense.amount, account.currency, defaultCurrency)
+                } else {
+                    null
+                }
+            }
     }
-    val totalIncome = remember(currentPeriodExpenses) {
-        currentPeriodExpenses.filter { it.amount > 0 && !it.category.startsWith("转账") }.sumOf { it.amount }
+
+    val totalExpense = remember(expensesForSum) {
+        expensesForSum.filter { it < 0 }.sumOf { abs(it) }
+    }
+    val totalIncome = remember(expensesForSum) {
+        expensesForSum.filter { it > 0 }.sumOf { it }
     }
     val totalBalance = totalIncome - totalExpense
 
     // 4. 筛选图表数据 (收支类型)
-    val filteredExpenses = remember(currentPeriodExpenses, transactionType) {
+    val filteredExpenses = remember(currentPeriodExpenses, transactionType, transferTypeString) {
         currentPeriodExpenses.filter { expense ->
             when (transactionType) {
-                TransactionType.EXPENSE -> expense.amount < 0 && !expense.category.startsWith("转账")
-                TransactionType.INCOME -> expense.amount > 0 && !expense.category.startsWith("转账")
-                TransactionType.BALANCE -> !expense.category.startsWith("转账")
+                TransactionType.EXPENSE -> expense.amount < 0 && !expense.category.startsWith(transferTypeString)
+                TransactionType.INCOME -> expense.amount > 0 && !expense.category.startsWith(transferTypeString)
+                TransactionType.BALANCE -> !expense.category.startsWith(transferTypeString)
             }
         }
     }
@@ -137,6 +162,7 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
                     totalIncome = totalIncome,
                     totalBalance = totalBalance,
                     isCustomRange = isCustomRange,
+                    defaultCurrency = defaultCurrency, // [传入]
                     onModeChange = { newMode ->
                         viewModel.setChartMode(newMode)
                         viewModel.setChartCustomDateRange(null, null)
@@ -167,7 +193,9 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
                         navController = navController,
                         dateRange = rangeStart to rangeEnd,
                         mainCategories = if (transactionType == TransactionType.INCOME) incomeMainCategories else expenseMainCategories,
-                        isCustomRange = isCustomRange
+                        isCustomRange = isCustomRange,
+                        accountMap = accountMap, // [传入]
+                        defaultCurrency = defaultCurrency // [传入]
                     )
                 } else {
                     EmptyState()
@@ -199,25 +227,53 @@ fun ChartPageContent(
     navController: NavHostController,
     dateRange: Pair<Long, Long>,
     mainCategories: List<MainCategory>,
-    isCustomRange: Boolean
+    isCustomRange: Boolean,
+    accountMap: Map<Long, Account>, // [新增]
+    defaultCurrency: String // [新增]
 ) {
-    val lineData = remember(data, chartMode, transactionType, dateRange, isCustomRange) {
+    val transferTypeString = stringResource(R.string.type_transfer) // [i18n]
+
+    // [修改调用] 传入 accountMap 和 defaultCurrency
+    val lineData = remember(data, chartMode, transactionType, dateRange, isCustomRange, accountMap, defaultCurrency) {
         if (isCustomRange) {
-            prepareCustomLineChartData(data, dateRange.first, dateRange.second, transactionType)
+            prepareCustomLineChartData(data, dateRange.first, dateRange.second, transactionType, accountMap, defaultCurrency)
         } else {
-            prepareLineChartData(data, chartMode, transactionType)
+            prepareLineChartData(data, chartMode, transactionType, accountMap, defaultCurrency)
         }
     }
 
-    val nestedStats = remember(data, mainCategories) {
-        val totalAmount = data.sumOf { abs(it.amount) }.toFloat()
+    // [BUG 修复] 计算总金额时，必须使用兑换后的金额进行百分比计算
+    val expensesForStats = remember(data, accountMap, defaultCurrency, transferTypeString) {
+        data.filter { !it.category.startsWith(transferTypeString) }.mapNotNull { expense ->
+            val account = accountMap[expense.accountId]
+            if (account != null) {
+                // 将交易金额兑换成默认货币的绝对值
+                ExchangeRates.convert(abs(expense.amount), account.currency, defaultCurrency)
+            } else {
+                null
+            }
+        }
+    }
 
+    val totalAmount = remember(expensesForStats) { expensesForStats.sumOf { it } }
+
+    val nestedStats = remember(data, mainCategories, totalAmount, accountMap, defaultCurrency, transferTypeString) {
         mainCategories.mapNotNull { mainCat ->
             val subCategoryNames = mainCat.subCategories.map { it.title }.toSet()
-            val relevantExpenses = data.filter { it.category in subCategoryNames }
+
+            // 筛选出属于该大类的，且不属于转账的交易
+            val relevantExpenses = data.filter { it.category in subCategoryNames && !it.category.startsWith(transferTypeString) }
 
             if (relevantExpenses.isNotEmpty()) {
-                val mainAmount = relevantExpenses.sumOf { abs(it.amount) }
+                // [BUG 修复] 计算 mainAmount 时进行兑换
+                val mainAmount = relevantExpenses.sumOf { expense ->
+                    val account = accountMap[expense.accountId]
+                    if (account != null) {
+                        ExchangeRates.convert(abs(expense.amount), account.currency, defaultCurrency)
+                    } else {
+                        0.0
+                    }
+                }
 
                 MainCategoryStat(
                     name = mainCat.title,
@@ -234,6 +290,8 @@ fun ChartPageContent(
     }
 
     val pieChartData = remember(nestedStats) {
+        // 由于 nestedStats.amount 已经是 Double，这里需要将其转换为 Long (或保持 Double 用于 PieChart)
+        // 假设 PieChart 需要 Long，且数据量不会溢出 Long
         nestedStats.associate { it.name to it.amount.toLong() }
     }
 
@@ -249,7 +307,7 @@ fun ChartPageContent(
             Box(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = if (transactionType == TransactionType.BALANCE) "结余趋势" else "整体趋势",
+                        text = if (transactionType == TransactionType.BALANCE) stringResource(R.string.chart_trend_balance) else stringResource(R.string.chart_trend_general),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -266,11 +324,14 @@ fun ChartPageContent(
                                 val end = when {
                                     isCustomRange -> {
                                         val label = point.label
-                                        if (label.contains("-") && label.length > 5) {
+                                        if (label.contains("-") && label.length > 5) { // 简单判断是否是月 (MM-dd) 模式，但这里可能更复杂
+                                            // 假设 ChartUtils 中的月格式是 yyyy-MM
+                                            // 如果是月统计模式，则 end 是下个月初
                                             val c = calendar.clone() as Calendar
                                             c.add(Calendar.MONTH, 1)
                                             c.timeInMillis - 1
                                         } else {
+                                            // 否则按日计算
                                             val c = calendar.clone() as Calendar
                                             c.add(Calendar.DAY_OF_MONTH, 1)
                                             c.timeInMillis - 1
@@ -314,7 +375,7 @@ fun ChartPageContent(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Fullscreen,
-                            contentDescription = "全屏查看",
+                            contentDescription = stringResource(R.string.chart_fullscreen),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -323,7 +384,8 @@ fun ChartPageContent(
         }
 
         if (transactionType == TransactionType.BALANCE) {
-            BalanceReportSection(data, chartMode)
+            // [修改调用] 传入 accountMap 和 defaultCurrency
+            BalanceReportSection(data, chartMode, defaultCurrency, accountMap)
         } else {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -332,7 +394,7 @@ fun ChartPageContent(
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = if(transactionType == TransactionType.EXPENSE) "支出构成 (按大类)" else "收入构成 (按大类)",
+                        text = if(transactionType == TransactionType.EXPENSE) stringResource(R.string.chart_composition_expense) else stringResource(R.string.chart_composition_income),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -341,11 +403,15 @@ fun ChartPageContent(
                     val pieTotal = pieChartData.values.sum().toFloat()
                     if (pieTotal > 0f) {
                         Box(modifier = Modifier.fillMaxWidth().height(260.dp), contentAlignment = Alignment.Center) {
-                            PieChart(pieChartData, title = if(transactionType == TransactionType.EXPENSE) "总支出" else "总收入")
+                            PieChart(
+                                data = pieChartData,
+                                title = if(transactionType == TransactionType.EXPENSE) stringResource(R.string.chart_total_expense) else stringResource(R.string.chart_total_income),
+                                currency = defaultCurrency // [新增]
+                            )
                         }
                     } else {
                         Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                            Text("没有数据", color = Color.Gray)
+                            Text(stringResource(R.string.chart_no_data), color = Color.Gray)
                         }
                     }
 
@@ -356,11 +422,12 @@ fun ChartPageContent(
                     nestedStats.forEach { mainStat ->
                         CategoryRankItem(
                             name = mainStat.name,
-                            amount = mainStat.amount.toLong(),
+                            amount = mainStat.amount, // [修正] 传递 Double
                             percentage = mainStat.percentageOfTotal,
                             color = mainStat.color,
                             ratio = (mainStat.amount / maxAmount).toFloat(),
                             icon = mainStat.icon,
+                            currency = defaultCurrency, // [传入]
                             onClick = {
                                 val typeInt = if (transactionType == TransactionType.INCOME) 1 else 0
                                 navController.navigate(

@@ -21,7 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource // [新增] 必须导入这个才能解析资源ID
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -54,7 +54,6 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // [修改] 增加 SYNC 和 LANGUAGE_SETTINGS 页面的判断，隐藏底部导航栏
     val showScaffold = currentRoute != Routes.LOCK &&
             currentRoute != Routes.WELCOME &&
             currentRoute != Routes.SYNC &&
@@ -140,14 +139,11 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
 
     BottomAppBar {
         items.forEach { item ->
-            // [关键修改] 获取动态资源字符串
             val title = stringResource(item.titleResId)
 
             val isSelected = currentRoute == item.route
             NavigationBarItem(
-                // [关键修改] contentDescription 也使用动态标题
                 icon = { Icon(item.icon, contentDescription = title) },
-                // [关键修改] Label 使用动态标题
                 label = { Text(title) },
                 selected = isSelected,
                 colors = NavigationBarItemDefaults.colors(
@@ -244,7 +240,6 @@ fun NavigationGraph(
             )
         }
 
-        // 全屏图表页路由注册
         composable(
             route = "fullscreen_chart/{type}/{start}/{end}",
             arguments = listOf(
@@ -267,14 +262,20 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Budget.route) {
-            BudgetScreen(viewModel = expenseViewModel, navController = navController, year = budgetScreenYear, month = budgetScreenMonth, onDateChange = onBudgetScreenDateChange, defaultCurrency = defaultCurrency)
+            // [修正] 移除了 defaultCurrency 参数，因为 BudgetScreen 内部会自动获取
+            BudgetScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                year = budgetScreenYear,
+                month = budgetScreenMonth,
+                onDateChange = onBudgetScreenDateChange
+            )
         }
 
         composable(BottomNavItem.Assets.route) {
             AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
-        // [修改] 传递 themeViewModel 给 SettingsScreen
         composable(BottomNavItem.Mine.route) {
             SettingsScreen(
                 navController = navController,

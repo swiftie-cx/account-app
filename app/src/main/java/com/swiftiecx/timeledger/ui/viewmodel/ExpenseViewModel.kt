@@ -55,6 +55,19 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     // 用于预算更新的互斥锁，防止并发冲突
     private val budgetUpdateMutex = Mutex()
 
+    // ===========================
+    // 0. 全局设置 (Currency) - [修改] 临时本地管理，解决 Repository 报错
+    // ===========================
+
+    // 使用 MutableStateFlow 在内存中管理，默认 CNY
+    private val _defaultCurrency = MutableStateFlow("CNY")
+    val defaultCurrency: StateFlow<String> = _defaultCurrency.asStateFlow()
+
+    fun setDefaultCurrency(currencyCode: String) {
+        _defaultCurrency.value = currencyCode
+        // TODO: 将来需要在 Repository 中实现 saveDefaultCurrency(currencyCode)
+    }
+
     init {
         // 1. 初始化时更新汇率 (在 IO 线程)
         viewModelScope.launch(Dispatchers.IO) {
@@ -82,6 +95,10 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
             } catch (e: Exception) {
                 "CNY"
             }
+
+            // [修改] 更新本地状态
+            _defaultCurrency.value = currencyCode
+            // TODO: repository.saveDefaultCurrency(currencyCode)
 
             // 2. 创建默认账户
             val defaultAccount = Account(

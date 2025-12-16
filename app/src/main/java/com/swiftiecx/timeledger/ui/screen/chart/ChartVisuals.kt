@@ -59,11 +59,10 @@ fun LineChart(
             color = android.graphics.Color.WHITE
             textSize = 12f * density
             textAlign = Paint.Align.CENTER
-            // 【关键修复】使用属性赋值语法
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
     }
-    val tooltipDateFormat = remember { SimpleDateFormat("MM-dd", Locale.CHINA) }
+    val tooltipDateFormat = remember { SimpleDateFormat("MM-dd", Locale.getDefault()) }
     val gradientColors = listOf(lineColor.copy(alpha = 0.3f), lineColor.copy(alpha = 0.0f))
     var selectedIndex by remember { mutableIntStateOf(-1) }
 
@@ -149,7 +148,7 @@ fun LineChart(
                 fillPath.lineTo(x, y)
             }
 
-            if (showAllLabels || dataPoints.size <= 7 || index % (dataPoints.size / 5) == 0) {
+            if (showAllLabels || dataPoints.size <= 7 || index % (dataPoints.size / 5).coerceAtLeast(1) == 0) {
                 drawContext.canvas.nativeCanvas.drawText(point.label, x, height - 5.dp.toPx(), textPaint)
             }
         }
@@ -188,8 +187,9 @@ fun LineChart(
     }
 }
 
+// [关键修复] 添加 currency 参数，并在绘制时使用
 @Composable
-fun PieChart(data: Map<String, Long>, title: String) {
+fun PieChart(data: Map<String, Long>, title: String, currency: String) {
     if (data.isEmpty()) return
 
     val chartData = remember(data) {
@@ -236,7 +236,6 @@ fun PieChart(data: Map<String, Long>, title: String) {
         Paint().apply {
             textSize = 20f * density
             textAlign = Paint.Align.CENTER
-            // 【关键修复】使用属性赋值语法
             typeface = Typeface.DEFAULT_BOLD
             color = android.graphics.Color.BLACK
         }
@@ -345,13 +344,16 @@ fun PieChart(data: Map<String, Long>, title: String) {
                     val selectedSlice = chartData[selectedIndex]
                     centerTitlePaint.color = selectedSlice.color.toArgb()
                     centerValuePaint.color = android.graphics.Color.BLACK
+                    // [i18n] 使用 currency
+                    val selectedValueText = "$currency ${selectedSlice.value}"
                     canvas.nativeCanvas.drawText(selectedSlice.name, center.x, center.y - 10.dp.toPx(), centerTitlePaint)
-                    canvas.nativeCanvas.drawText(selectedSlice.value.toString(), center.x, center.y + 16.dp.toPx(), centerValuePaint)
+                    canvas.nativeCanvas.drawText(selectedValueText, center.x, center.y + 16.dp.toPx(), centerValuePaint)
                 } else {
                     centerTitlePaint.color = android.graphics.Color.GRAY
                     centerValuePaint.color = android.graphics.Color.BLACK
+                    val totalText = "$currency ${String.format("%.0f", total)}"
                     canvas.nativeCanvas.drawText(title, center.x, center.y - 10.dp.toPx(), centerTitlePaint)
-                    canvas.nativeCanvas.drawText(String.format("%.0f", total), center.x, center.y + 16.dp.toPx(), centerValuePaint)
+                    canvas.nativeCanvas.drawText(totalText, center.x, center.y + 16.dp.toPx(), centerValuePaint)
                 }
             }
         }

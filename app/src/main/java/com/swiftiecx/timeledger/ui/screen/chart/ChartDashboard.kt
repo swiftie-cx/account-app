@@ -17,9 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.swiftiecx.timeledger.R
+import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.Expense
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -37,29 +40,42 @@ fun DashboardHeader(
     totalIncome: Double,
     totalBalance: Double,
     isCustomRange: Boolean,
+    defaultCurrency: String, // [新增参数]
     onModeChange: (ChartMode) -> Unit,
     onDateChange: (Int) -> Unit,
     onTypeChange: (TransactionType) -> Unit,
     onCustomRangeClick: () -> Unit,
     onBackFromCustom: () -> Unit
 ) {
-    val dateFormat = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA) }
-    val monthFormat = remember { SimpleDateFormat("yyyy年MM月", Locale.CHINA) }
-    val yearFormat = remember { SimpleDateFormat("yyyy年", Locale.CHINA) }
+    // 【修正】将 stringResource 移到 remember 外部
+    val dateFormatString = stringResource(R.string.date_format_full)
+    val monthFormatString = stringResource(R.string.date_format_year_month)
+    val yearFormatString = stringResource(R.string.date_format_year)
 
-    val dateTitle = remember(chartMode, currentDate, isCustomRange, rangeStart, rangeEnd) {
+    val dateFormat = remember(dateFormatString) { SimpleDateFormat(dateFormatString, Locale.getDefault()) }
+    val monthFormat = remember(monthFormatString) { SimpleDateFormat(monthFormatString, Locale.getDefault()) }
+    val yearFormat = remember(yearFormatString) { SimpleDateFormat(yearFormatString, Locale.getDefault()) }
+
+    // [i18n] 模式名称
+    val modeWeek = stringResource(R.string.time_week_short)
+    val modeMonth = stringResource(R.string.time_month_short)
+    val modeYear = stringResource(R.string.time_year_short)
+    val customRangeTitle = stringResource(R.string.time_custom)
+    val weekUnit = stringResource(R.string.week_unit) // [修正] 提前获取，避免在 remember 块内报错
+
+    val dateTitle = remember(chartMode, currentDate, isCustomRange, rangeStart, rangeEnd, weekUnit) {
         if (isCustomRange) {
-            "自定义范围"
+            customRangeTitle
         } else {
             when (chartMode) {
-                ChartMode.WEEK -> "第 ${currentDate.get(Calendar.WEEK_OF_YEAR)} 周"
+                ChartMode.WEEK -> "$modeWeek ${currentDate.get(Calendar.WEEK_OF_YEAR)} $weekUnit"
                 ChartMode.MONTH -> monthFormat.format(currentDate.time)
                 ChartMode.YEAR -> yearFormat.format(currentDate.time)
             }
         }
     }
 
-    val rangeText = remember(rangeStart, rangeEnd) {
+    val rangeText = remember(rangeStart, rangeEnd, dateFormat) {
         "${dateFormat.format(Date(rangeStart))} - ${dateFormat.format(Date(rangeEnd))}"
     }
 
@@ -96,9 +112,9 @@ fun DashboardHeader(
                 ) {
                     Text(
                         text = when (mode) {
-                            ChartMode.WEEK -> "周"
-                            ChartMode.MONTH -> "月"
-                            ChartMode.YEAR -> "年"
+                            ChartMode.WEEK -> modeWeek
+                            ChartMode.MONTH -> modeMonth
+                            ChartMode.YEAR -> modeYear
                         },
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
@@ -118,7 +134,7 @@ fun DashboardHeader(
             ) {
                 Icon(
                     Icons.Default.DateRange,
-                    null,
+                    stringResource(R.string.time_custom),
                     tint = if(isCustomRange) MaterialTheme.colorScheme.primary else Color.White,
                     modifier = Modifier.size(16.dp)
                 )
@@ -133,11 +149,11 @@ fun DashboardHeader(
         ) {
             if (isCustomRange) {
                 IconButton(onClick = onBackFromCustom) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = Color.White)
                 }
             } else {
                 IconButton(onClick = { onDateChange(-1) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "前一页", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.prev_period), tint = Color.White)
                 }
             }
 
@@ -159,7 +175,7 @@ fun DashboardHeader(
                 Spacer(Modifier.width(48.dp))
             } else {
                 IconButton(onClick = { onDateChange(1) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "后一页", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.next_period), tint = Color.White)
                 }
             }
         }
@@ -174,8 +190,9 @@ fun DashboardHeader(
             // 结余卡片
             val balanceSelected = transactionType == TransactionType.BALANCE
             StatSelectionCard(
-                title = "本期结余",
+                title = stringResource(R.string.chart_balance_title),
                 amount = totalBalance,
+                currency = defaultCurrency, // [传入货币]
                 isSelected = balanceSelected,
                 selectedBgColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                 unselectedBgColor = MaterialTheme.colorScheme.surface,
@@ -188,8 +205,9 @@ fun DashboardHeader(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 // 支出卡片
                 StatSelectionCard(
-                    title = "支出",
+                    title = stringResource(R.string.expense_label),
                     amount = totalExpense,
+                    currency = defaultCurrency, // [传入货币]
                     isSelected = transactionType == TransactionType.EXPENSE,
                     selectedBgColor = Color(0xFFFFEBEE),
                     unselectedBgColor = MaterialTheme.colorScheme.surface,
@@ -201,8 +219,9 @@ fun DashboardHeader(
 
                 // 收入卡片
                 StatSelectionCard(
-                    title = "收入",
+                    title = stringResource(R.string.income_label),
                     amount = totalIncome,
+                    currency = defaultCurrency, // [传入货币]
                     isSelected = transactionType == TransactionType.INCOME,
                     selectedBgColor = Color(0xFFE8F5E9),
                     unselectedBgColor = MaterialTheme.colorScheme.surface,
@@ -216,8 +235,9 @@ fun DashboardHeader(
     }
 }
 
+// [修改 BalanceReportSection] 新增 accountMap 参数
 @Composable
-fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
+fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode, defaultCurrency: String,accountMap: Map<Long, Account>) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(24.dp),
@@ -226,9 +246,9 @@ fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = when(chartMode) {
-                    ChartMode.WEEK -> "周报表"
-                    ChartMode.MONTH -> "月报表"
-                    ChartMode.YEAR -> "年报表"
+                    ChartMode.WEEK -> stringResource(R.string.chart_report_week)
+                    ChartMode.MONTH -> stringResource(R.string.chart_report_month)
+                    ChartMode.YEAR -> stringResource(R.string.chart_report_year)
                 },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
@@ -236,24 +256,30 @@ fun BalanceReportSection(data: List<Expense>, chartMode: ChartMode) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                Text("时间", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
-                Text("收入", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
-                Text("支出", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
-                Text("结余", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.chart_report_time_label), modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.income_label), modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.expense_label), modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.chart_report_balance_label), modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
             }
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
-            val reportItems = remember(data, chartMode) { generateBalanceReportItems(data, chartMode) }
+            // BUG FIX: 注意：这里 generateBalanceReportItems 必须在 ChartUtils.kt 中修复
+            // 并且需要在调用时传入 AccountMap 和 defaultCurrency (这需要在 ChartDashboard 的父级 ChartScreen 中完成)
+            val reportItems = remember(data, chartMode, accountMap, defaultCurrency) {
+                generateBalanceReportItems(data, chartMode, accountMap, defaultCurrency)
+            }
+
             reportItems.forEach { item ->
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(item.timeLabel, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
-                    Text(String.format("%.0f", item.income), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF7BC67E))
-                    Text(String.format("%.0f", item.expense), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFA7070))
+                    // [i18n] 金额格式化
+                    Text(stringResource(R.string.amount_no_decimal_format_chart, item.income), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF7BC67E))
+                    Text(stringResource(R.string.amount_no_decimal_format_chart, item.expense), modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFA7070))
                     Text(
-                        String.format("%.0f", item.balance),
+                        stringResource(R.string.amount_no_decimal_format_chart, item.balance),
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyMedium,
