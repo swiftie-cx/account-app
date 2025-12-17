@@ -36,8 +36,21 @@ fun SettingsScreen(
     val userEmail by viewModel.userEmail.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
 
-    // 获取当前语言显示名称
-    val currentLanguage = themeViewModel.getCurrentLanguageDisplayName()
+    // [关键修复]
+    // 1. 监听 ViewModel 中的语言代码 (例如 "system", "ja", "zh")
+    // 注意：请确保 ThemeViewModel 中有一个名为 language 的 StateFlow<String>
+    val currentLanguageCode by themeViewModel.language.collectAsState()
+
+    // 2. 在 UI 层直接使用 stringResource 进行映射
+    // 这样能确保它总是使用当前生效的语言资源 (values-ja, values-zh 等)
+    val currentLanguageLabel = when (currentLanguageCode) {
+        "zh" -> stringResource(R.string.lang_zh)
+        "en" -> stringResource(R.string.lang_en)
+        "ja" -> stringResource(R.string.lang_ja)
+        "ko" -> stringResource(R.string.lang_ko)
+        // 这里的 stringResource 会根据当前 Context 自动读取日语/英语/中文
+        else -> stringResource(R.string.lang_follow_system)
+    }
 
     var showClearDataDialog by remember { mutableStateOf(false) }
     var showClearDataFinalDialog by remember { mutableStateOf(false) }
@@ -153,11 +166,12 @@ fun SettingsScreen(
                     )
                     Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
 
+                    // [关键修改] 使用刚才计算好的 currentLanguageLabel
                     SettingsItem(
                         icon = Icons.Default.Public,
                         // [i18n]
                         title = stringResource(R.string.opt_language),
-                        value = currentLanguage,
+                        value = currentLanguageLabel,
                         onClick = { navController.navigate(Routes.LANGUAGE_SETTINGS) }
                     )
                     Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))

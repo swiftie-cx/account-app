@@ -60,6 +60,7 @@ class ExpenseRepository(
     private val context: Context
 ) {
     // --- 偏好设置 (SharedPreferences) ---
+    // [修复] 全局统一使用这一个 prefs，避免重复定义
     private val prefs = context.getSharedPreferences("expense_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
 
@@ -69,6 +70,20 @@ class ExpenseRepository(
 
     init {
         firebaseAuth.useAppLanguage()
+    }
+
+    // ===========================
+    //  默认货币设置 (New)
+    // ===========================
+
+    // 读取保存的货币 (如果没有保存过，返回 null)
+    fun getSavedCurrency(): String? {
+        return prefs.getString("key_default_currency", null)
+    }
+
+    // 保存货币
+    fun saveDefaultCurrency(currencyCode: String) {
+        prefs.edit().putString("key_default_currency", currencyCode).apply()
     }
 
     // ===========================
@@ -406,6 +421,9 @@ class ExpenseRepository(
         editor.remove("main_cats_income")
         editor.remove("cats_expense")
         editor.remove("cats_income")
+
+        // 移除货币设置 (可选，看您是否想保留设置)
+        // editor.remove("key_default_currency")
 
         editor.apply()
 

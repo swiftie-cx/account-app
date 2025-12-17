@@ -2,12 +2,10 @@ package com.swiftiecx.timeledger.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
-import android.content.res.Configuration
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.swiftiecx.timeledger.R // [关键] 确保引入 R 文件以读取资源
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.Budget
 import com.swiftiecx.timeledger.data.ExchangeRates
@@ -55,23 +53,48 @@ sealed class SyncUiState {
     data class Conflict(val cloudTime: Long) : SyncUiState()
 }
 
-// [修改] 继承 AndroidViewModel 以便获取 Application Context
+// 继承 AndroidViewModel 以便获取 Application Context
 class ExpenseViewModel(
     private val repository: ExpenseRepository,
-    application: Application // [修改] 接收 Application
+    application: Application
 ) : AndroidViewModel(application) {
 
     // 用于预算更新的互斥锁
     private val budgetUpdateMutex = Mutex()
 
     // ===========================
-    // 0. 全局设置
+    // 0. 全局设置 & 自动货币检测
     // ===========================
-    private val _defaultCurrency = MutableStateFlow("CNY")
+
+    /**
+     * [新增] 根据系统语言自动检测默认货币
+     */
+    private fun detectAutoCurrency(): String {
+        return try {
+            val locale = Locale.getDefault()
+            when (locale.language) {
+                "ja" -> "JPY" // 日语 -> 日元
+                "ko" -> "KRW" // 韩语 -> 韩元
+                "zh" -> "CNY" // 中文 -> 人民币
+                else -> "USD" // 其他 -> 美元
+            }
+        } catch (e: Exception) {
+            "USD"
+        }
+    }
+
+    // [关键修改] 初始化逻辑闭环：优先读取本地保存的配置 -> 如果没有才自动检测
+    private val _defaultCurrency = MutableStateFlow(
+        repository.getSavedCurrency() ?: detectAutoCurrency()
+    )
     val defaultCurrency: StateFlow<String> = _defaultCurrency.asStateFlow()
 
+    // [关键修改] 设置货币时，同步保存到本地存储
     fun setDefaultCurrency(currencyCode: String) {
         _defaultCurrency.value = currencyCode
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.saveDefaultCurrency(currencyCode)
+        }
     }
 
     init {
@@ -100,18 +123,9 @@ class ExpenseViewModel(
     fun refreshCategories(specificContext: Context? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             // [关键] 决定使用哪个 Context
-            // 如果是在切换语言时调用，specificContext 会带有新语言的配置
-            // 如果是正常启动，就用全局 Application
             val targetContext = specificContext ?: getApplication<Application>()
 
-            // 这里的 getMainCategories 会重新从 R.string 读取字符串
-            // 我们需要修改 repository 的方法，或者在这里手动触发重读
-            // 由于 Repository 中通常不持有 Context，这里假设 repository.getMainCategories
-            // 实际上是读取数据库。如果数据库里的名字是旧语言，我们需要 update 它们。
-
-            // [核心逻辑] 强制重新初始化分类名称
-            // 注意：这会覆盖用户自定义修改的分类名称（如果您的应用允许修改默认分类名）
-            // 如果您希望保留用户修改，这里需要更复杂的逻辑判断（比如只更新 isDefault=true 的分类）
+            // [核心逻辑] 强制重新初始化分类名称 (支持多语言切换)
             repository.forceUpdateCategoryNames(targetContext)
 
             // 重新读取
@@ -131,15 +145,23 @@ class ExpenseViewModel(
 
     fun completeOnboarding(initialBalance: Double) {
         viewModelScope.launch(Dispatchers.IO) {
-            val currencyCode = try {
-                Currency.getInstance(Locale.getDefault()).currencyCode
+            // [修改] 使用当前的 defaultCurrency
+            val currencyCode = _defaultCurrency.value
+
+            // [关键修复] 必须在这里保存货币设置！
+            // 这样用户点击"开启旅程"后，该货币就被永久记住了
+            repository.saveDefaultCurrency(currencyCode)
+
+            // [修改] 获取本地化的默认账户名称
+            val context = getApplication<Application>()
+            val accountName = try {
+                context.getString(R.string.default_account_name)
             } catch (e: Exception) {
-                "CNY"
+                "Default Account"
             }
-            _defaultCurrency.value = currencyCode
 
             val defaultAccount = Account(
-                name = "默认账户",
+                name = accountName,
                 type = "account_default", // 使用 Key
                 initialBalance = initialBalance,
                 currency = currencyCode,

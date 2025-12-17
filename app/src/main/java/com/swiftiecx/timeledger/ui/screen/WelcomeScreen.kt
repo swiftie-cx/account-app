@@ -17,14 +17,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.util.Currency
 import java.util.Locale
@@ -37,12 +37,16 @@ fun WelcomeScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     var amountStr by remember { mutableStateOf("") }
 
-    // 自动检测的币种符号
-    val currencySymbol = remember {
+    // [修改 1] 监听 ViewModel 中已经自动检测好的货币代码 (例如 "KRW", "CNY", "JPY")
+    val defaultCurrencyCode by viewModel.defaultCurrency.collectAsState()
+
+    // [修改 2] 将代码 (KRW) 转换为符号 (₩) 用于显示
+    // 这里的 key = defaultCurrencyCode 意味着如果 ViewModel 里的货币变了，符号也会跟着变
+    val currencySymbol = remember(defaultCurrencyCode) {
         try {
-            Currency.getInstance(Locale.getDefault()).symbol
+            Currency.getInstance(defaultCurrencyCode).symbol
         } catch (e: Exception) {
-            "¥"
+            defaultCurrencyCode // 如果转换失败，直接显示代码
         }
     }
 
@@ -126,6 +130,7 @@ fun WelcomeScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // 显示动态获取的符号
                         Text(
                             text = currencySymbol,
                             style = MaterialTheme.typography.headlineMedium,
@@ -166,7 +171,10 @@ fun WelcomeScreen(
             Button(
                 onClick = {
                     val amount = amountStr.toDoubleOrNull() ?: 0.0
+                    // [逻辑] 这里的 completeOnboarding 内部会读取 _defaultCurrency.value
+                    // 而界面显示的符号也是根据这个 value 转换的，实现了逻辑统一
                     viewModel.completeOnboarding(amount)
+
                     // 跳转到主页并清空回退栈
                     navController.navigate("details") {
                         popUpTo(0) // 清空所有回退栈，防止返回欢迎页
