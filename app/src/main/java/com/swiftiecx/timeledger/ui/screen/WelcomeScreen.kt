@@ -37,16 +37,15 @@ fun WelcomeScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     var amountStr by remember { mutableStateOf("") }
 
-    // [修改 1] 监听 ViewModel 中已经自动检测好的货币代码 (例如 "KRW", "CNY", "JPY")
+    // [修改 1] 监听 ViewModel 里的真实数据！不要自己算！
     val defaultCurrencyCode by viewModel.defaultCurrency.collectAsState()
 
-    // [修改 2] 将代码 (KRW) 转换为符号 (₩) 用于显示
-    // 这里的 key = defaultCurrencyCode 意味着如果 ViewModel 里的货币变了，符号也会跟着变
+    // [修改 2] 根据 ViewModel 的 Code (KRW) 转成符号 (₩)
     val currencySymbol = remember(defaultCurrencyCode) {
         try {
             Currency.getInstance(defaultCurrencyCode).symbol
         } catch (e: Exception) {
-            defaultCurrencyCode // 如果转换失败，直接显示代码
+            defaultCurrencyCode
         }
     }
 

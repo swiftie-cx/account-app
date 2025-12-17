@@ -28,7 +28,7 @@ import com.swiftiecx.timeledger.ui.viewmodel.ThemeViewModel
 @Composable
 fun SettingsScreen(
     navController: NavController,
-    defaultCurrency: String,
+    // [修改 1] 删除 defaultCurrency 参数，不再依赖外部传参
     viewModel: ExpenseViewModel,
     themeViewModel: ThemeViewModel
 ) {
@@ -36,19 +36,17 @@ fun SettingsScreen(
     val userEmail by viewModel.userEmail.collectAsState()
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
 
-    // [关键修复]
-    // 1. 监听 ViewModel 中的语言代码 (例如 "system", "ja", "zh")
-    // 注意：请确保 ThemeViewModel 中有一个名为 language 的 StateFlow<String>
-    val currentLanguageCode by themeViewModel.language.collectAsState()
+    // [修改 2] 核心修复：直接在内部监听 ViewModel 的实时数据
+    // 这样能确保显示的一定是当前生效的货币设置
+    val defaultCurrency by viewModel.defaultCurrency.collectAsState()
 
-    // 2. 在 UI 层直接使用 stringResource 进行映射
-    // 这样能确保它总是使用当前生效的语言资源 (values-ja, values-zh 等)
+    // 语言设置监听逻辑
+    val currentLanguageCode by themeViewModel.language.collectAsState()
     val currentLanguageLabel = when (currentLanguageCode) {
         "zh" -> stringResource(R.string.lang_zh)
         "en" -> stringResource(R.string.lang_en)
         "ja" -> stringResource(R.string.lang_ja)
         "ko" -> stringResource(R.string.lang_ko)
-        // 这里的 stringResource 会根据当前 Context 自动读取日语/英语/中文
         else -> stringResource(R.string.lang_follow_system)
     }
 
@@ -59,7 +57,6 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                // [i18n]
                 title = { Text(stringResource(R.string.nav_me), fontWeight = FontWeight.Bold) }
             )
         }
@@ -111,13 +108,11 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            // [i18n]
                             text = if (isLoggedIn) userEmail else stringResource(R.string.click_to_login),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            // [i18n]
                             text = if (isLoggedIn) stringResource(R.string.view_profile) else stringResource(R.string.login_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -136,7 +131,6 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- 2. 常规设置 ---
-            // [i18n]
             SettingsGroupTitle(stringResource(R.string.group_general))
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -145,31 +139,28 @@ fun SettingsScreen(
                 Column {
                     SettingsItem(
                         icon = Icons.Default.Category,
-                        // [i18n]
                         title = stringResource(R.string.opt_category),
                         onClick = { navController.navigate(Routes.CATEGORY_SETTINGS) }
                     )
                     Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     SettingsItem(
                         icon = Icons.Default.Repeat,
-                        // [i18n]
                         title = stringResource(R.string.opt_periodic),
                         onClick = { navController.navigate(Routes.PERIODIC_BOOKKEEPING) }
                     )
                     Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+
+                    // [注意] 这里的 defaultCurrency 已经是上面的实时变量了
                     SettingsItem(
                         icon = Icons.Default.AttachMoney,
-                        // [i18n]
                         title = stringResource(R.string.opt_currency),
                         value = defaultCurrency,
                         onClick = { navController.navigate(Routes.CURRENCY_SELECTION) }
                     )
                     Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
 
-                    // [关键修改] 使用刚才计算好的 currentLanguageLabel
                     SettingsItem(
                         icon = Icons.Default.Public,
-                        // [i18n]
                         title = stringResource(R.string.opt_language),
                         value = currentLanguageLabel,
                         onClick = { navController.navigate(Routes.LANGUAGE_SETTINGS) }
@@ -178,7 +169,6 @@ fun SettingsScreen(
 
                     SettingsItem(
                         icon = Icons.Default.Palette,
-                        // [i18n]
                         title = stringResource(R.string.opt_theme),
                         onClick = { navController.navigate(Routes.THEME_SETTINGS) }
                     )
@@ -188,7 +178,6 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- 3. 安全设置 ---
-            // [i18n]
             SettingsGroupTitle(stringResource(R.string.group_security))
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -197,7 +186,6 @@ fun SettingsScreen(
                 Column {
                     SettingsItem(
                         icon = Icons.Default.Lock,
-                        // [i18n]
                         title = stringResource(R.string.opt_privacy),
                         onClick = { navController.navigate(Routes.PRIVACY_SETTINGS) }
                     )
@@ -207,7 +195,6 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- 4. 数据设置 ---
-            // [i18n]
             SettingsGroupTitle(stringResource(R.string.group_data))
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -216,7 +203,6 @@ fun SettingsScreen(
                 Column {
                     SettingsItem(
                         icon = Icons.Default.CloudSync,
-                        // [i18n]
                         title = stringResource(R.string.opt_sync),
                         onClick = {
                             if (isLoggedIn) {
@@ -231,7 +217,6 @@ fun SettingsScreen(
 
                     SettingsItem(
                         icon = Icons.Default.DeleteForever,
-                        // [i18n]
                         title = stringResource(R.string.opt_clear_data),
                         textColor = MaterialTheme.colorScheme.error,
                         iconColor = MaterialTheme.colorScheme.error,
@@ -243,7 +228,6 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                // [i18n]
                 text = "${stringResource(R.string.version)} 1.0.0",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
@@ -254,15 +238,12 @@ fun SettingsScreen(
     }
 
     // --- 弹窗逻辑 ---
-    // [i18n]
     val confirmCode = stringResource(R.string.confirm_clear_code)
 
     if (showClearDataDialog) {
         AlertDialog(
             onDismissRequest = { showClearDataDialog = false },
-            // [i18n]
             title = { Text(stringResource(R.string.dialog_clear_title)) },
-            // [i18n]
             text = { Text(stringResource(R.string.dialog_clear_msg)) },
             confirmButton = {
                 TextButton(
@@ -273,13 +254,11 @@ fun SettingsScreen(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    // [i18n] 修复后的资源引用
                     Text(stringResource(R.string.next_step))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDataDialog = false }) {
-                    // [i18n]
                     Text(stringResource(R.string.dialog_cancel))
                 }
             }
@@ -289,11 +268,9 @@ fun SettingsScreen(
     if (showClearDataFinalDialog) {
         AlertDialog(
             onDismissRequest = { showClearDataFinalDialog = false },
-            // [i18n]
             title = { Text(stringResource(R.string.dialog_final_title)) },
             text = {
                 Column {
-                    // [i18n]
                     Text(stringResource(R.string.dialog_final_msg), style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -321,13 +298,11 @@ fun SettingsScreen(
                     enabled = clearDataInput == confirmCode,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    // [i18n]
                     Text(stringResource(R.string.dialog_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDataFinalDialog = false }) {
-                    // [i18n]
                     Text(stringResource(R.string.dialog_cancel))
                 }
             }

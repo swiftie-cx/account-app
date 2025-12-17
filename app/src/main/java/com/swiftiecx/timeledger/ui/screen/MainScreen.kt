@@ -49,7 +49,10 @@ fun MainScreen(
     val calendar = Calendar.getInstance()
     var budgetScreenYear by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
     var budgetScreenMonth by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.MONTH) + 1) }
-    var defaultCurrency by rememberSaveable { mutableStateOf("CNY") }
+
+    // [核心修复 1] 删除本地状态，直接监听 ViewModel！
+    // 之前这里写死了 "CNY"，导致无论 ViewModel 怎么变，传给首页的永远是 CNY
+    val defaultCurrency by expenseViewModel.defaultCurrency.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -98,9 +101,10 @@ fun MainScreen(
                     budgetScreenYear = year
                     budgetScreenMonth = month
                 },
-                defaultCurrency = defaultCurrency,
+                defaultCurrency = defaultCurrency, // 这里传入的现在是 ViewModel 里的最新值 (USD)
                 onDefaultCurrencyChange = { currency ->
-                    defaultCurrency = currency
+                    // [核心修复 2] 当用户切换货币时，直接通知 ViewModel 更新
+                    expenseViewModel.setDefaultCurrency(currency)
                 }
             )
         }
@@ -118,7 +122,8 @@ fun MainScreen(
             },
             defaultCurrency = defaultCurrency,
             onDefaultCurrencyChange = { currency ->
-                defaultCurrency = currency
+                // [核心修复 2] 同样通知 ViewModel
+                expenseViewModel.setDefaultCurrency(currency)
             }
         )
     }
@@ -209,6 +214,7 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Details.route) {
+            // 这里会接收到 MainScreen 传下来的最新 defaultCurrency
             DetailsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
@@ -262,7 +268,6 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Budget.route) {
-            // [修正] 移除了 defaultCurrency 参数，因为 BudgetScreen 内部会自动获取
             BudgetScreen(
                 viewModel = expenseViewModel,
                 navController = navController,
@@ -273,13 +278,14 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Assets.route) {
+            // 资产页也会接收到正确的 defaultCurrency，从而停止错误的汇率转换
             AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
         composable(BottomNavItem.Mine.route) {
             SettingsScreen(
                 navController = navController,
-                defaultCurrency = defaultCurrency,
+                // defaultCurrency = defaultCurrency, // SettingsScreen 内部已经自己监听了，这里不需要传了
                 viewModel = expenseViewModel,
                 themeViewModel = themeViewModel
             )
@@ -359,7 +365,7 @@ fun NavigationGraph(
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 navController = navController,
-                defaultCurrency = defaultCurrency,
+                // defaultCurrency = defaultCurrency, // SettingsScreen 内部已经自己监听了
                 viewModel = expenseViewModel,
                 themeViewModel = themeViewModel
             )
@@ -374,6 +380,8 @@ fun NavigationGraph(
         }
 
         composable(Routes.CURRENCY_SELECTION) {
+            // 当用户在选择页点击新货币时，会触发 onDefaultCurrencyChange
+            // 这会回调 MainScreen 里的 lambda，从而调用 expenseViewModel.setDefaultCurrency()
             CurrencySelectionScreen(navController = navController, onCurrencySelected = onDefaultCurrencyChange)
         }
 

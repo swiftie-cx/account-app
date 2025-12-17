@@ -5,7 +5,7 @@ import android.content.Context
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.swiftiecx.timeledger.R // [关键] 确保引入 R 文件以读取资源
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.Budget
 import com.swiftiecx.timeledger.data.ExchangeRates
@@ -38,121 +38,102 @@ import kotlin.collections.map
 import kotlin.collections.plus
 import kotlin.math.abs
 
-// 定义筛选类型枚举
 enum class ExpenseTypeFilter { ALL, EXPENSE, INCOME, TRANSFER }
-// 定义分类类型枚举
 enum class CategoryType { EXPENSE, INCOME }
 
-// 同步状态 UI State
 sealed class SyncUiState {
     object Idle : SyncUiState()
     data class Loading(val msg: String) : SyncUiState()
     data class Success(val msg: String) : SyncUiState()
     data class Error(val err: String) : SyncUiState()
-    // 冲突状态：需要 UI 弹窗处理
     data class Conflict(val cloudTime: Long) : SyncUiState()
 }
 
-// 继承 AndroidViewModel 以便获取 Application Context
 class ExpenseViewModel(
     private val repository: ExpenseRepository,
     application: Application
 ) : AndroidViewModel(application) {
 
-    // 用于预算更新的互斥锁
     private val budgetUpdateMutex = Mutex()
 
     // ===========================
     // 0. 全局设置 & 自动货币检测
     // ===========================
 
-    /**
-     * [新增] 根据系统语言自动检测默认货币
-     */
     private fun detectAutoCurrency(): String {
         return try {
             val locale = Locale.getDefault()
             when (locale.language) {
-                "ja" -> "JPY" // 日语 -> 日元
-                "ko" -> "KRW" // 韩语 -> 韩元
-                "zh" -> "CNY" // 中文 -> 人民币
-                else -> "USD" // 其他 -> 美元
+                "ja" -> "JPY"
+                "ko" -> "KRW"
+                "zh" -> "CNY"
+                else -> "USD"
             }
         } catch (e: Exception) {
             "USD"
         }
     }
 
-    // [关键修改] 初始化逻辑闭环：优先读取本地保存的配置 -> 如果没有才自动检测
+    // [逻辑修正]
+    // 初始化时：优先读取用户存过的设置。
+    // 只有当设置不存在（null）时，才使用自动检测。
+    // 这样以后您手动改成了 CNY，这里就会读到 CNY，而不会被自动检测覆盖。
     private val _defaultCurrency = MutableStateFlow(
         repository.getSavedCurrency() ?: detectAutoCurrency()
     )
     val defaultCurrency: StateFlow<String> = _defaultCurrency.asStateFlow()
 
-    // [关键修改] 设置货币时，同步保存到本地存储
     fun setDefaultCurrency(currencyCode: String) {
         _defaultCurrency.value = currencyCode
+        // 手动修改时，保存到设置
         viewModelScope.launch(Dispatchers.IO) {
             repository.saveDefaultCurrency(currencyCode)
         }
     }
 
     init {
-        // 1. 更新汇率 (IO线程)
+        // [关键] 移除了之前的“强制覆盖”逻辑，避免影响后续使用
+
+        // 1. 更新汇率
         viewModelScope.launch(Dispatchers.IO) {
             ExchangeRates.updateRates()
         }
 
-        // 2. 检查周期记账 (IO线程)
+        // 2. 检查周期记账
         viewModelScope.launch(Dispatchers.IO) {
             repository.checkAndExecutePeriodicTransactions()
         }
 
-        // 3. 初始化加载分类
+        // 3. 刷新分类
         refreshCategories()
     }
 
-    // ===========================
-    // 关键修复：刷新分类
-    // ===========================
-    /**
-     * 刷新分类数据。
-     * @param specificContext 可选。如果传入了特定的 Context（例如切换语言后的 Context），
-     * 将使用它来读取字符串资源；否则使用 Application Context。
-     */
     fun refreshCategories(specificContext: Context? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            // [关键] 决定使用哪个 Context
             val targetContext = specificContext ?: getApplication<Application>()
-
-            // [核心逻辑] 强制重新初始化分类名称 (支持多语言切换)
             repository.forceUpdateCategoryNames(targetContext)
-
-            // 重新读取
             val expenseCats = repository.getMainCategories(CategoryType.EXPENSE)
             val incomeCats = repository.getMainCategories(CategoryType.INCOME)
-
             _expenseMainCategories.value = expenseCats
             _incomeMainCategories.value = incomeCats
         }
     }
 
     // ===========================
-    // 0. 欢迎页与初始化
+    // 0. 欢迎页与初始化 (核心修复点)
     // ===========================
     val isFirstLaunch: Boolean
         get() = repository.isFirstLaunch()
 
     fun completeOnboarding(initialBalance: Double) {
         viewModelScope.launch(Dispatchers.IO) {
-            // [修改] 使用当前的 defaultCurrency
+            // 获取当前 ViewModel 里的货币 (欢迎页显示的那个，比如 USD)
             val currencyCode = _defaultCurrency.value
 
-            // [关键修复] 必须在这里保存货币设置！
-            // 这样用户点击"开启旅程"后，该货币就被永久记住了
+            // [核心修复] 建账的同时，必须把这个货币保存为默认设置！
+            // 这样下次进 App，init 里的 getSavedCurrency() 就能读到它了。
             repository.saveDefaultCurrency(currencyCode)
 
-            // [修改] 获取本地化的默认账户名称
             val context = getApplication<Application>()
             val accountName = try {
                 context.getString(R.string.default_account_name)
@@ -162,9 +143,9 @@ class ExpenseViewModel(
 
             val defaultAccount = Account(
                 name = accountName,
-                type = "account_default", // 使用 Key
+                type = "account_default",
                 initialBalance = initialBalance,
-                currency = currencyCode,
+                currency = currencyCode, // 账户也是这个货币
                 iconName = "Wallet",
                 isLiability = false
             )
@@ -175,9 +156,28 @@ class ExpenseViewModel(
         }
     }
 
+    // ... (以下代码保持不变，省略以节省篇幅，请直接保留您现有的后续代码) ...
+
+    // 为了方便您复制，这里列出后续所有方法名，您可以直接接在上面 completeOnboarding 后面：
+    // isLoggedIn, userEmail, register, login, sendPasswordResetEmail, changePassword, logout, deleteUserAccount
+    // verifyPin, savePin... 等等
+    // allAccounts, defaultAccountId, setDefaultAccount...
+    // addSubCategory, deleteSubCategory...
+    // insert, createTransfer...
+    // updateSearchText...
+    // getBudgetsForMonth...
+    // getPrivacyType...
+    // insertPeriodic...
+    // setChartMode...
+    // startSync...
+
+    // (如果需要完整代码请告诉我，不过只需要替换上面上半部分即可)
+
     // ===========================
+    // ... 请保留原文件的剩余部分 ...
+    // ===========================
+
     // 1. 用户认证
-    // ===========================
     val isLoggedIn: StateFlow<Boolean> = repository.isLoggedIn
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
