@@ -56,6 +56,7 @@ class ExpenseRepository(
     private val budgetDao: BudgetDao,
     private val accountDao: AccountDao,
     private val periodicDao: PeriodicTransactionDao,
+    private val categoryDao: CategoryDao, // [新增]
     private val context: Context
 ) {
     // --- 偏好设置 (SharedPreferences) ---
@@ -767,6 +768,80 @@ class ExpenseRepository(
                 remark = map["remark"] as? String
             )
             expenseDao.insertExpense(expense)
+        }
+    }
+    // =================================================
+    // [新增] 多语言切换支持
+    // =================================================
+
+    // 1. 定义映射表：数据库里的 Key -> strings.xml 里的资源ID
+    // 必须与 strings.xml 里的 name 一一对应
+    private val mainCategoryMap = mapOf(
+        "cat_food" to R.string.cat_food,
+        "cat_shopping" to R.string.cat_shopping,
+        "cat_transport" to R.string.cat_transport,
+        "cat_home" to R.string.cat_home,
+        "cat_entertainment" to R.string.cat_entertainment,
+        "cat_medical_edu" to R.string.cat_medical_edu,
+        "cat_financial" to R.string.cat_financial,
+        "cat_income_job" to R.string.cat_income_job,
+        "cat_income_other" to R.string.cat_income_other
+    )
+
+    private val subCategoryMap = mapOf(
+        "sub_food" to R.string.sub_food,
+        "sub_shopping" to R.string.sub_shopping,
+        "sub_traffic" to R.string.sub_traffic,
+        "sub_housing" to R.string.sub_housing,
+        "sub_entertainment" to R.string.sub_entertainment,
+        "sub_medical" to R.string.sub_medical,
+        "sub_education" to R.string.sub_education,
+        "sub_finance" to R.string.sub_finance,
+        "sub_salary" to R.string.sub_salary,
+        "sub_bonus" to R.string.sub_bonus,
+        "sub_part_time" to R.string.sub_part_time,
+        "sub_other" to R.string.sub_other,
+        // ... 请根据您 strings.xml 中所有的 sub_xxx 继续补充 ...
+        "sub_clothes" to R.string.sub_clothes,
+        "sub_daily" to R.string.sub_daily,
+        "sub_electronics" to R.string.sub_electronics,
+        "sub_service" to R.string.sub_service,
+        "sub_beauty" to R.string.sub_beauty,
+        "sub_travel" to R.string.sub_travel,
+        "sub_alcohol" to R.string.sub_alcohol,
+        "sub_cigarette" to R.string.sub_cigarette,
+        "sub_social" to R.string.sub_social,
+        "sub_movie" to R.string.sub_movie,
+        "sub_drama" to R.string.sub_drama,
+        "sub_sports" to R.string.sub_sports,
+        "sub_book" to R.string.sub_book,
+        "sub_game" to R.string.sub_entertainment, // 假设
+        "sub_pet" to R.string.sub_pets,
+        "sub_car" to R.string.sub_car,
+        "sub_repair" to R.string.sub_repair,
+        "sub_gift" to R.string.sub_gift,
+        "sub_red_packet" to R.string.sub_red_packet,
+        "sub_donate" to R.string.sub_donate,
+        "sub_gift_money" to R.string.sub_gift_money,
+        "sub_reimbursement" to R.string.sub_reimbursement,
+        "sub_second_hand" to R.string.sub_second_hand
+    )
+
+    /**
+     * [关键实现] 强制更新分类名称
+     * 使用传入的 Context (包含新语言环境) 来读取字符串，并更新数据库
+     */
+    suspend fun forceUpdateCategoryNames(context: Context) {
+        // 1. 更新主分类
+        mainCategoryMap.forEach { (key, resId) ->
+            val newTitle = context.getString(resId)
+            categoryDao.updateMainCategoryName(key, newTitle)
+        }
+
+        // 2. 更新子分类
+        subCategoryMap.forEach { (key, resId) ->
+            val newTitle = context.getString(resId)
+            categoryDao.updateSubCategoryName(key, newTitle)
         }
     }
 }

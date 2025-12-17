@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">TimeLedger</string>
+
+    <string name="nav_assets">資産</string>
+    <string name="nav_budget">予算</string>
+    <string name="nav_chart">統計</string>
+    <string name="nav_details">明細</string>
+    <string name="nav_me">マイページ</string>
+
+    <string name="add">追加</string>
+    <string name="add_again">続けて追加</string>
+    <string name="back">戻る</string>
+    <string name="cancel">キャンセル</string>
+    <string name="confirm">確定</string>
+    <string name="delete">削除</string>
+    <string name="edit">編集</string>
+    <string name="finish">完了</string>
+    <string name="next_step">次へ</string>
+    <string name="reset">リセット</string>
+    <string name="save">保存</string>
+    <string name="search">検索</string>
+    <string name="unknown">不明</string>
+
+    <string name="balance">残高</string>
+    <string name="expense_label">支出</string>
+    <string name="income_label">収入</string>
+    <string name="transfer_in_app">振替</string> <string name="type_all">すべて</string>
+    <string name="type_expense">支出</string>
+    <string name="type_income">収入</string>
+    <string name="type_transfer">振替</string>
+
+    <string name="no_records">この期間の記録はありません</string>
+    <string name="search_hint">メモやカテゴリを検索</string>
+
+    <string name="category_composition">カテゴリ内訳</string>
+    <string name="month_balance">月次収支</string>
+    <string name="total_amount">合計</string>
+    <string name="trend_chart">推移</string>
+
+    <string name="account_card">銀行カード</string>
+    <string name="account_cash">現金</string>
+    <string name="account_credit">クレジットカード</string>
+    <string name="account_default">デフォルト</string>
+    <string name="account_ewallet">電子マネー</string>
+    <string name="account_investment">投資</string>
+    <string name="current_balance">現在の残高</string>
+    <string name="net_assets">純資産</string>
+    <string name="total_assets">総資産</string>
+    <string name="total_liabilities">総負債</string>
+    <string name="view_profile">プロフィールを表示</string>
+
+    <string name="amount_label">金額</string>
+    <string name="category_label">カテゴリ</string>
+    <string name="currency">通貨</string>
+    <string name="date">日付</string>
+    <string name="date_label">日付</string>
+    <string name="exclude_from_budget">予算から除外</string>
+    <string name="fee_label">手数料</string>
+    <string name="manual_mode">手動入力 (自動換算なし)</string>
+    <string name="remark_hint">メモを入力...</string>
+    <string name="remark_label">メモ</string>
+    <string name="select_category">カテゴリを選択</string>
+    <string name="select_icon">アイコンを選択</string>
+    <string name="transfer_in_account">入金先</string>
+    <string name="transfer_mode_in_fixed">入金額を固定 (手数料別)</string>
+    <string name="transfer_mode_out_fixed">出金額を固定 (手数料込)</string>
+    <string name="transfer_out_account">出金元</string>
+
+    <string name="account_name">口座名</string>
+    <string name="account_type">種類</string>
+    <string name="add_account">口座を追加</string>
+    <string name="manage_account">口座管理</string>
+    <string name="select_account">口座を選択</string>
+
+    <string name="click_to_login">タップしてログイン</string>
+    <string name="delete_account">アカウント削除</string>
+    <string name="group_data">データ</string>
+    <string name="group_general">一般</string>
+    <string name="group_security">セキュリティ</string>
+    <string name="login_hint">ログインして同期</string>
+    <string name="logout">ログアウト</string>
+    <string name="me_title">マイページ</string>
+    <string name="opt_category">カテゴリ設定</string>
+    <string name="opt_clear_data">データの初期化</string>
+    <string name="opt_currency">デフォルト通貨</string>
+    <string name="opt_language">言語 (Language)</string>
+    <string name="opt_periodic">定期的な記録</string>
+    <string name="opt_privacy">セキュリティとプライバシー</string>
+    <string name="opt_sync">バックアップと同期</string>
+    <string name="opt_theme">テーマ設定</string>
+    <string name="settings_title">設定</string>
+    <string name="version">バージョン</string>
+
+    <string name="count">回数</string>
+    <string name="count_label_unit">回</string>
+    <string name="end_by_count">回数指定で終了</string>
+    <string name="end_by_date">日付指定で終了</string>
+    <string name="end_never">無期限</string>
+    <string name="end_rule">終了条件</string>
+    <string name="freq_day">毎日</string>
+    <string name="freq_month">毎月</string>
+    <string name="freq_week">毎週</string>
+    <string name="freq_year">毎年</string>
+    <string name="input_repeat_count">繰り返し回数を入力</string>
+    <string name="periodic_empty_hint">定期的な記録はありません</string>
+    <string name="periodic_title">定期的な記録</string>
+    <string name="repeat_frequency">繰り返し</string>
+    <string name="start_date">開始日</string>
+    <string name="switch_mode">モード切替</string>
+    <string name="warning_cross_currency_transfer_periodic">異なる通貨間での定期振替はサポートされていません。同じ通貨の口座を選択してください。</string>
+
+    <string name="end_date">終了日</string>
+    <string name="next_month">翌月</string>
+    <string name="next_year_month">翌月</string>
+    <string name="prev_month">前月</string>
+    <string name="prev_year_month">前月</string>
+    <string name="select_date">日付を選択</string>
+    <string name="select_date_range">期間を選択</string>
+    <string name="time_custom">期間指定</string>
+    <string name="time_day">日次</string>
+    <string name="time_month">月次</string>
+    <string name="time_month_current">今月</string>
+    <string name="time_month_short">月</string>
+    <string name="time_week">週次</string>
+    <string name="time_week_current">今週</string>
+    <string name="time_week_short">週</string>
+    <string name="time_year">年次</string>
+    <string name="time_year_current">今年</string>
+    <string name="time_year_short">年</string>
+    <string name="today">今日</string>
+
+    <string name="lang_en">English</string>
+    <string name="lang_follow_system">システムに従う</string>
+    <string name="lang_hint">言語を切り替えるとアプリが再起動します</string>
+    <string name="lang_ja">日本語</string>
+    <string name="lang_ko">韓国語</string>
+    <string name="lang_zh">简体中文</string>
+    <string name="language_title">言語</string>
+
+    <string name="confirm_clear_code">CLEAR</string>
+    <string name="confirm_delete_code">DELETE</string>
+    <string name="dialog_cancel">キャンセル</string>
+    <string name="dialog_clear_msg">全てのデータを削除しますか？この操作は取り消せません。</string>
+    <string name="dialog_clear_title">データの削除</string>
+    <string name="dialog_confirm">確認</string>
+    <string name="dialog_delete_account_msg1">アカウントを完全に削除します。</string>
+    <string name="dialog_delete_account_msg2">クラウド上の全データが消去され、復元できなくなります。</string>
+    <string name="dialog_delete_account_msg3">ローカルデータは残りますが、同期機能は無効化されます。</string>
+    <string name="dialog_delete_account_title">アカウント削除</string>
+    <string name="dialog_final_msg">確認のため、以下のテキストを入力してください：</string>
+    <string name="dialog_final_title">最終確認</string>
+    <string name="error_password_mismatch">パスワードが一致しません</string>
+    <string name="success_save">保存しました</string>
+
+    <string name="cat_food">食費</string>
+    <string name="cat_shopping">買い物</string>
+    <string name="cat_transport">交通費</string>
+    <string name="cat_home">住居・生活</string>
+    <string name="cat_entertainment">娯楽</string>
+    <string name="cat_medical_edu">医療・教育</string>
+    <string name="cat_financial">金融</string>
+    <string name="cat_income_job">給与</string>
+    <string name="cat_income_other">その他</string>
+
+    <string name="sub_alcohol">お酒</string>
+    <string name="sub_beauty">美容</string>
+    <string name="sub_bonus">ボーナス</string>
+    <string name="sub_book">書籍</string>
+    <string name="sub_car">自動車</string>
+    <string name="sub_child">育児</string>
+    <string name="sub_cigarette">タバコ</string>
+    <string name="sub_clothes">衣服</string>
+    <string name="sub_daily">日用品</string>
+    <string name="sub_donate">寄付</string>
+    <string name="sub_drama">公演・ショー</string>
+    <string name="sub_education">教育</string>
+    <string name="sub_electronics">電子機器</string>
+    <string name="sub_entertainment">エンタメ</string>
+    <string name="sub_finance">投資・金融</string>
+    <string name="sub_food">食事</string>
+    <string name="sub_gift">プレゼント</string>
+    <string name="sub_gift_money">お祝い金</string>
+    <string name="sub_housing">家賃</string>
+    <string name="sub_medical">医療</string>
+    <string name="sub_movie">映画</string>
+    <string name="sub_other">その他</string>
+    <string name="sub_part_time">アルバイト</string>
+    <string name="sub_pets">ペット</string>
+    <string name="sub_phone">通信費</string>
+    <string name="sub_red_packet">ご祝儀・お年玉</string>
+    <string name="sub_reimbursement">経費精算</string>
+    <string name="sub_repair">修理・整備</string>
+    <string name="sub_salary">給料</string>
+    <string name="sub_second_hand">不用品売却</string>
+    <string name="sub_service">サービス</string>
+    <string name="sub_shopping">ショッピング</string>
+    <string name="sub_snacks">おやつ</string>
+    <string name="sub_social">交際費</string>
+    <string name="sub_sports">スポーツ</string>
+    <string name="sub_traffic">交通機関</string>
+    <string name="sub_travel">旅行</string>
+
+    <string name="bio_prompt_title">指紋認証</string>
+    <string name="go_login">ログインへ</string>
+    <string name="got_it">OK</string>
+    <string name="lock_biometric_not_supported">指紋認証が利用できないか、登録されていません</string>
+    <string name="lock_error_wrong_pattern">パターンが間違っています</string>
+    <string name="lock_error_wrong_pin">PINコードが間違っています</string>
+    <string name="lock_forgot_password">パスワードを忘れましたか？アカウントで認証</string>
+    <string name="lock_verify_password">本人確認</string>
+    <string name="login_required_text">アプリロックを設定するにはログインが必要です。</string>
+    <string name="login_required_title">ログインが必要です</string>
+    <string name="pattern_confirm_title">確認のため再入力</string>
+    <string name="pattern_error_mismatch">パターンが一致しません</string>
+    <string name="pattern_error_too_short">4つ以上の点を結んでください</string>
+    <string name="pattern_prompt_connect_4">4つ以上の点を結んでください</string>
+    <string name="pattern_setup_title">パターンの入力</string>
+    <string name="pin_confirm_title">PINの確認</string>
+    <string name="pin_error_mismatch">PINが一致しません</string>
+    <string name="pin_prompt_confirm">確認のため再入力</string>
+    <string name="pin_prompt_input_4">4桁の数字を入力</string>
+    <string name="pin_setup_title">PINの設定</string>
+    <string name="privacy_biometric_desc">指紋で素早くロック解除</string>
+    <string name="privacy_biometric_require_text">指紋認証を有効にする前に、PINまたはパターンを設定してください。</string>
+    <string name="privacy_biometric_require_title">指紋認証を設定できません</string>
+    <string name="privacy_biometric_title">指紋認証</string>
+    <string name="privacy_enabled_success">有効にしました</string>
+    <string name="privacy_pattern_desc">パターンでロック解除</string>
+    <string name="privacy_pattern_title">パターンロック</string>
+    <string name="privacy_pin_desc">4桁の数字でロック解除</string>
+    <string name="privacy_pin_title">PINコード</string>
+    <string name="privacy_title">パスコードロック</string>
+    <string name="unlock_dialog_title">セキュリティ確認</string>
+    <string name="unlock_email_label">メールアドレス</string>
+    <string name="unlock_enter_account_password">メールアドレスとパスワードを入力</string>
+    <string name="unlock_enter_email_first">まずメールアドレスを入力してください</string>
+    <string name="unlock_password_label">パスワード</string>
+    <string name="unlock_reset_link_sent">リセットリンクを送信しました。パスワードを再設定後、ここでログインしてください。</string>
+    <string name="unlock_reset_lock_tip">セキュリティ保護のため、検証後にアプリロック設定はリセットされます。</string>
+    <string name="unlock_reset_sent">メールを送信しました。受信トレイを確認してください。</string>
+    <string name="unlock_send_reset">パスワードをお忘れですか？リセットメールを送信</string>
+    <string name="unlock_verify_and_unlock">認証してロック解除</string>
+
+    <string name="action_confirm_change">変更を確定</string>
+    <string name="action_confirm_delete">削除を確定</string>
+    <string name="action_delete_account">アカウント削除</string>
+    <string name="action_forgot_password">パスワードをお忘れですか？</string>
+    <string name="action_go_register">新規登録</string>
+    <string name="action_login">ログイン</string>
+    <string name="action_logout">ログアウト</string>
+    <string name="action_next_step">次へ</string>
+    <string name="action_register_and_login">登録してログイン</string>
+    <string name="action_send_reset_link">リセットリンクを送信</string>
+    <string name="account_delete_confirm_phrase">CONFIRM DELETE</string>
+    <string name="change_password_title">パスワード変更</string>
+    <string name="dialog_delete_account_warning1">注意：アカウントは完全に削除されます。</string>
+    <string name="dialog_delete_account_warning2">クラウド上のすべてのデータが消去され、復元できません。</string>
+    <string name="dialog_delete_account_warning3">ローカルデータは残りますが、クラウド同期は利用できなくなります。</string>
+    <string name="dialog_enter_text_to_confirm">削除を確認するため、以下の文字を入力してください：</string>
+    <string name="dialog_final_confirm_title">最終セキュリティ確認</string>
+    <string name="error_enter_current_password">現在のパスワードを入力してください</string>
+    <string name="error_enter_email">メールアドレスを入力してください</string>
+    <string name="error_new_password_mismatch">新しいパスワードが一致しません</string>
+    <string name="error_new_password_same_as_old">新しいパスワードは古いパスワードと同じにはできません</string>
+    <string name="error_new_password_too_short">新しいパスワードは6文字以上である必要があります</string>
+    <string name="error_password_min_6">パスワードは6文字以上で入力してください</string>
+    <string name="label_confirm_new_password">新しいパスワード（確認）</string>
+    <string name="label_confirm_password">パスワード（確認）</string>
+    <string name="label_current_password">現在のパスワード</string>
+    <string name="label_email">メールアドレス</string>
+    <string name="label_email_short">Email</string>
+    <string name="label_new_password_min_6">新しいパスワード (6文字以上)</string>
+    <string name="label_password">パスワード</string>
+    <string name="label_set_password">パスワード設定</string>
+    <string name="login_subtitle">ログインしてデータを同期</string>
+    <string name="login_title">おかえりなさい</string>
+    <string name="menu_change_password">パスワード変更</string>
+    <string name="menu_forgot_password">パスワードを忘れた場合</string>
+    <string name="msg_logged_out">ログアウトしました</string>
+    <string name="msg_password_changed">パスワードを更新しました</string>
+    <string name="msg_register_success_verification_sent">登録完了。確認メールを送信しました。</string>
+    <string name="msg_reset_email_sent">リセットメールを送信しました。受信トレイをご確認ください。</string>
+    <string name="register_subtitle">アカウントを作成してクラウド同期を有効化</string>
+    <string name="register_title">アカウント作成</string>
+    <string name="reset_password_hint">"登録済みのメールアドレスを入力してください。パスワードリセット用のリンクを送信します。"</string>
+    <string name="reset_password_title">パスワードリセット</string>
+    <string name="status_logged_in">ログイン済み</string>
+    <string name="status_not_logged_in">未ログイン</string>
+    <string name="text_no_account">"アカウントをお持ちでないですか？"</string>
+    <string name="toast_account_deleted">アカウントを削除しました</string>
+    <string name="toast_reauth_required">セキュリティのため、再度ログインしてください。</string>
+    <string name="user_info_title">ユーザー情報</string>
+
+    <string name="select_default_currency">デフォルト通貨を選択</string>
+    <string name="currency_name_aud">オーストラリアドル</string>
+    <string name="currency_name_bgn">ブルガリアレフ</string>
+    <string name="currency_name_brl">ブラジルレアル</string>
+    <string name="currency_name_cad">カナダドル</string>
+    <string name="currency_name_chf">スイスフラン</string>
+    <string name="currency_name_cny">中国元</string>
+    <string name="currency_name_czk">チェココルナ</string>
+    <string name="currency_name_dkk">デンマーククローネ</string>
+    <string name="currency_name_eur">ユーロ</string>
+    <string name="currency_name_gbp">英ポンド</string>
+    <string name="currency_name_hkd">香港ドル</string>
+    <string name="currency_name_huf">ハンガリーフォリント</string>
+    <string name="currency_name_idr">インドネシアルピア</string>
+    <string name="currency_name_ils">新シェケル</string>
+    <string name="currency_name_inr">インドルピー</string>
+    <string name="currency_name_jpy">日本円</string>
+    <string name="currency_name_krw">韓国ウォン</string>
+    <string name="currency_name_mxn">メキシコペソ</string>
+    <string name="currency_name_myr">マレーシアリンギット</string>
+    <string name="currency_name_nok">ノルウェークローネ</string>
+    <string name="currency_name_nzd">ニュージーランドドル</string>
+    <string name="currency_name_php">フィリピンペソ</string>
+    <string name="currency_name_pln">ポーランドズロチ</string>
+    <string name="currency_name_ron">ルーマニアレイ</string>
+    <string name="currency_name_rub">ロシアルーブル</string>
+    <string name="currency_name_sek">スウェーデンクローナ</string>
+    <string name="currency_name_sgd">シンガポールドル</string>
+    <string name="currency_name_thb">タイバーツ</string>
+    <string name="currency_name_try">トルコリラ</string>
+    <string name="currency_name_twd">ニュー台湾ドル</string>
+    <string name="currency_name_usd">アメリカドル</string>
+    <string name="currency_name_vnd">ベトナムドン</string>
+    <string name="currency_name_zar">南アフリカランド</string>
+
+    <string name="add_transaction_mock">支出を記録</string>
+    <string name="amount_mock">¥ 1,234</string>
+    <string name="month_expense_mock">今月の支出</string>
+    <string name="selected_label">選択中</string>
+    <string name="theme_preview_title">プレビュー</string>
+    <string name="theme_selection_title">テーマカラー選択</string>
+
+    <string name="sync_cloud_time_label">クラウドのバックアップ日時: %1$s</string>
+    <string name="sync_conflict_msg1">ローカルとクラウドの両方にデータが存在します。</string>
+    <string name="sync_conflict_msg2">処理を選択してください：</string>
+    <string name="sync_conflict_title">データの競合</string>
+    <string name="sync_current_account_label">現在のアカウント: %1$s</string>
+    <string name="sync_description">同期をタップすると、データのバックアップまたは復元を自動的に行います。\n両方にデータがある場合は、処理を選択する画面が表示されます。</string>
+    <string name="sync_merge_strategy">データを統合 (推奨)</string>
+    <string name="sync_not_logged_in">未ログイン</string>
+    <string name="sync_overwrite_cloud_strategy">ローカルデータを使用 (上書き)</string>
+    <string name="sync_overwrite_local_strategy">クラウドデータを使用 (復元)</string>
+    <string name="sync_retry">再試行</string>
+    <string name="sync_start">同期を開始</string>
+    <string name="sync_title">クラウド同期</string>
+    <string name="sync_unknown_time">日時不明</string>
+
+    <string name="add_category">カテゴリ追加</string>
+    <string name="category_reorder">並べ替え</string>
+    <string name="category_settings_title">カテゴリ設定</string>
+    <string name="subcategory_count_label">サブカテゴリ %1$d個</string>
+    <string name="subcategory_management_title">%1$s - サブカテゴリ管理</string>
+    <string name="subcategory_reorder_hint">右側のアイコンを長押しして並べ替え</string>
+
+    <string name="account_detail_title">口座詳細</string>
+    <string name="account_management_hint">長押しして並べ替え、星をタップしてデフォルトに設定</string>
+    <string name="account_management_title">口座管理</string>
+    <string name="account_name_placeholder">口座名</string>
+    <string name="account_not_found">口座情報が見つかりません</string>
+    <string name="account_reorder">口座の並べ替え</string>
+    <string name="add_account_title">新規口座</string>
+    <string name="balance_edit_hint">残高を変更すると、自動的に残高調整の記録が作成されます。</string>
+    <string name="balance_placeholder">0.00</string>
+    <string name="edit_account">口座編集</string>
+    <string name="edit_account_title">口座編集</string>
+    <string name="no_transaction_records">取引履歴なし</string>
+    <string name="set_as_default">デフォルトに設定</string>
+    <string name="transaction_records_title">取引履歴</string>
+    <string name="transaction_remark_format"> · %1$s</string>
+
+    <string-array name="account_types">
+        <item>現金</item>
+        <item>銀行カード</item>
+        <item>クレジットカード</item>
+        <item>投資</item>
+        <item>電子マネー</item>
+        <item>デフォルト</item>
+    </string-array>
+
+    <string name="assets_title">資産</string>
+    <string name="budget_base_currency">CNY</string>
+    <string name="total_budget_category_name">総予算</string>
+    <string name="month_format">%1$d年 %2$s</string> <string name="budget_settings">予算設定</string>
+    <string name="total_budget_title">総予算</string>
+    <string name="budget_spent">支出済み</string>
+    <string name="budget_remaining">残り</string>
+    <string name="budget_percent_format">%1$d%%</string>
+    <string name="amount_no_decimal_format">%.0f</string>
+    <string name="budget_total_amount_format">合計: %1$s %2$.0f</string>
+    <string name="budget_spent_amount_format">支出済 %1$s</string>
+    <string name="budget_total_amount_label_format">予算 %1$s</string>
+    <string name="select_month">月を選択</string>
+    <string name="calendar_nav_title">カレンダー</string>
+    <string name="amount_format">%.2f</string>
+    <string name="daily_income_format">収 %1$s</string>
+    <string name="daily_expense_format">支 %1$s</string>
+    <string name="fee_format">手 %1$s</string>
+    <string name="original_amount_approx_format">≈ %1$s %2$s</string>
+    <string name="transaction_account_format"> · %1$s</string>
+    <string name="week_unit">週</string>
+    <string name="prev_period">前へ</string>
+    <string name="next_period">次へ</string>
+    <string name="chart_balance_title">現在の残高</string>
+    <string name="chart_report_week">週次レポート</string>
+    <string name="chart_report_month">月次レポート</string>
+    <string name="chart_report_year">年次レポート</string>
+    <string name="chart_report_time_label">期間</string>
+    <string name="chart_report_balance_label">収支</string>
+    <string name="amount_no_decimal_format_chart">%.0f</string>
+    <string name="date_format_full">yyyy/MM/dd</string>
+    <string name="date_format_year_month">yyyy年 MMM</string>
+    <string name="date_format_year">yyyy年</string>
+    <string name="chart_empty_state">この期間のデータはありません</string>
+    <string name="currency_amount_format_chart">%1$s %2$.2f</string>
+    <string name="currency_amount_format">%1$s %2$.2f</string>
+    <string name="currency_amount_no_decimal_format">%1$s %2$.0f</string>
+    <string name="currency_amount_no_decimal_format_small">%1$s %2$.0f</string>
+    <string name="percent_format">%.1f%%</string>
+    <string name="chart_trend_balance">収支推移</string>
+    <string name="chart_trend_general">全体推移</string>
+    <string name="chart_fullscreen">全画面</string>
+    <string name="chart_composition_expense">支出構成 (カテゴリ別)</string>
+    <string name="chart_composition_income">収入構成 (カテゴリ別)</string>
+    <string name="chart_total_expense">総支出</string>
+    <string name="chart_total_income">総収入</string>
+    <string name="chart_no_data">この期間のデータはありません</string>
+    <string name="chart_trend_expense">支出推移</string>
+    <string name="chart_trend_income">収入推移</string>
+    <string name="chart_fullscreen_title_format">全画面 %1$s</string>
+    <string name="chart_data_points_format">%1$d 件のデータ</string>
+    <string name="budget_screen_title">%1$d年%2$d月 予算</string>
+    <string name="edit_format">編集 %1$s</string>
+    <string name="category_key_total_budget">総予算</string>
+    <string name="date_format_year_month_format">%1$d年 %2$d月</string>
+    <string name="budget_settings_button">予算設定</string>
+    <string name="spent_label_short">支出</string>
+    <string name="budget_label_short">予算</string>
+    <string name="remaining_amount_format">残り: %1$s %2$.2f</string>
+    <string name="overspent_amount_format">超過: %1$s %2$.2f</string>
+    <string name="tag_exclude_from_budget">予算対象外</string>
+
+    <string name="calendar_month_balance">今月の収支</string>
+
+    <string name="income_short">入</string>
+    <string name="expense_short">出</string>
+
+    <string name="weekday_fri">金</string>
+    <string name="weekday_mon">月</string>
+    <string name="weekday_sat">土</string>
+    <string name="weekday_sun">日</string>
+    <string name="weekday_thu">木</string>
+    <string name="weekday_tue">火</string>
+    <string name="weekday_wed">水</string>
+
+    <string name="daily_budget_label">1日の予算</string>
+    <string name="budget_status_normal">正常</string>
+    <string name="budget_status_over">超過</string>
+
+    <string name="ok">OK</string>
+    <string name="toggle_mode">モード切替</string>
+    <string name="previous">前へ</string>
+    <string name="next">次へ</string>
+
+    <string name="year_month_title_format">%1$d年 %2$s</string>
+
+    <string name="month_number_format">%1$d月</string>
+    <string name="detail_title">詳細</string>
+
+    <string name="record_not_found">記録が見つかりません</string>
+
+    <string name="internal_transfer">振替</string>
+
+    <string name="type_label">種類</string>
+
+    <string name="converted_label">換算額</string>
+    <string name="account_label">口座</string>
+
+    <string name="transfer_out">出金</string>
+    <string name="transfer_in">入金</string>
+
+    <string name="unknown_account">不明な口座</string>
+
+    <string name="account_balance_format">%1$s (残高: %2$s)</string>
+    <string name="converted_amount_format">≈ %1$s %2$.2f</string>
+    <string name="added_at_format">(%1$s に追加)</string>
+
+    <string name="default_account_name">デフォルト口座</string>
+
+    <string name="category_transfer_out">振替 (出金)</string>
+    <string name="category_transfer_in">振替 (入金)</string>
+
+    <string name="periodic_remark_transfer_default">定期振替</string>
+    <string name="periodic_remark_auto_default">定期的な記録</string>
+
+    <string name="error_not_logged_in">ログインしていません</string>
+    <string name="error_user_not_logged_in">ユーザーがログインしていません</string>
+
+    <string name="error_email_already_registered">このメールアドレスは既に登録されています</string>
+    <string name="error_email_invalid">メールアドレスの形式が正しくありません</string>
+    <string name="error_email_not_registered">このメールアドレスは登録されていません</string>
+    <string name="error_account_not_exist">アカウントが存在しません</string>
+    <string name="error_email_or_password_wrong">メールアドレスまたはパスワードが間違っています</string>
+
+    <string name="error_network">ネットワークエラー</string>
+    <string name="error_network_check">通信エラーが発生しました。接続を確認してください。</string>
+
+    <string name="error_register_failed">登録に失敗しました: %1$s</string>
+    <string name="error_login_failed">ログインに失敗しました: %1$s</string>
+    <string name="error_send_failed">送信に失敗しました: %1$s</string>
+    <string name="error_change_password_failed">更新に失敗しました: %1$s</string>
+    <string name="error_delete_account_failed">アカウント削除に失敗しました: %1$s</string>
+
+    <string name="error_old_password_wrong">現在のパスワードが間違っています</string>
+    <string name="error_recent_login_required">セッションの有効期限が切れました。再度ログインしてから試してください。</string>
+    <string name="error_recent_login_required_delete">セッションの有効期限が切れました。アカウントを削除する前に、再度ログインしてください。</string>
+    <string name="error_new_password_weak">新しいパスワードが脆弱です</string>
+
+    <string name="success_backup_to_cloud">クラウドにバックアップしました</string>
+    <string name="success_restore_from_cloud">クラウドから復元しました</string>
+    <string name="error_cloud_data_empty">クラウドデータが空です</string>
+    <string name="error_cloud_no_data">クラウドのバックアップが見つかりません</string>
+    <string name="success_cloud_empty_uploaded">クラウドが空のため、ローカルデータをアップロードしました。</string>
+    <string name="success_sync_merge_added">同期が完了しました。%1$d件の記録を追加しました。</string>
+
+    <string name="error_register_failed_short">登録失敗</string>
+    <string name="error_login_failed_short">ログイン失敗</string>
+    <string name="error_send_failed_short">送信失敗</string>
+    <string name="error_change_failed_short">更新失敗</string>
+    <string name="error_delete_failed_short">削除失敗</string>
+    <string name="error_connection_failed_short">接続失敗</string>
+
+    <string name="sync_success_short">同期成功</string>
+    <string name="sync_failed_short">同期失敗</string>
+
+    <string name="sync_loading_checking_cloud">クラウドデータを確認中...</string>
+    <string name="sync_loading_merging">データを統合中...</string>
+    <string name="sync_loading_uploading_backup">バックアップをアップロード中...</string>
+    <string name="sync_loading_restoring_data">データを復元中...</string>
+
+    <string name="welcome_title">TimeLedgerへようこそ</string>
+    <string name="welcome_subtitle">最初の記録を始めましょう</string>
+    <string name="initial_asset_balance">初期の資産残高</string>
+    <string name="start_journey">利用を開始</string>
+</resources>

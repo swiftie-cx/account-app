@@ -1,0 +1,550 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">TimeLedger</string>
+
+    <string name="nav_assets">자산</string>
+    <string name="nav_budget">예산</string>
+    <string name="nav_chart">차트</string>
+    <string name="nav_details">상세</string>
+    <string name="nav_me">마이페이지</string>
+
+    <string name="add">추가</string>
+    <string name="add_again">다시 추가</string>
+    <string name="back">뒤로</string>
+    <string name="cancel">취소</string>
+    <string name="confirm">확인</string>
+    <string name="delete">삭제</string>
+    <string name="edit">수정</string>
+    <string name="finish">완료</string>
+    <string name="next_step">다음</string>
+    <string name="reset">초기화</string>
+    <string name="save">저장</string>
+    <string name="search">검색</string>
+    <string name="unknown">알 수 없음</string>
+
+    <string name="balance">잔액</string>
+    <string name="expense_label">지출</string>
+    <string name="income_label">수입</string>
+    <string name="transfer_in_app">이체</string>
+    <string name="type_all">전체</string>
+    <string name="type_expense">지출</string>
+    <string name="type_income">수입</string>
+    <string name="type_transfer">이체</string>
+
+    <string name="no_records">기록이 없습니다</string>
+    <string name="search_hint">메모, 카테고리 검색</string>
+
+    <string name="category_composition">카테고리별</string>
+    <string name="month_balance">월간 수지</string>
+    <string name="total_amount">합계</string>
+    <string name="trend_chart">추세</string>
+
+    <string name="account_card">체크카드</string>
+    <string name="account_cash">현금</string>
+    <string name="account_credit">신용카드</string>
+    <string name="account_default">기본</string>
+    <string name="account_ewallet">전자지갑</string>
+    <string name="account_investment">투자</string>
+    <string name="current_balance">현재 잔액</string>
+    <string name="net_assets">순자산</string>
+    <string name="total_assets">총 자산</string>
+    <string name="total_liabilities">총 부채</string>
+    <string name="view_profile">프로필 보기</string>
+
+    <string name="amount_label">금액</string>
+    <string name="category_label">카테고리</string>
+    <string name="currency">통화</string>
+    <string name="date">날짜</string>
+    <string name="date_label">일자</string>
+    <string name="exclude_from_budget">예산에서 제외</string>
+    <string name="fee_label">수수료</string>
+    <string name="manual_mode">직접 입력 (자동환산 안함)</string>
+    <string name="remark_hint">메모 입력...</string>
+    <string name="remark_label">메모</string>
+    <string name="select_category">카테고리 선택</string>
+    <string name="select_icon">아이콘 선택</string>
+    <string name="transfer_in_account">입금 계좌</string>
+    <string name="transfer_mode_in_fixed">입금액 고정 (수수료 별도)</string>
+    <string name="transfer_mode_out_fixed">출금액 고정 (수수료 포함)</string>
+    <string name="transfer_out_account">출금 계좌</string>
+
+    <string name="account_name">계좌명</string>
+    <string name="account_type">유형</string>
+    <string name="add_account">계좌 추가</string>
+    <string name="manage_account">계좌 관리</string>
+    <string name="select_account">계좌 선택</string>
+
+    <string name="click_to_login">로그인하기</string>
+    <string name="delete_account">계정 탈퇴</string>
+    <string name="group_data">데이터</string>
+    <string name="group_general">일반</string>
+    <string name="group_security">보안</string>
+    <string name="login_hint">로그인하고 동기화하세요</string>
+    <string name="logout">로그아웃</string>
+    <string name="me_title">마이페이지</string>
+    <string name="opt_category">카테고리 설정</string>
+    <string name="opt_clear_data">데이터 초기화</string>
+    <string name="opt_currency">기본 통화</string>
+    <string name="opt_language">언어 (Language)</string>
+    <string name="opt_periodic">정기 기록</string>
+    <string name="opt_privacy">보안 및 프라이버시</string>
+    <string name="opt_sync">백업 및 동기화</string>
+    <string name="opt_theme">테마 설정</string>
+    <string name="settings_title">설정</string>
+    <string name="version">버전</string>
+
+    <string name="count">횟수</string>
+    <string name="count_label_unit">회</string>
+    <string name="end_by_count">횟수 지정 종료</string>
+    <string name="end_by_date">날짜 지정 종료</string>
+    <string name="end_never">계속 반복</string>
+    <string name="end_rule">종료 조건</string>
+    <string name="freq_day">매일</string>
+    <string name="freq_month">매월</string>
+    <string name="freq_week">매주</string>
+    <string name="freq_year">매년</string>
+    <string name="input_repeat_count">반복 횟수 입력</string>
+    <string name="periodic_empty_hint">정기 기록이 없습니다</string>
+    <string name="periodic_title">정기 기록 관리</string>
+    <string name="repeat_frequency">반복 주기</string>
+    <string name="start_date">시작일</string>
+    <string name="switch_mode">모드 전환</string>
+    <string name="warning_cross_currency_transfer_periodic">서로 다른 통화 간의 정기 이체는 지원되지 않습니다. 동일한 통화 계좌를 선택해주세요.</string>
+
+    <string name="end_date">종료일</string>
+    <string name="next_month">다음 달</string>
+    <string name="next_year_month">다음</string>
+    <string name="prev_month">이전 달</string>
+    <string name="prev_year_month">이전</string>
+    <string name="select_date">날짜 선택</string>
+    <string name="select_date_range">기간 선택</string>
+    <string name="time_custom">직접 지정</string>
+    <string name="time_day">일</string>
+    <string name="time_month">월</string>
+    <string name="time_month_current">이번 달</string>
+    <string name="time_month_short">월</string>
+    <string name="time_week">주</string>
+    <string name="time_week_current">이번 주</string>
+    <string name="time_week_short">주</string>
+    <string name="time_year">년</string>
+    <string name="time_year_current">올해</string>
+    <string name="time_year_short">년</string>
+    <string name="today">오늘</string>
+
+    <string name="lang_en">English</string>
+    <string name="lang_follow_system">시스템 설정 따름</string>
+    <string name="lang_hint">언어 변경 시 앱이 재시작됩니다</string>
+    <string name="lang_ja">日本語</string>
+    <string name="lang_ko">한국어</string>
+    <string name="lang_zh">简体中文</string>
+    <string name="language_title">언어 설정</string>
+
+    <string name="confirm_clear_code">초기화</string>
+    <string name="confirm_delete_code">삭제</string>
+    <string name="dialog_cancel">취소</string>
+    <string name="dialog_clear_msg">모든 데이터가 삭제되며 복구할 수 없습니다. 계속하시겠습니까?</string>
+    <string name="dialog_clear_title">데이터 초기화</string>
+    <string name="dialog_confirm">확인</string>
+    <string name="dialog_delete_account_msg1">계정을 영구적으로 삭제합니다.</string>
+    <string name="dialog_delete_account_msg2">클라우드의 모든 데이터가 삭제되며 복구할 수 없습니다.</string>
+    <string name="dialog_delete_account_msg3">로컬 데이터는 유지되지만 동기화 기능은 사용할 수 없게 됩니다.</string>
+    <string name="dialog_delete_account_title">계정 탈퇴</string>
+    <string name="dialog_final_msg">확인을 위해 아래 문구를 입력해주세요:</string>
+    <string name="dialog_final_title">최종 확인</string>
+    <string name="error_password_mismatch">비밀번호가 일치하지 않습니다</string>
+    <string name="success_save">저장되었습니다</string>
+
+    <string name="cat_food">식비</string>
+    <string name="cat_shopping">쇼핑</string>
+    <string name="cat_transport">교통</string>
+    <string name="cat_home">주거</string>
+    <string name="cat_entertainment">여가</string>
+    <string name="cat_medical_edu">의료/교육</string>
+    <string name="cat_financial">금융</string>
+    <string name="cat_income_job">급여</string>
+    <string name="cat_income_other">기타수입</string>
+
+    <string name="sub_alcohol">술/유흥</string>
+    <string name="sub_beauty">뷰티/미용</string>
+    <string name="sub_bonus">상여금</string>
+    <string name="sub_book">도서</string>
+    <string name="sub_car">차량유지</string>
+    <string name="sub_child">육아</string>
+    <string name="sub_cigarette">담배</string>
+    <string name="sub_clothes">의류</string>
+    <string name="sub_daily">생활용품</string>
+    <string name="sub_donate">기부</string>
+    <string name="sub_drama">공연/전시</string>
+    <string name="sub_education">교육</string>
+    <string name="sub_electronics">디지털/가전</string>
+    <string name="sub_entertainment">오락</string>
+    <string name="sub_finance">투자</string>
+    <string name="sub_food">식사</string>
+    <string name="sub_gift">선물</string>
+    <string name="sub_gift_money">경조사</string>
+    <string name="sub_housing">주거비</string>
+    <string name="sub_medical">병원/약국</string>
+    <string name="sub_movie">영화</string>
+    <string name="sub_other">기타</string>
+    <string name="sub_part_time">부업</string>
+    <string name="sub_pets">반려동물</string>
+    <string name="sub_phone">통신비</string>
+    <string name="sub_red_packet">용돈</string>
+    <string name="sub_reimbursement">환급/반환</string>
+    <string name="sub_repair">수리/정비</string>
+    <string name="sub_salary">월급</string>
+    <string name="sub_second_hand">중고거래</string>
+    <string name="sub_service">서비스</string>
+    <string name="sub_shopping">잡화</string>
+    <string name="sub_snacks">간식</string>
+    <string name="sub_social">사교/모임</string>
+    <string name="sub_sports">운동</string>
+    <string name="sub_traffic">대중교통</string>
+    <string name="sub_travel">여행</string>
+
+    <string name="bio_prompt_title">지문 인증</string>
+    <string name="go_login">로그인</string>
+    <string name="got_it">확인</string>
+    <string name="lock_biometric_not_supported">지문을 사용할 수 없거나 등록되지 않았습니다</string>
+    <string name="lock_error_wrong_pattern">패턴이 올바르지 않습니다</string>
+    <string name="lock_error_wrong_pin">PIN 번호가 올바르지 않습니다</string>
+    <string name="lock_forgot_password">비밀번호를 잊으셨나요? 계정 인증하기</string>
+    <string name="lock_verify_password">본인 인증</string>
+    <string name="login_required_text">앱 잠금을 설정하려면 로그인이 필요합니다.</string>
+    <string name="login_required_title">로그인 필요</string>
+    <string name="pattern_confirm_title">다시 한 번 그려주세요</string>
+    <string name="pattern_error_mismatch">패턴이 일치하지 않습니다</string>
+    <string name="pattern_error_too_short">4개 이상의 점을 연결해주세요</string>
+    <string name="pattern_prompt_connect_4">4개 이상의 점을 연결해주세요</string>
+    <string name="pattern_setup_title">패턴 설정</string>
+    <string name="pin_confirm_title">PIN 번호 확인</string>
+    <string name="pin_error_mismatch">PIN 번호가 일치하지 않습니다</string>
+    <string name="pin_prompt_confirm">다시 입력해주세요</string>
+    <string name="pin_prompt_input_4">4자리 숫자를 입력해주세요</string>
+    <string name="pin_setup_title">PIN 번호 설정</string>
+    <string name="privacy_biometric_desc">지문으로 빠르게 잠금 해제</string>
+    <string name="privacy_biometric_require_text">지문 잠금을 사용하려면 먼저 PIN이나 패턴을 설정해야 합니다.</string>
+    <string name="privacy_biometric_require_title">지문 잠금 설정 불가</string>
+    <string name="privacy_biometric_title">지문 잠금</string>
+    <string name="privacy_enabled_success">설정되었습니다</string>
+    <string name="privacy_pattern_desc">패턴으로 잠금 해제</string>
+    <string name="privacy_pattern_title">패턴 잠금</string>
+    <string name="privacy_pin_desc">4자리 숫자로 잠금 해제</string>
+    <string name="privacy_pin_title">PIN 잠금</string>
+    <string name="privacy_title">앱 잠금</string>
+    <string name="unlock_dialog_title">보안 인증</string>
+    <string name="unlock_email_label">이메일</string>
+    <string name="unlock_enter_account_password">이메일과 비밀번호를 입력해주세요</string>
+    <string name="unlock_enter_email_first">이메일을 먼저 입력해주세요</string>
+    <string name="unlock_password_label">비밀번호</string>
+    <string name="unlock_reset_link_sent">재설정 링크가 전송되었습니다. 비밀번호 변경 후 다시 로그인해주세요.</string>
+    <string name="unlock_reset_lock_tip">보안을 위해 인증 시 앱 잠금 설정이 초기화됩니다.</string>
+    <string name="unlock_reset_sent">이메일이 전송되었습니다. 메일함을 확인해주세요.</string>
+    <string name="unlock_send_reset">비밀번호 찾기</string>
+    <string name="unlock_verify_and_unlock">인증 및 잠금 해제</string>
+
+    <string name="action_confirm_change">변경 확인</string>
+    <string name="action_confirm_delete">삭제 확인</string>
+    <string name="action_delete_account">계정 삭제</string>
+    <string name="action_forgot_password">비밀번호 찾기</string>
+    <string name="action_go_register">회원가입</string>
+    <string name="action_login">로그인</string>
+    <string name="action_logout">로그아웃</string>
+    <string name="action_next_step">다음</string>
+    <string name="action_register_and_login">가입 및 로그인</string>
+    <string name="action_send_reset_link">재설정 링크 전송</string>
+    <string name="account_delete_confirm_phrase">삭제</string>
+    <string name="change_password_title">비밀번호 변경</string>
+    <string name="dialog_delete_account_warning1">주의: 계정이 영구적으로 삭제됩니다.</string>
+    <string name="dialog_delete_account_warning2">클라우드의 모든 데이터가 삭제되며 복구할 수 없습니다.</string>
+    <string name="dialog_delete_account_warning3">로컬 데이터는 유지되지만 클라우드 동기화는 더 이상 사용할 수 없습니다.</string>
+    <string name="dialog_enter_text_to_confirm">계정 삭제를 확인하려면 아래 문구를 입력해주세요:</string>
+    <string name="dialog_final_confirm_title">최종 보안 확인</string>
+    <string name="error_enter_current_password">현재 비밀번호를 입력해주세요</string>
+    <string name="error_enter_email">이메일을 입력해주세요</string>
+    <string name="error_new_password_mismatch">새 비밀번호가 일치하지 않습니다</string>
+    <string name="error_new_password_same_as_old">새 비밀번호는 이전과 다르게 설정해주세요</string>
+    <string name="error_new_password_too_short">새 비밀번호는 6자리 이상이어야 합니다</string>
+    <string name="error_password_min_6">비밀번호는 6자리 이상이어야 합니다</string>
+    <string name="label_confirm_new_password">새 비밀번호 확인</string>
+    <string name="label_confirm_password">비밀번호 확인</string>
+    <string name="label_current_password">현재 비밀번호</string>
+    <string name="label_email">이메일</string>
+    <string name="label_email_short">이메일</string>
+    <string name="label_new_password_min_6">새 비밀번호 (6자리 이상)</string>
+    <string name="label_password">비밀번호</string>
+    <string name="label_set_password">비밀번호 설정</string>
+    <string name="login_subtitle">로그인하고 데이터를 동기화하세요</string>
+    <string name="login_title">반갑습니다</string>
+    <string name="menu_change_password">비밀번호 변경</string>
+    <string name="menu_forgot_password">비밀번호 찾기</string>
+    <string name="msg_logged_out">로그아웃되었습니다</string>
+    <string name="msg_password_changed">비밀번호가 변경되었습니다</string>
+    <string name="msg_register_success_verification_sent">가입 성공. 인증 메일이 발송되었습니다.</string>
+    <string name="msg_reset_email_sent">재설정 메일이 발송되었습니다. 메일함을 확인해주세요.</string>
+    <string name="register_subtitle">가입하고 클라우드 동기화를 시작하세요</string>
+    <string name="register_title">회원가입</string>
+    <string name="reset_password_hint">가입한 이메일을 입력하시면 비밀번호 재설정 링크를 보내드립니다.</string>
+    <string name="reset_password_title">비밀번호 재설정</string>
+    <string name="status_logged_in">로그인 상태</string>
+    <string name="status_not_logged_in">로그인되지 않음</string>
+    <string name="text_no_account">계정이 없으신가요?</string>
+    <string name="toast_account_deleted">계정이 삭제되었습니다</string>
+    <string name="toast_reauth_required">보안을 위해 다시 로그인해주세요.</string>
+    <string name="user_info_title">회원 정보</string>
+
+    <string name="select_default_currency">기본 통화 선택</string>
+    <string name="currency_name_aud">호주 달러</string>
+    <string name="currency_name_bgn">불가리아 레프</string>
+    <string name="currency_name_brl">브라질 레알</string>
+    <string name="currency_name_cad">캐나다 달러</string>
+    <string name="currency_name_chf">스위스 프랑</string>
+    <string name="currency_name_cny">중국 위안</string>
+    <string name="currency_name_czk">체코 코루나</string>
+    <string name="currency_name_dkk">덴마크 크로네</string>
+    <string name="currency_name_eur">유로</string>
+    <string name="currency_name_gbp">영국 파운드</string>
+    <string name="currency_name_hkd">홍콩 달러</string>
+    <string name="currency_name_huf">헝가리 포린트</string>
+    <string name="currency_name_idr">인도네시아 루피아</string>
+    <string name="currency_name_ils">이스라엘 셰켈</string>
+    <string name="currency_name_inr">인도 루피</string>
+    <string name="currency_name_jpy">일본 엔</string>
+    <string name="currency_name_krw">대한민국 원</string>
+    <string name="currency_name_mxn">멕시코 페소</string>
+    <string name="currency_name_myr">말레이시아 링깃</string>
+    <string name="currency_name_nok">노르웨이 크로네</string>
+    <string name="currency_name_nzd">뉴질랜드 달러</string>
+    <string name="currency_name_php">필리핀 페소</string>
+    <string name="currency_name_pln">폴란드 즐로티</string>
+    <string name="currency_name_ron">루마니아 레우</string>
+    <string name="currency_name_rub">러시아 루블</string>
+    <string name="currency_name_sek">스웨덴 크로나</string>
+    <string name="currency_name_sgd">싱가포르 달러</string>
+    <string name="currency_name_thb">태국 바트</string>
+    <string name="currency_name_try">튀르키예 리라</string>
+    <string name="currency_name_twd">대만 달러</string>
+    <string name="currency_name_usd">미국 달러</string>
+    <string name="currency_name_vnd">베트남 동</string>
+    <string name="currency_name_zar">남아공 랜드</string>
+
+    <string name="add_transaction_mock">지출 기록하기</string>
+    <string name="amount_mock">12,345 원</string>
+    <string name="month_expense_mock">이번 달 지출</string>
+    <string name="selected_label">선택됨</string>
+    <string name="theme_preview_title">미리보기</string>
+    <string name="theme_selection_title">테마 색상 선택</string>
+
+    <string name="sync_cloud_time_label">클라우드 백업: %1$s</string>
+    <string name="sync_conflict_msg1">로컬과 클라우드 모두 데이터가 존재합니다.</string>
+    <string name="sync_conflict_msg2">처리 방법을 선택해주세요:</string>
+    <string name="sync_conflict_title">데이터 충돌</string>
+    <string name="sync_current_account_label">현재 계정: %1$s</string>
+    <string name="sync_description">동기화를 누르면 데이터가 자동으로 백업되거나 복원됩니다.\n양쪽에 데이터가 있으면 처리 방법을 묻습니다.</string>
+    <string name="sync_merge_strategy">데이터 병합 (추천)</string>
+    <string name="sync_not_logged_in">로그인 필요</string>
+    <string name="sync_overwrite_cloud_strategy">로컬 데이터 사용 (클라우드 덮어쓰기)</string>
+    <string name="sync_overwrite_local_strategy">클라우드 데이터 사용 (로컬 덮어쓰기)</string>
+    <string name="sync_retry">재시도</string>
+    <string name="sync_start">동기화 시작</string>
+    <string name="sync_title">클라우드 동기화</string>
+    <string name="sync_unknown_time">기록 없음</string>
+
+    <string name="add_category">카테고리 추가</string>
+    <string name="category_reorder">순서 변경</string>
+    <string name="category_settings_title">카테고리 설정</string>
+    <string name="subcategory_count_label">세부 카테고리 %1$d개</string>
+    <string name="subcategory_management_title">%1$s - 세부 설정</string>
+    <string name="subcategory_reorder_hint">오른쪽 아이콘을 길게 눌러 순서를 변경하세요</string>
+
+    <string name="account_detail_title">계좌 상세</string>
+    <string name="account_management_hint">길게 눌러 순서 변경, 별표를 눌러 기본 계좌 설정</string>
+    <string name="account_management_title">계좌 관리</string>
+    <string name="account_name_placeholder">계좌 이름</string>
+    <string name="account_not_found">계좌 정보를 찾을 수 없습니다</string>
+    <string name="account_reorder">계좌 순서 변경</string>
+    <string name="add_account_title">새 계좌 추가</string>
+    <string name="balance_edit_hint">잔액을 수정하면 차액만큼 보정 내역이 자동 생성됩니다.</string>
+    <string name="balance_placeholder">0</string>
+    <string name="edit_account">계좌 수정</string>
+    <string name="edit_account_title">계좌 수정</string>
+    <string name="no_transaction_records">거래 내역이 없습니다</string>
+    <string name="set_as_default">기본 계좌로 설정</string>
+    <string name="transaction_records_title">거래 내역</string>
+    <string name="transaction_remark_format"> · %1$s</string>
+
+    <string-array name="account_types">
+        <item>현금</item>
+        <item>체크카드</item>
+        <item>신용카드</item>
+        <item>투자</item>
+        <item>전자지갑</item>
+        <item>기본</item>
+    </string-array>
+
+    <string name="assets_title">자산</string>
+    <string name="budget_base_currency">KRW</string>
+    <string name="total_budget_category_name">총 예산</string>
+    <string name="month_format">%1$d월 %2$s</string>
+    <string name="budget_settings">예산 설정</string>
+    <string name="total_budget_title">총 예산</string>
+    <string name="budget_spent">지출</string>
+    <string name="budget_remaining">잔액</string>
+    <string name="budget_percent_format">%1$d%%</string>
+    <string name="amount_no_decimal_format">%.0f</string>
+    <string name="budget_total_amount_format">전체: %1$s %2$.0f</string>
+    <string name="budget_spent_amount_format">지출 %1$s</string>
+    <string name="budget_total_amount_label_format">예산 %1$s</string>
+    <string name="select_month">월 선택</string>
+    <string name="calendar_nav_title">달력</string>
+    <string name="amount_format">%.0f</string> <string name="daily_income_format">수입 %1$s</string>
+    <string name="daily_expense_format">지출 %1$s</string>
+    <string name="fee_format">수수료 %1$s</string>
+    <string name="original_amount_approx_format">≈ %1$s %2$s</string>
+    <string name="transaction_account_format"> · %1$s</string>
+    <string name="week_unit">주</string>
+    <string name="prev_period">이전</string>
+    <string name="next_period">다음</string>
+    <string name="chart_balance_title">현재 잔액</string>
+    <string name="chart_report_week">주간 리포트</string>
+    <string name="chart_report_month">월간 리포트</string>
+    <string name="chart_report_year">연간 리포트</string>
+    <string name="chart_report_time_label">기간</string>
+    <string name="chart_report_balance_label">잔액</string>
+    <string name="amount_no_decimal_format_chart">%.0f</string>
+    <string name="date_format_full">yyyy-MM-dd</string>
+    <string name="date_format_year_month">yyyy년 MMM</string>
+    <string name="date_format_year">yyyy년</string>
+    <string name="chart_empty_state">이 기간에는 기록이 없습니다.</string>
+    <string name="currency_amount_format_chart">%1$s %2$.0f</string>
+    <string name="currency_amount_format">%1$s %2$.0f</string>
+    <string name="currency_amount_no_decimal_format">%1$s %2$.0f</string>
+    <string name="currency_amount_no_decimal_format_small">%1$s %2$.0f</string>
+    <string name="percent_format">%.1f%%</string>
+    <string name="chart_trend_balance">잔액 추이</string>
+    <string name="chart_trend_general">전체 추이</string>
+    <string name="chart_fullscreen">전체 화면</string>
+    <string name="chart_composition_expense">지출 구성 (카테고리별)</string>
+    <string name="chart_composition_income">수입 구성 (카테고리별)</string>
+    <string name="chart_total_expense">총 지출</string>
+    <string name="chart_total_income">총 수입</string>
+    <string name="chart_no_data">데이터가 없습니다.</string>
+    <string name="chart_trend_expense">지출 추이</string>
+    <string name="chart_trend_income">수입 추이</string>
+    <string name="chart_fullscreen_title_format">%1$s 전체 화면</string>
+    <string name="chart_data_points_format">데이터 포인트 %1$d개</string>
+    <string name="budget_screen_title">%1$d년 %2$d월 예산</string>
+    <string name="edit_format">%1$s 수정</string>
+    <string name="category_key_total_budget">총 예산</string>
+    <string name="date_format_year_month_format">%1$d년 %2$d월</string>
+    <string name="budget_settings_button">예산 설정</string>
+    <string name="spent_label_short">사용</string>
+    <string name="budget_label_short">예산</string>
+    <string name="remaining_amount_format">남은 금액: %1$s %2$.0f</string>
+    <string name="overspent_amount_format">초과 금액: %1$s %2$.0f</string>
+    <string name="tag_exclude_from_budget">예산제외</string>
+
+    <string name="calendar_month_balance">이달의 수지</string>
+
+    <string name="income_short">수입</string>
+    <string name="expense_short">지출</string>
+
+    <string name="weekday_fri">금</string>
+    <string name="weekday_mon">월</string>
+    <string name="weekday_sat">토</string>
+    <string name="weekday_sun">일</string>
+    <string name="weekday_thu">목</string>
+    <string name="weekday_tue">화</string>
+    <string name="weekday_wed">수</string>
+
+    <string name="daily_budget_label">하루 예산</string>
+    <string name="budget_status_normal">정상</string>
+    <string name="budget_status_over">초과</string>
+
+    <string name="ok">확인</string>
+    <string name="toggle_mode">모드 전환</string>
+    <string name="previous">이전</string>
+    <string name="next">다음</string>
+
+    <string name="year_month_title_format">%1$d년 %2$s</string>
+
+    <string name="month_number_format">%1$d월</string>
+    <string name="detail_title">상세 정보</string>
+
+    <string name="record_not_found">기록을 찾을 수 없습니다</string>
+
+    <string name="internal_transfer">내부 이체</string>
+
+    <string name="type_label">유형</string>
+
+    <string name="converted_label">환산 금액</string>
+    <string name="account_label">계좌</string>
+
+    <string name="transfer_out">출금</string>
+    <string name="transfer_in">입금</string>
+
+    <string name="unknown_account">알 수 없는 계좌</string>
+
+    <string name="account_balance_format">%1$s (잔액: %2$s)</string>
+    <string name="converted_amount_format">≈ %1$s %2$.0f</string>
+    <string name="added_at_format">(%1$s 추가됨)</string>
+
+    <string name="default_account_name">기본 계좌</string>
+
+    <string name="category_transfer_out">이체 (출금)</string>
+    <string name="category_transfer_in">이체 (입금)</string>
+
+    <string name="periodic_remark_transfer_default">정기 이체</string>
+    <string name="periodic_remark_auto_default">정기 거래</string>
+
+    <string name="error_not_logged_in">로그인이 필요합니다</string>
+    <string name="error_user_not_logged_in">사용자 정보가 없습니다</string>
+
+    <string name="error_email_already_registered">이미 가입된 이메일입니다</string>
+    <string name="error_email_invalid">이메일 형식이 올바르지 않습니다</string>
+    <string name="error_email_not_registered">가입되지 않은 이메일입니다</string>
+    <string name="error_account_not_exist">존재하지 않는 계정입니다</string>
+    <string name="error_email_or_password_wrong">이메일 또는 비밀번호가 틀렸습니다</string>
+
+    <string name="error_network">네트워크 오류</string>
+    <string name="error_network_check">네트워크 연결을 확인해주세요.</string>
+
+    <string name="error_register_failed">가입 실패: %1$s</string>
+    <string name="error_login_failed">로그인 실패: %1$s</string>
+    <string name="error_send_failed">전송 실패: %1$s</string>
+    <string name="error_change_password_failed">변경 실패: %1$s</string>
+    <string name="error_delete_account_failed">계정 삭제 실패: %1$s</string>
+
+    <string name="error_old_password_wrong">현재 비밀번호가 틀렸습니다</string>
+    <string name="error_recent_login_required">세션이 만료되었습니다. 다시 로그인한 후 시도해주세요.</string>
+    <string name="error_recent_login_required_delete">세션이 만료되었습니다. 계정을 삭제하려면 다시 로그인해주세요.</string>
+    <string name="error_new_password_weak">비밀번호가 너무 약합니다</string>
+
+    <string name="success_backup_to_cloud">클라우드에 백업되었습니다</string>
+    <string name="success_restore_from_cloud">클라우드에서 복원되었습니다</string>
+    <string name="error_cloud_data_empty">클라우드 데이터가 비어 있습니다</string>
+    <string name="error_cloud_no_data">백업을 찾을 수 없습니다</string>
+    <string name="success_cloud_empty_uploaded">클라우드가 비어 있어 로컬 데이터를 업로드했습니다.</string>
+    <string name="success_sync_merge_added">동기화 완료. %1$d건이 추가되었습니다.</string>
+
+    <string name="error_register_failed_short">가입 실패</string>
+    <string name="error_login_failed_short">로그인 실패</string>
+    <string name="error_send_failed_short">전송 실패</string>
+    <string name="error_change_failed_short">변경 실패</string>
+    <string name="error_delete_failed_short">삭제 실패</string>
+    <string name="error_connection_failed_short">연결 실패</string>
+
+    <string name="sync_success_short">동기화 성공</string>
+    <string name="sync_failed_short">동기화 실패</string>
+
+    <string name="sync_loading_checking_cloud">클라우드 확인 중...</string>
+    <string name="sync_loading_merging">데이터 병합 중...</string>
+    <string name="sync_loading_uploading_backup">백업 업로드 중...</string>
+    <string name="sync_loading_restoring_data">데이터 복원 중...</string>
+
+    <string name="welcome_title">TimeLedger에 오신 것을 환영합니다</string>
+    <string name="welcome_subtitle">첫 번째 기록을 시작해보세요</string>
+    <string name="initial_asset_balance">초기 자산 잔액</string>
+    <string name="start_journey">시작하기</string>
+</resources>

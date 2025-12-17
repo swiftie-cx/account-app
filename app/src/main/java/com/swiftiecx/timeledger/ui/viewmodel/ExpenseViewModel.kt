@@ -1,7 +1,11 @@
 package com.swiftiecx.timeledger.ui.viewmodel
 
+import android.app.Application
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.swiftiecx.timeledger.data.Account
@@ -51,10 +55,11 @@ sealed class SyncUiState {
     data class Conflict(val cloudTime: Long) : SyncUiState()
 }
 
+// [修改] 继承 AndroidViewModel 以便获取 Application Context
 class ExpenseViewModel(
     private val repository: ExpenseRepository,
-    private val context: Context // [保留] 虽然没直接用，但工厂类传了，保留以防万一
-) : ViewModel() {
+    application: Application // [修改] 接收 Application
+) : AndroidViewModel(application) {
 
     // 用于预算更新的互斥锁
     private val budgetUpdateMutex = Mutex()
@@ -87,9 +92,29 @@ class ExpenseViewModel(
     // ===========================
     // 关键修复：刷新分类
     // ===========================
-    fun refreshCategories() {
-        // [关键修复] 必须使用 Dispatchers.IO，否则访问数据库会崩溃！
+    /**
+     * 刷新分类数据。
+     * @param specificContext 可选。如果传入了特定的 Context（例如切换语言后的 Context），
+     * 将使用它来读取字符串资源；否则使用 Application Context。
+     */
+    fun refreshCategories(specificContext: Context? = null) {
         viewModelScope.launch(Dispatchers.IO) {
+            // [关键] 决定使用哪个 Context
+            // 如果是在切换语言时调用，specificContext 会带有新语言的配置
+            // 如果是正常启动，就用全局 Application
+            val targetContext = specificContext ?: getApplication<Application>()
+
+            // 这里的 getMainCategories 会重新从 R.string 读取字符串
+            // 我们需要修改 repository 的方法，或者在这里手动触发重读
+            // 由于 Repository 中通常不持有 Context，这里假设 repository.getMainCategories
+            // 实际上是读取数据库。如果数据库里的名字是旧语言，我们需要 update 它们。
+
+            // [核心逻辑] 强制重新初始化分类名称
+            // 注意：这会覆盖用户自定义修改的分类名称（如果您的应用允许修改默认分类名）
+            // 如果您希望保留用户修改，这里需要更复杂的逻辑判断（比如只更新 isDefault=true 的分类）
+            repository.forceUpdateCategoryNames(targetContext)
+
+            // 重新读取
             val expenseCats = repository.getMainCategories(CategoryType.EXPENSE)
             val incomeCats = repository.getMainCategories(CategoryType.INCOME)
 

@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.kotlin.kapt")
     alias(libs.plugins.kotlin.compose)
-    // id("com.android.application") <--- 删掉这一行，因为第一行已经加过了
     id("com.google.gms.google-services")
 }
 
@@ -19,6 +18,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // [关键修复] 显式声明 App 支持的语言
+        // 这能强制构建系统打包日语(ja)和韩语(ko)资源，防止资源丢失
+        resourceConfigurations.addAll(listOf("en", "zh", "ja", "ko"))
     }
 
     buildTypes {
@@ -87,7 +90,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
-    // 邮件库 (虽然换了 Firebase，但这几个库留着也不报错，如果不想要可以删掉)
+    // 邮件库
     implementation("com.sun.mail:android-mail:1.6.7")
     implementation("com.sun.mail:android-activation:1.6.7")
 
@@ -95,10 +98,9 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0")) // 建议用较新的稳定版，或者保持你写的 34.7.0 如果确实有
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth-ktx")
-
     implementation("com.google.firebase:firebase-firestore-ktx:24.10.0")
 
     implementation("androidx.appcompat:appcompat:1.6.1")

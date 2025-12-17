@@ -21,6 +21,7 @@ class PeriodicWorker(
                 budgetDao = database.budgetDao(),
                 accountDao = database.accountDao(),
                 periodicDao = database.periodicDao(),
+                categoryDao = database.categoryDao(), // [补上]
                 context = applicationContext
             )
 

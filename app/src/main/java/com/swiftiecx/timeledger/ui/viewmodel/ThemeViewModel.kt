@@ -107,6 +107,8 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
         return when {
             current.startsWith("zh") -> "简体中文"
             current.startsWith("en") -> "English"
+            current.startsWith("ja") -> "日本語" // [补全]
+            current.startsWith("ko") -> "한국어"   // [补全]
             else -> "跟随系统"
         }
     }

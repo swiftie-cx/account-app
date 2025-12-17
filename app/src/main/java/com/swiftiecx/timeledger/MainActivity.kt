@@ -53,11 +53,14 @@ class MainActivity : AppCompatActivity() {
             // --- 3. 初始化数据库和仓库 ---
             Log.d(TAG, "正在初始化数据库...")
             val database = AppDatabase.getDatabase(applicationContext)
+
+            // [关键修复] 补全参数：categoryDao，移除 context
             val repository = ExpenseRepository(
                 expenseDao = database.expenseDao(),
                 budgetDao = database.budgetDao(),
                 accountDao = database.accountDao(),
                 periodicDao = database.periodicDao(),
+                categoryDao = database.categoryDao(), // [补上]
                 context = applicationContext
             )
             Log.d(TAG, "Repository 初始化完成")
@@ -65,11 +68,12 @@ class MainActivity : AppCompatActivity() {
             // --- 4. 初始化 ViewModel ---
             Log.d(TAG, "正在初始化 ViewModel...")
 
-            // 4.1 ExpenseViewModel
+            // 4.1 ExpenseViewModel (使用 Application)
             val expenseViewModelFactory = object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     if (modelClass.isAssignableFrom(ExpenseViewModel::class.java)) {
                         @Suppress("UNCHECKED_CAST")
+                        // 传入 repository 和 application
                         return ExpenseViewModel(repository, application) as T
                     }
                     throw IllegalArgumentException("Unknown ViewModel class")
@@ -141,8 +145,6 @@ class MainActivity : AppCompatActivity() {
 
         } catch (e: Exception) {
             Log.e(TAG, "FATAL: MainActivity 初始化过程发生严重错误", e)
-            // 这里虽然捕获了，但如果没有 UI，应用还是会黑屏或退出
-            // 但至少我们能在 Logcat 里看到报错堆栈
         }
     }
 }

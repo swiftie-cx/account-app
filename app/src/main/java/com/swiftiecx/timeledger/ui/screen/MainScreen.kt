@@ -460,7 +460,7 @@ fun NavigationGraph(
         }
 
         composable(Routes.LANGUAGE_SETTINGS) {
-            LanguageSettingsScreen(navController = navController, themeViewModel = themeViewModel)
+            LanguageSettingsScreen(navController = navController, themeViewModel = themeViewModel,expenseViewModel = expenseViewModel)
         }
 
     }
