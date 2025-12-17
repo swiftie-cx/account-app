@@ -2,8 +2,10 @@ package com.swiftiecx.timeledger.data
 
 import android.content.Context
 import android.os.Build
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.ui.navigation.Category
 import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -46,12 +48,15 @@ enum class SyncStrategy {
     MERGE              // 智能合并
 }
 
+private const val KEY_CATEGORY_TRANSFER_OUT = "category_transfer_out"
+private const val KEY_CATEGORY_TRANSFER_IN = "category_transfer_in"
+
 class ExpenseRepository(
     private val expenseDao: ExpenseDao,
     private val budgetDao: BudgetDao,
     private val accountDao: AccountDao,
     private val periodicDao: PeriodicTransactionDao,
-    private val context: Context // 修改：添加 private val 使其成为成员变量，供后续 CategoryData 使用
+    private val context: Context
 ) {
     // --- 偏好设置 (SharedPreferences) ---
     private val prefs = context.getSharedPreferences("expense_prefs", Context.MODE_PRIVATE)
@@ -63,6 +68,53 @@ class ExpenseRepository(
 
     init {
         firebaseAuth.useAppLanguage()
+    }
+
+    // ===========================
+    //  Localization helpers
+    // ===========================
+
+    private fun s(@StringRes id: Int, vararg args: Any): String {
+        return if (args.isEmpty()) context.getString(id) else context.getString(id, *args)
+    }
+
+    fun getString(@StringRes id: Int, vararg args: Any): String = s(id, *args)
+
+    // [关键修改] 不再强制转换 Key。CategoryData 已经是单一数据源，Repository 只需要原样存储。
+    fun normalizeCategoryValue(value: String): String {
+        return value
+    }
+
+    // [关键修改] 显示名称的转换交由 CategoryData.getDisplayName 处理，这里只做直通。
+    fun localizeCategoryValue(value: String): String {
+        return value
+    }
+
+    fun isTransferCategory(value: String): Boolean {
+        // 兼容旧的资源名 key，防止旧数据识别错误
+        return value == KEY_CATEGORY_TRANSFER_OUT || value == KEY_CATEGORY_TRANSFER_IN ||
+                value == "category_transfer_out" || value == "category_transfer_in"
+    }
+
+    fun transferOutCategoryKey(): String = KEY_CATEGORY_TRANSFER_OUT
+    fun transferInCategoryKey(): String = KEY_CATEGORY_TRANSFER_IN
+
+    // Built-in account type keys (string resource names)
+    private val builtinAccountTypeKeys: Set<String> = setOf(
+        "account_cash", "account_card", "account_credit", "account_investment", "account_ewallet", "account_default"
+    )
+
+    fun normalizeAccountTypeValue(value: String): String {
+        // Account 类型目前逻辑比较简单，暂时保留原样
+        if (builtinAccountTypeKeys.contains(value)) return value
+        val id = context.resources.getIdentifier(value, "string", context.packageName)
+        return if (id != 0) value else value
+    }
+
+    fun localizeAccountTypeValue(value: String): String {
+        if (!builtinAccountTypeKeys.contains(value)) return value
+        val id = context.resources.getIdentifier(value, "string", context.packageName)
+        return if (id != 0) context.getString(id) else value
     }
 
     // --- 首次启动标记 ---
@@ -79,11 +131,12 @@ class ExpenseRepository(
     fun saveMainCategories(categories: List<MainCategory>, type: CategoryType) {
         val dtoList = categories.map { main ->
             MainCategoryDto(
-                title = main.title,
+                title = main.title, // [修改] 直接存 title
                 iconName = IconMapper.getIconName(main.icon),
                 colorInt = main.color.toArgb(),
                 subs = main.subCategories.map { sub ->
-                    SubCategoryDto(sub.title, IconMapper.getIconName(sub.icon))
+                    // [修改] 直接存 key (sub.key 现在是 stable key)
+                    SubCategoryDto(sub.key, IconMapper.getIconName(sub.icon))
                 }
             )
         }
@@ -107,7 +160,11 @@ class ExpenseRepository(
                         icon = IconMapper.getIcon(dto.iconName),
                         color = Color(dto.colorInt),
                         subCategories = dto.subs.map { subDto ->
-                            Category(subDto.title, IconMapper.getIcon(subDto.iconName))
+                            // 这里 subDto.title 实际上存的是 key
+                            val stableKey = subDto.title
+                            // 尝试从 CategoryData 恢复正确的本地化 title
+                            val displayTitle = CategoryData.getDisplayName(stableKey, context)
+                            Category(displayTitle, IconMapper.getIcon(subDto.iconName), key = stableKey)
                         }
                     )
                 }
@@ -122,7 +179,7 @@ class ExpenseRepository(
         }
     }
 
-    // 【新增】辅助方法：获取默认的多语言分类
+    // 辅助方法：获取默认的多语言分类
     private fun getDefaultCategories(type: CategoryType): List<MainCategory> {
         return if (type == CategoryType.EXPENSE) {
             CategoryData.getExpenseCategories(context)
@@ -156,11 +213,9 @@ class ExpenseRepository(
                     Category(it.title, IconMapper.getIcon(it.iconName))
                 }
             } catch (e: Exception) {
-                // 解析失败，回退到默认扁平化列表
                 getDefaultCategories(type).flatMap { it.subCategories }
             }
         } else {
-            // 无缓存，回退到默认扁平化列表
             getDefaultCategories(type).flatMap { it.subCategories }
         }
     }
@@ -194,10 +249,10 @@ class ExpenseRepository(
             Result.success(true)
         } catch (e: Exception) {
             val msg = when (e) {
-                is FirebaseAuthUserCollisionException -> "该邮箱已被注册"
-                is FirebaseAuthInvalidCredentialsException -> "邮箱格式不正确"
-                is FirebaseNetworkException -> "网络连接失败，请检查网络"
-                else -> "注册失败: ${e.message}"
+                is FirebaseAuthUserCollisionException -> s(R.string.error_email_already_registered)
+                is FirebaseAuthInvalidCredentialsException -> s(R.string.error_email_invalid)
+                is FirebaseNetworkException -> s(R.string.error_network_check)
+                else -> s(R.string.error_register_failed, e.message ?: "")
             }
             Result.failure(Exception(msg))
         }
@@ -209,10 +264,10 @@ class ExpenseRepository(
             Result.success(true)
         } catch (e: Exception) {
             val msg = when (e) {
-                is FirebaseAuthInvalidUserException -> "该账号不存在"
-                is FirebaseAuthInvalidCredentialsException -> "邮箱或密码错误"
-                is FirebaseNetworkException -> "网络连接失败，请检查网络"
-                else -> "登录失败: ${e.message}"
+                is FirebaseAuthInvalidUserException -> s(R.string.error_account_not_exist)
+                is FirebaseAuthInvalidCredentialsException -> s(R.string.error_email_or_password_wrong)
+                is FirebaseNetworkException -> s(R.string.error_network_check)
+                else -> s(R.string.error_login_failed, e.message ?: "")
             }
             Result.failure(Exception(msg))
         }
@@ -228,10 +283,10 @@ class ExpenseRepository(
             Result.success(true)
         } catch (e: Exception) {
             val msg = when (e) {
-                is FirebaseAuthInvalidUserException -> "该邮箱未注册"
-                is FirebaseAuthInvalidCredentialsException -> "邮箱格式不正确"
-                is FirebaseNetworkException -> "网络连接失败"
-                else -> "发送失败: ${e.message}"
+                is FirebaseAuthInvalidUserException -> s(R.string.error_email_not_registered)
+                is FirebaseAuthInvalidCredentialsException -> s(R.string.error_email_invalid)
+                is FirebaseNetworkException -> s(R.string.error_network)
+                else -> s(R.string.error_send_failed, e.message ?: "")
             }
             Result.failure(Exception(msg))
         }
@@ -241,7 +296,7 @@ class ExpenseRepository(
         return try {
             val user = firebaseAuth.currentUser
             if (user == null || user.email == null) {
-                return Result.failure(Exception("用户未登录"))
+                return Result.failure(Exception(s(R.string.error_user_not_logged_in)))
             }
             val credential = EmailAuthProvider.getCredential(user.email!!, oldPass)
             user.reauthenticate(credential).await()
@@ -249,12 +304,12 @@ class ExpenseRepository(
             Result.success(true)
         } catch (e: Exception) {
             val msg = when (e) {
-                is FirebaseAuthInvalidCredentialsException -> "旧密码不正确"
-                is FirebaseAuthRecentLoginRequiredException -> "登录已过期，请重新登录后再试"
-                is FirebaseNetworkException -> "网络连接失败"
+                is FirebaseAuthInvalidCredentialsException -> s(R.string.error_old_password_wrong)
+                is FirebaseAuthRecentLoginRequiredException -> s(R.string.error_recent_login_required)
+                is FirebaseNetworkException -> s(R.string.error_network)
                 else -> {
-                    if (e.message?.contains("weak-password") == true) "新密码强度太低"
-                    else "修改失败: ${e.message}"
+                    if (e.message?.contains("weak-password") == true) s(R.string.error_new_password_weak)
+                    else s(R.string.error_change_password_failed, e.message ?: "")
                 }
             }
             Result.failure(Exception(msg))
@@ -267,10 +322,10 @@ class ExpenseRepository(
             user?.delete()?.await()
             Result.success(true)
         } catch (e: Exception) {
-            val msg = when(e) {
-                is FirebaseAuthRecentLoginRequiredException -> "安全验证过期，请重新登录后注销"
-                is FirebaseNetworkException -> "网络连接失败"
-                else -> "注销失败: ${e.message}"
+            val msg = when (e) {
+                is FirebaseAuthRecentLoginRequiredException -> s(R.string.error_recent_login_required_delete)
+                is FirebaseNetworkException -> s(R.string.error_network)
+                else -> s(R.string.error_delete_account_failed, e.message ?: "")
             }
             Result.failure(Exception(msg))
         }
@@ -290,6 +345,7 @@ class ExpenseRepository(
 
     // --- Expense methods ---
     val allExpenses: Flow<List<Expense>> = expenseDao.getAllExpenses()
+    // [修改] 直接存，不 normalize
     suspend fun insert(expense: Expense) = expenseDao.insertExpense(expense)
     suspend fun createTransfer(expenseOut: Expense, expenseIn: Expense) = expenseDao.insertTransfer(expenseOut, expenseIn)
     suspend fun deleteExpense(expense: Expense) = expenseDao.deleteExpense(expense)
@@ -314,8 +370,8 @@ class ExpenseRepository(
             }
         }
 
-    suspend fun insertAccount(account: Account) = accountDao.insert(account)
-    suspend fun updateAccount(account: Account) = accountDao.update(account)
+    suspend fun insertAccount(account: Account) = accountDao.insert(account.copy(type = normalizeAccountTypeValue(account.type)))
+    suspend fun updateAccount(account: Account) = accountDao.update(account.copy(type = normalizeAccountTypeValue(account.type)))
     suspend fun deleteAccount(account: Account) = accountDao.delete(account)
 
     // --- Helper methods ---
@@ -419,27 +475,27 @@ class ExpenseRepository(
 
             val expenseOut = Expense(
                 accountId = rule.accountId,
-                category = "转账 (转出)",
+                category = transferOutCategoryKey(),
                 amount = finalOut,
                 date = rule.nextExecutionDate,
-                remark = rule.remark ?: "周期转账"
+                remark = rule.remark ?: s(R.string.periodic_remark_transfer_default)
             )
             val expenseIn = Expense(
                 accountId = rule.targetAccountId,
-                category = "转账 (转入)",
+                category = transferInCategoryKey(),
                 amount = finalIn,
                 date = rule.nextExecutionDate,
-                remark = rule.remark ?: "周期转账"
+                remark = rule.remark ?: s(R.string.periodic_remark_transfer_default)
             )
             expenseDao.insertTransfer(expenseOut, expenseIn)
         } else {
             val finalAmount = if (rule.type == 0) -abs(rule.amount) else abs(rule.amount)
             val expense = Expense(
-                category = rule.category,
+                category = rule.category, // 直接存，不 normalize
                 amount = finalAmount,
                 date = rule.nextExecutionDate,
                 accountId = rule.accountId,
-                remark = rule.remark ?: "周期自动记账",
+                remark = rule.remark ?: s(R.string.periodic_remark_auto_default),
                 excludeFromBudget = rule.excludeFromBudget
             )
             expenseDao.insertExpense(expense)
@@ -487,7 +543,7 @@ class ExpenseRepository(
 
     // 1. 检查云端状态
     suspend fun checkCloudStatus(): Result<SyncCheckResult> {
-        val uid = firebaseAuth.currentUser?.uid ?: return Result.failure(Exception("未登录"))
+        val uid = firebaseAuth.currentUser?.uid ?: return Result.failure(Exception(s(R.string.error_not_logged_in)))
         return try {
             val doc = firestore.collection("users").document(uid)
                 .collection("backups").document("latest")
@@ -497,11 +553,13 @@ class ExpenseRepository(
             val localAccountCount = accountDao.getAllAccounts().first().size
             val localCount = localExpenseCount + localAccountCount
 
-            Result.success(SyncCheckResult(
-                hasCloudData = doc.exists(),
-                hasLocalData = localCount > 0,
-                cloudTimestamp = doc.getLong("timestamp") ?: 0L
-            ))
+            Result.success(
+                SyncCheckResult(
+                    hasCloudData = doc.exists(),
+                    hasLocalData = localCount > 0,
+                    cloudTimestamp = doc.getLong("timestamp") ?: 0L
+                )
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -509,7 +567,7 @@ class ExpenseRepository(
 
     // 2. 执行同步
     suspend fun executeSync(strategy: SyncStrategy): Result<String> {
-        val uid = firebaseAuth.currentUser?.uid ?: return Result.failure(Exception("未登录"))
+        val uid = firebaseAuth.currentUser?.uid ?: return Result.failure(Exception(s(R.string.error_not_logged_in)))
 
         return try {
             val doc = firestore.collection("users").document(uid)
@@ -522,23 +580,23 @@ class ExpenseRepository(
             when (strategy) {
                 SyncStrategy.OVERWRITE_CLOUD -> {
                     uploadData(uid, localExpenses, localAccounts)
-                    Result.success("已成功备份到云端")
+                    Result.success(s(R.string.success_backup_to_cloud))
                 }
 
                 SyncStrategy.OVERWRITE_LOCAL -> {
                     if (doc.exists()) {
-                        val data = doc.data ?: return Result.failure(Exception("云端数据为空"))
+                        val data = doc.data ?: return Result.failure(Exception(s(R.string.error_cloud_data_empty)))
                         restoreDataLocally(data)
-                        Result.success("已成功从云端恢复")
+                        Result.success(s(R.string.success_restore_from_cloud))
                     } else {
-                        Result.failure(Exception("云端无数据"))
+                        Result.failure(Exception(s(R.string.error_cloud_no_data)))
                     }
                 }
 
                 SyncStrategy.MERGE -> {
                     if (!doc.exists()) {
                         uploadData(uid, localExpenses, localAccounts)
-                        return Result.success("云端为空，已自动上传本地数据")
+                        return Result.success(s(R.string.success_cloud_empty_uploaded))
                     }
 
                     val cloudData = doc.data!!
@@ -549,10 +607,11 @@ class ExpenseRepository(
 
                     cloudAccountsMap.forEach { accMap ->
                         val name = accMap["name"] as String
-                        val type = accMap["type"] as String
+                        val typeRaw = accMap["type"] as String
+                        val type = normalizeAccountTypeValue(typeRaw)
                         val currency = accMap["currency"] as? String ?: "CNY"
 
-                        val existingLocalAccount = localAccounts.find { it.name == name && it.type == type }
+                        val existingLocalAccount = localAccounts.find { it.name == name && normalizeAccountTypeValue(it.type) == type }
 
                         val cloudId = (accMap["id"] as Number).toLong()
                         if (existingLocalAccount != null) {
@@ -577,7 +636,9 @@ class ExpenseRepository(
                         val amount = (expMap["amount"] as Number).toDouble()
                         val date = parseDate(expMap["date"])
                         val remark = expMap["remark"] as? String ?: ""
-                        val category = expMap["category"] as String
+                        val categoryRaw = expMap["category"] as String
+                        // [修改] 直接取值，不 normalize
+                        val category = categoryRaw
                         val cloudAccountId = (expMap["accountId"] as Number).toLong()
 
                         val targetAccountId = accountIdMap[cloudAccountId] ?: return@forEach
@@ -606,7 +667,7 @@ class ExpenseRepository(
                     val finalAccounts = accountDao.getAllAccounts().first()
                     uploadData(uid, finalExpenses, finalAccounts)
 
-                    Result.success("同步完成，新增了 ${addedCount} 条记录")
+                    Result.success(s(R.string.success_sync_merge_added, addedCount))
                 }
             }
         } catch (e: Exception) {
@@ -616,7 +677,6 @@ class ExpenseRepository(
     }
 
     private suspend fun uploadData(uid: String, expenses: List<Expense>, accounts: List<Account>) {
-
         // 【新增】获取当前所有的分类设置
         val expenseCats = getMainCategories(CategoryType.EXPENSE)
         val incomeCats = getMainCategories(CategoryType.INCOME)
@@ -627,7 +687,7 @@ class ExpenseRepository(
                 title = main.title,
                 iconName = IconMapper.getIconName(main.icon),
                 colorInt = main.color.toArgb(),
-                subs = main.subCategories.map { SubCategoryDto(it.title, IconMapper.getIconName(it.icon)) }
+                subs = main.subCategories.map { SubCategoryDto(it.key, IconMapper.getIconName(it.icon)) } // 存 Key
             )
         }
         val incomeCatsDto = incomeCats.map { main ->
@@ -635,7 +695,7 @@ class ExpenseRepository(
                 title = main.title,
                 iconName = IconMapper.getIconName(main.icon),
                 colorInt = main.color.toArgb(),
-                subs = main.subCategories.map { SubCategoryDto(it.title, IconMapper.getIconName(it.icon)) }
+                subs = main.subCategories.map { SubCategoryDto(it.key, IconMapper.getIconName(it.icon)) } // 存 Key
             )
         }
 
@@ -682,7 +742,7 @@ class ExpenseRepository(
         accountsList.forEach { map ->
             val account = Account(
                 name = map["name"] as String,
-                type = map["type"] as String,
+                type = normalizeAccountTypeValue(map["type"] as String),
                 initialBalance = (map["initialBalance"] as Number).toDouble(),
                 currency = map["currency"] as? String ?: "CNY",
                 iconName = map["iconName"] as? String ?: "Wallet",
@@ -701,7 +761,7 @@ class ExpenseRepository(
 
             val expense = Expense(
                 accountId = newAccountId,
-                category = map["category"] as String,
+                category = map["category"] as String, // [修改] 直接取，不 normalize
                 amount = (map["amount"] as Number).toDouble(),
                 date = date,
                 remark = map["remark"] as? String

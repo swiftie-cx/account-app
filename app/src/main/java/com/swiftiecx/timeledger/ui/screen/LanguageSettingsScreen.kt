@@ -1,5 +1,8 @@
 package com.swiftiecx.timeledger.ui.screen
 
+import android.content.Context
+import android.content.Intent
+import android.os.Process
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -22,6 +26,9 @@ fun LanguageSettingsScreen(
     navController: NavController,
     themeViewModel: ThemeViewModel
 ) {
+    // 获取 Context 用于重启 App
+    val context = LocalContext.current
+
     // 【关键优化】使用 remember 记录当前选中的语言，实现点击即时刷新 UI
     var currentCode by remember { mutableStateOf(themeViewModel.getCurrentLanguageCode()) }
 
@@ -77,8 +84,10 @@ fun LanguageSettingsScreen(
                                 if (!isSelected) {
                                     // 1. 立即更新 UI 状态 (打钩)
                                     currentCode = option.code
-                                    // 2. 调用 ViewModel 切换语言 (随后 App 会自动重启)
+                                    // 2. 调用 ViewModel 切换语言
                                     themeViewModel.setLanguage(option.code)
+                                    // 3. 【核心】强制重启 App 以彻底应用新语言（清除内存缓存）
+                                    restartApp(context)
                                 }
                             }
                         )
@@ -136,3 +145,19 @@ fun LanguageItem(
 }
 
 data class LanguageOption(val name: String, val code: String)
+
+/**
+ * 强制重启 App 的工具函数
+ * 通过清除任务栈并杀死当前进程，让系统重新启动 App，
+ * 从而彻底清除单例（如 Repository）中缓存的旧语言资源。
+ */
+fun restartApp(context: Context) {
+    val packageManager = context.packageManager
+    val intent = packageManager.getLaunchIntentForPackage(context.packageName)
+    val componentName = intent?.component
+    val mainIntent = Intent.makeRestartActivityTask(componentName)
+    // 启动新任务
+    context.startActivity(mainIntent)
+    // 杀死当前进程
+    Process.killProcess(Process.myPid())
+}

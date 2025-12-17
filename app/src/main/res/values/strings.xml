@@ -200,15 +200,15 @@
     <!-- ========================================================= -->
     <!-- Categories -->
     <!-- ========================================================= -->
-    <string name="cat_entertainment">Entertainment</string>
-    <string name="cat_financial">Finance &amp; Transfer</string>
-    <string name="cat_food">Food &amp; Dining</string>
+    <string name="cat_food">Food</string>
+    <string name="cat_shopping">Shop</string>
+    <string name="cat_transport">Traffic</string>
     <string name="cat_home">Home</string>
-    <string name="cat_income_job">Job income</string>
-    <string name="cat_income_other">Other income</string>
-    <string name="cat_medical_edu">Health &amp; Education</string>
-    <string name="cat_shopping">Shopping</string>
-    <string name="cat_transport">Transport</string>
+    <string name="cat_entertainment">Leisure</string>
+    <string name="cat_medical_edu">Health</string>
+    <string name="cat_financial">Finance</string>
+    <string name="cat_income_job">Job</string>
+    <string name="cat_income_other">Other</string>
 
     <string name="sub_alcohol">Alcohol</string>
     <string name="sub_beauty">Beauty</string>
@@ -425,7 +425,7 @@
     <!-- Account Screens / Records -->
     <!-- ========================================================= -->
     <string name="account_detail_title">Account Details</string>
-    <string name="account_management_hint">Long press to drag and reorder, tap the circle to set as default</string>
+    <string name="account_management_hint">Long press to reorder, tap star to set default</string>
     <string name="account_management_title">Account Management</string>
     <string name="account_name_placeholder">Account Name</string>
     <string name="account_not_found">Account information not found</string>
@@ -563,8 +563,65 @@
 
     <string name="unknown_account">Unknown account</string>
 
-    <string name="account_balance_format">%1$s (Balance: %2$.2f)</string>
+    <string name="account_balance_format">%1$s (Balance: %2$s)</string>
     <string name="converted_amount_format">≈ %1$s %2$.2f</string>
     <string name="added_at_format">(Added at %1$s)</string>
 
+    <string name="default_account_name">Default account</string>
+
+    <string name="category_transfer_out">Transfer (Out)</string>
+    <string name="category_transfer_in">Transfer (In)</string>
+
+    <string name="periodic_remark_transfer_default">Recurring transfer</string>
+    <string name="periodic_remark_auto_default">Recurring transaction</string>
+
+    <string name="error_not_logged_in">Not logged in</string>
+    <string name="error_user_not_logged_in">User not logged in</string>
+
+    <string name="error_email_already_registered">This email is already registered</string>
+    <string name="error_email_invalid">Invalid email format</string>
+    <string name="error_email_not_registered">This email is not registered</string>
+    <string name="error_account_not_exist">Account does not exist</string>
+    <string name="error_email_or_password_wrong">Incorrect email or password</string>
+
+    <string name="error_network">Network error</string>
+    <string name="error_network_check">Network error. Please check your connection.</string>
+
+    <string name="error_register_failed">Registration failed: %1$s</string>
+    <string name="error_login_failed">Login failed: %1$s</string>
+    <string name="error_send_failed">Send failed: %1$s</string>
+    <string name="error_change_password_failed">Update failed: %1$s</string>
+    <string name="error_delete_account_failed">Delete account failed: %1$s</string>
+
+    <string name="error_old_password_wrong">Current password is incorrect</string>
+    <string name="error_recent_login_required">Session expired. Please log in again and retry.</string>
+    <string name="error_recent_login_required_delete">Session expired. Please log in again before deleting the account.</string>
+    <string name="error_new_password_weak">New password is too weak</string>
+
+    <string name="success_backup_to_cloud">Backed up to cloud</string>
+    <string name="success_restore_from_cloud">Restored from cloud</string>
+    <string name="error_cloud_data_empty">Cloud data is empty</string>
+    <string name="error_cloud_no_data">No cloud backup found</string>
+    <string name="success_cloud_empty_uploaded">Cloud is empty. Uploaded local data.</string>
+    <string name="success_sync_merge_added">Sync complete. Added %1$d records.</string>
+
+    <string name="error_register_failed_short">Registration failed</string>
+    <string name="error_login_failed_short">Login failed</string>
+    <string name="error_send_failed_short">Send failed</string>
+    <string name="error_change_failed_short">Update failed</string>
+    <string name="error_delete_failed_short">Delete failed</string>
+    <string name="error_connection_failed_short">Connection failed</string>
+
+    <string name="sync_success_short">Sync success</string>
+    <string name="sync_failed_short">Sync failed</string>
+
+    <string name="sync_loading_checking_cloud">Checking cloud data...</string>
+    <string name="sync_loading_merging">Merging data...</string>
+    <string name="sync_loading_uploading_backup">Uploading backup...</string>
+    <string name="sync_loading_restoring_data">Restoring data...</string>
+
+    <string name="welcome_title">Welcome to TimeLedger</string>
+    <string name="welcome_subtitle">Let\'s start your first entry</string>
+    <string name="initial_asset_balance">Initial Asset Balance</string>
+    <string name="start_journey">Start Journey</string>
 </resources>

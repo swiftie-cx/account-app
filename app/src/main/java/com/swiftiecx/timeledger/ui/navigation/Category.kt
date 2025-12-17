@@ -28,6 +28,52 @@ data class MainCategory(
 // --- 动态分类数据源 ---
 object CategoryData {
 
+    // [关键新增] 旧数据兼容映射表
+    // 如果数据库里存的是 "sub_food" (旧逻辑)，我们把它映射到 "Food" (新逻辑)
+    // 这样 UI 就能通过 "Food" 找到正确的本地化标题和图标
+    private val legacyKeyMap: Map<String, String> = mapOf(
+        "sub_food" to "Food",
+        "sub_snacks" to "Snacks",
+        "sub_alcohol" to "Alcohol",
+        "sub_cigarette" to "Cigarette",
+        "sub_shopping" to "Shopping",
+        "sub_clothes" to "Clothes",
+        "sub_electronics" to "Electronics",
+        "sub_gift" to "Gift",
+        "sub_beauty" to "Beauty",
+        "sub_traffic" to "Traffic",
+        "sub_car" to "Car",
+        "sub_repair" to "Repair",
+        "sub_travel" to "Travel",
+        "sub_housing" to "Housing",
+        "sub_daily" to "Daily",
+        "sub_phone" to "Phone",
+        "sub_pets" to "Pets",
+        "sub_service" to "Service",
+        "sub_entertainment" to "Entertainment",
+        "sub_sports" to "Sports",
+        "sub_social" to "Social",
+        "sub_movie" to "Movie",
+        "sub_drama" to "Drama",
+        "sub_medical" to "Medical",
+        "sub_education" to "Education",
+        "sub_child" to "Child",
+        "sub_book" to "Book",
+        "sub_donate" to "Donate",
+        "sub_other" to "Other",
+
+        // Income
+        "sub_salary" to "Salary",
+        "sub_bonus" to "Bonus",
+        "sub_reimbursement" to "Reimbursement",
+        "sub_part_time" to "PartTime",
+        "sub_finance" to "Finance",
+        "sub_gift_money" to "GiftMoney",
+        "sub_red_packet" to "RedPacket",
+        "sub_second_hand" to "SecondHand",
+        "sub_other" to "OtherIncome" // 注意：收入的其他映射到 OtherIncome
+    )
+
     // 在这里我们显式传入 key="Food" 等英文，用于从数据库匹配
     fun getExpenseCategories(context: Context): List<MainCategory> {
         return listOf(
@@ -149,6 +195,11 @@ object CategoryData {
      * 如果传入本来就是 key，则原样返回。
      */
     fun getStableKey(nameOrKey: String, context: Context): String {
+        // 1. 如果是 legacy key (sub_xxx)，直接映射到新 key
+        val mappedKey = legacyKeyMap[nameOrKey]
+        if (mappedKey != null) return mappedKey
+
+        // 2. 正常查找
         val allSubs = (getExpenseCategories(context) + getIncomeCategories(context))
             .flatMap { it.subCategories }
 
@@ -161,10 +212,14 @@ object CategoryData {
      * 如果传入本来就是显示名，则原样返回。
      */
     fun getDisplayName(nameOrKey: String, context: Context): String {
+        // 1. 优先尝试 legacy 映射：如果数据库存的是 "sub_food"，这里会映射为 "Food"
+        val searchKey = legacyKeyMap[nameOrKey] ?: nameOrKey
+
         val allSubs = (getExpenseCategories(context) + getIncomeCategories(context))
             .flatMap { it.subCategories }
 
-        val hit = allSubs.firstOrNull { it.title == nameOrKey || it.key == nameOrKey }
+        // 2. 用新 key (或原 key) 去匹配
+        val hit = allSubs.firstOrNull { it.key == searchKey || it.title == nameOrKey }
         return hit?.title ?: nameOrKey
     }
 
@@ -173,10 +228,11 @@ object CategoryData {
      * typeInt: 0=支出 1=收入
      */
     fun getColor(nameOrKey: String, typeInt: Int, context: Context): Color {
+        val searchKey = legacyKeyMap[nameOrKey] ?: nameOrKey
         val mains = if (typeInt == 0) getExpenseCategories(context) else getIncomeCategories(context)
 
         val mainHit = mains.firstOrNull { main ->
-            main.subCategories.any { sub -> sub.title == nameOrKey || sub.key == nameOrKey }
+            main.subCategories.any { sub -> sub.key == searchKey || sub.title == nameOrKey }
         }
 
         return mainHit?.color ?: Color(0xFF90A4AE)
@@ -186,10 +242,11 @@ object CategoryData {
      * 根据子分类(显示名或key)拿到图标。
      */
     fun getIcon(nameOrKey: String, context: Context): ImageVector {
+        val searchKey = legacyKeyMap[nameOrKey] ?: nameOrKey
         val allMains = getExpenseCategories(context) + getIncomeCategories(context)
 
         for (main in allMains) {
-            val subHit = main.subCategories.firstOrNull { it.title == nameOrKey || it.key == nameOrKey }
+            val subHit = main.subCategories.firstOrNull { it.key == searchKey || it.title == nameOrKey }
             if (subHit != null) return subHit.icon
         }
 

@@ -16,8 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -37,10 +36,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
+import com.swiftiecx.timeledger.ui.navigation.AccountTypeManager // [新增] 引入 AccountTypeManager
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.util.Locale
-import kotlin.collections.find
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,17 +51,15 @@ fun AddAccountScreen(
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
-    // 【修正位置】账户类型从资源数组中加载，位于 Composable 顶层
-    val accountTypes = stringArrayResource(R.array.account_types).toList()
-    // 【修正位置】获取信用卡类型的字符串
-    val creditCardType = stringArrayResource(R.array.account_types)[2]
+    // [修改] 使用 Manager 获取类型列表 (Key, ResId)
+    val accountTypes = remember { AccountTypeManager.getAllTypes() }
 
     // --- 状态管理 ---
     var accountName by remember { mutableStateOf("") }
     var balanceInput by remember { mutableStateOf("") }
 
-    // 初始化时使用已加载的资源数组
-    var selectedType by remember { mutableStateOf(accountTypes.first()) }
+    // [修改] 默认选中第一个类型的 Key
+    var selectedTypeKey by remember { mutableStateOf(accountTypes.first().first) }
 
     val currencies = listOf(
         "CNY", "USD", "EUR", "JPY", "HKD", "GBP", "AUD", "CAD",
@@ -70,9 +67,17 @@ fun AddAccountScreen(
     )
     var selectedCurrency by remember { mutableStateOf(currencies.first()) }
 
-    val icons = IconMapper.allIcons
+    // 获取图标列表 (Pair<String, ImageVector>)
+    val icons = remember {
+        listOf(
+            "Wallet", "Bank", "CreditCard", "TrendingUp",
+            "Smartphone", "AttachMoney", "Savings", "Payment",
+            "CurrencyExchange", "Euro", "ShowChart", "PieChart"
+        ).map { it to IconMapper.getIcon(it) }
+    }
+
     // 默认选中第一个图标
-    var selectedIcon by remember { mutableStateOf<String?>(icons.firstOrNull()?.first) }
+    var selectedIcon by remember { mutableStateOf(icons.first().first) }
 
     var isDataLoaded by remember { mutableStateOf(false) }
 
@@ -86,15 +91,20 @@ fun AddAccountScreen(
                 val transactionSum = allExpenses
                     .filter { it.accountId == accountToEdit.id }
                     .sumOf { it.amount }
-                val currentBalance = accountToEdit.initialBalance + transactionSum
+                val currentBalance = accountToEdit.initialBalance + transactionSum // 这里暂时只用于显示
 
+                // 编辑模式下，初始余额显示为 Account 原始的 initialBalance
+                // 或者如果您希望用户修改的是“当前余额”，逻辑会更复杂（需要反推初始余额），这里保持简单逻辑：
+                // 通常修改账户信息时，改的是基本信息，余额建议通过“余额调整”功能（记一笔）来做。
+                // 但为了保持您的逻辑一致：
                 balanceInput = when {
-                    currentBalance == 0.0 -> ""
-                    currentBalance % 1.0 == 0.0 -> currentBalance.toLong().toString()
-                    else -> String.format(Locale.US, "%.2f", currentBalance)
+                    accountToEdit.initialBalance == 0.0 -> ""
+                    accountToEdit.initialBalance % 1.0 == 0.0 -> accountToEdit.initialBalance.toLong().toString()
+                    else -> String.format(Locale.US, "%.2f", accountToEdit.initialBalance)
                 }
 
-                selectedType = accountToEdit.type
+                // [修改] 尝试把旧数据的中文转成 Key
+                selectedTypeKey = AccountTypeManager.getStableKey(accountToEdit.type)
                 selectedCurrency = accountToEdit.currency
                 selectedIcon = accountToEdit.iconName
                 isDataLoaded = true
@@ -123,28 +133,31 @@ fun AddAccountScreen(
                             val name = accountName.trim()
                             val newBalanceVal = balanceInput.toDoubleOrNull() ?: 0.0
 
-                            if (name.isNotBlank() && selectedIcon != null) {
+                            if (name.isNotBlank()) {
+                                // 判断是否负债账户 (这里简单逻辑：信用卡即负债)
+                                val isLiability = selectedTypeKey == "account_credit"
+
                                 if (accountId == null) {
                                     val account = Account(
                                         name = name,
-                                        type = selectedType,
+                                        type = selectedTypeKey, // [修改] 保存 Key
                                         currency = selectedCurrency,
                                         initialBalance = newBalanceVal,
-                                        iconName = selectedIcon!!,
-                                        isLiability = (selectedType == creditCardType)
+                                        iconName = selectedIcon,
+                                        isLiability = isLiability
                                     )
                                     viewModel.insertAccount(account)
                                 } else {
                                     val accountToUpdate = Account(
                                         id = accountId,
                                         name = name,
-                                        type = selectedType,
+                                        type = selectedTypeKey, // [修改] 保存 Key
                                         currency = selectedCurrency,
-                                        initialBalance = 0.0,
-                                        iconName = selectedIcon!!,
-                                        isLiability = (selectedType == creditCardType)
+                                        initialBalance = newBalanceVal, // 这里直接更新初始余额
+                                        iconName = selectedIcon,
+                                        isLiability = isLiability
                                     )
-                                    viewModel.updateAccountWithNewBalance(accountToUpdate, newBalanceVal)
+                                    viewModel.updateAccount(accountToUpdate)
                                 }
                                 navController.popBackStack()
                             }
@@ -173,7 +186,7 @@ fun AddAccountScreen(
                 balance = balanceInput,
                 currency = selectedCurrency,
                 iconName = selectedIcon,
-                type = selectedType,
+                typeKey = selectedTypeKey, // [修改] 传入 Key
                 primaryColor = primaryColor
             )
 
@@ -181,7 +194,7 @@ fun AddAccountScreen(
             Card(
                 colors = CardDefaults.cardColors(containerColor = surfaceColor),
                 shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(0.dp), // 平面风格，更现代
+                elevation = CardDefaults.cardElevation(0.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -200,11 +213,12 @@ fun AddAccountScreen(
                     // 类型和货币 (并排)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(modifier = Modifier.weight(1f)) {
-                            DropdownInput(
+                            // [修改] 使用新的下拉组件
+                            AccountTypeDropdown(
                                 label = stringResource(R.string.account_type),
                                 options = accountTypes,
-                                selectedOption = selectedType,
-                                onOptionSelected = { selectedType = it }
+                                selectedKey = selectedTypeKey,
+                                onOptionSelected = { selectedTypeKey = it }
                             )
                         }
                         Box(modifier = Modifier.weight(1f)) {
@@ -255,7 +269,7 @@ fun AddAccountScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.heightIn(max = 300.dp) // 限制高度
+                        modifier = Modifier.heightIn(max = 300.dp)
                     ) {
                         items(icons) { (name, icon) ->
                             IconSelectionItem(
@@ -281,17 +295,16 @@ fun AccountPreviewCard(
     balance: String,
     currency: String,
     iconName: String?,
-    type: String,
+    typeKey: String,
     primaryColor: Color
 ) {
     val displayBalance = if (balance.isBlank()) "0.00" else balance
 
-    // 渐变背景
+    // [修改] 获取类型显示名称
+    val typeName = AccountTypeManager.getDisplayName(typeKey)
+
     val brush = Brush.verticalGradient(
-        colors = listOf(
-            primaryColor.copy(alpha = 0.8f),
-            primaryColor
-        )
+        colors = listOf(primaryColor.copy(alpha = 0.8f), primaryColor)
     )
 
     Card(
@@ -303,11 +316,8 @@ fun AccountPreviewCard(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(brush)
+            modifier = Modifier.fillMaxSize().background(brush)
         ) {
-            // 装饰圆圈
             Box(
                 modifier = Modifier
                     .offset(x = 200.dp, y = (-50).dp)
@@ -321,7 +331,6 @@ fun AccountPreviewCard(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // 顶部：图标 + 类型
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
@@ -335,11 +344,10 @@ fun AccountPreviewCard(
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(text = name, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                        Text(text = type, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+                        Text(text = typeName, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
                     }
                 }
 
-                // 底部：余额
                 Column {
                     Text(
                         text = stringResource(R.string.current_balance),
@@ -349,11 +357,10 @@ fun AccountPreviewCard(
                     Spacer(Modifier.height(4.dp))
 
                     val balanceValue = remember(displayBalance) {
-                        displayBalance.trim()
-                            .replace(",", "")
-                            .toDoubleOrNull() ?: 0.0
+                        displayBalance.trim().replace(",", "").toDoubleOrNull() ?: 0.0
                     }
 
+                    // [修改] 使用 stringResource 格式化金额，避免闪退
                     Text(
                         text = stringResource(R.string.currency_amount_format, currency, balanceValue),
                         style = MaterialTheme.typography.headlineMedium,
@@ -402,7 +409,7 @@ fun IconSelectionItem(
     }
 }
 
-// --- 组件：下拉选择框 (美化版) ---
+// --- 组件：通用下拉选择框 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropdownInput(
@@ -425,7 +432,7 @@ fun DropdownInput(
             label = { Text(label) },
             trailingIcon = {
                 Icon(
-                    Icons.Default.KeyboardArrowDown,
+                    Icons.Default.ArrowDropDown,
                     null,
                     modifier = Modifier.rotate(if (expanded) 180f else 0f)
                 )
@@ -456,7 +463,64 @@ fun DropdownInput(
     }
 }
 
-// 辅助扩展函数：旋转图标
+// --- 组件：账户类型专用下拉框 (支持多语言) ---
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AccountTypeDropdown(
+    label: String,
+    options: List<Pair<String, Int>>, // Key, ResId
+    selectedKey: String,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // 获取当前选中的显示文字
+    val selectedResId = AccountTypeManager.getTypeResId(selectedKey)
+    val displayText = if (selectedResId != null) stringResource(selectedResId) else selectedKey
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = displayText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = {
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    null,
+                    modifier = Modifier.rotate(if (expanded) 180f else 0f)
+                )
+            },
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+            )
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+        ) {
+            options.forEach { (key, resId) ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(resId)) },
+                    onClick = {
+                        onOptionSelected(key)
+                        expanded = false
+                    },
+                    contentPadding = PaddingValues(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
 fun Modifier.rotate(degrees: Float) = this.then(
     Modifier.graphicsLayer(rotationZ = degrees)
 )

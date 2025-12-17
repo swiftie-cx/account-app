@@ -125,7 +125,7 @@ fun SearchScreen(
         val sb = StringBuilder()
 
         if (initialCategory != null) {
-            sb.append(initialCategory)
+            sb.append(CategoryData.getDisplayName(initialCategory, context))
         }
 
         val start = customDateRangeMillis.first
@@ -145,7 +145,8 @@ fun SearchScreen(
         selectedTypeIndex,
         selectedTimeIndex,
         customDateRangeMillis,
-        selectedCategories
+        selectedCategories,
+        context // [新增] 依赖 context 变化
     ) {
         val timeFilteredResults = when (selectedTimeIndex) {
             1 -> {
@@ -186,13 +187,21 @@ fun SearchScreen(
         }
 
         val categoryFilteredResults = if (selectedCategories.isNotEmpty()) {
-            timeFilteredResults.filter { it.category in selectedCategories }
+            // [修正] 这里 selectedCategories 存的是 key，expense.category 也是 key，可以直接比较
+            timeFilteredResults.filter {
+                val stableKey = CategoryData.getStableKey(it.category, context)
+                stableKey in selectedCategories || it.category in selectedCategories
+            }
         } else {
             timeFilteredResults
         }
 
-        val transferExpenses = categoryFilteredResults.filter { it.category.startsWith("转账") }
-        val regularExpenses = categoryFilteredResults.filter { !it.category.startsWith("转账") }
+        val transferExpenses = categoryFilteredResults.filter {
+            it.category.startsWith("转账") || it.category.startsWith("Transfer") || CategoryData.getStableKey(it.category, context).startsWith("Transfer")
+        }
+        val regularExpenses = categoryFilteredResults.filter {
+            !(it.category.startsWith("转账") || it.category.startsWith("Transfer") || CategoryData.getStableKey(it.category, context).startsWith("Transfer"))
+        }
 
         val processedTransfers = transferExpenses
             .groupBy { it.date }
@@ -446,9 +455,10 @@ fun SearchScreen(
                         is Expense -> {
                             val account = accountMap[item.accountId]
 
-                            // ✅ item.category 是 key（如 Food / Electronics）就能命中
-                            val icon = categoryIconMap[item.category]
-                            val categoryThemeColor = categoryColorMap[item.category] ?: MaterialTheme.colorScheme.primary
+                            // ✅ 自动映射 Key -> Icon / Color
+                            val stableKey = CategoryData.getStableKey(item.category, context)
+                            val icon = CategoryData.getIcon(stableKey, context)
+                            val categoryThemeColor = CategoryData.getColor(stableKey, if(item.amount<0) 0 else 1, context)
 
                             ExpenseItem(
                                 expense = item,
@@ -522,6 +532,8 @@ private fun CategoryFilterRow(
     onRemoveCategory: (String) -> Unit,
     onAddClick: () -> Unit
 ) {
+    val context = LocalContext.current // [新增]
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -554,14 +566,15 @@ private fun CategoryFilterRow(
                 )
             }
 
-            items(selectedCategories) { category ->
+            items(selectedCategories) { categoryKey ->
                 InputChip(
                     selected = true,
                     onClick = { /* 不做事 */ },
-                    label = { Text(category) },
+                    // [关键修改] 显示本地化名称
+                    label = { Text(CategoryData.getDisplayName(categoryKey, context)) },
                     trailingIcon = {
                         IconButton(
-                            onClick = { onRemoveCategory(category) },
+                            onClick = { onRemoveCategory(categoryKey) },
                             modifier = Modifier.size(18.dp)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -687,6 +700,7 @@ private fun ExpenseItem(
     account: Account?,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current // [新增]
     val isExpense = expense.amount < 0
     val amountColor = if (isExpense) Color(0xFFE53935) else Color(0xFF4CAF50)
 
@@ -722,8 +736,9 @@ private fun ExpenseItem(
         Spacer(Modifier.size(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
+            // [关键修改] 显示本地化名称
             Text(
-                text = expense.category,
+                text = CategoryData.getDisplayName(expense.category, context),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface

@@ -42,7 +42,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.collections.find
-import kotlin.math.abs
 
 // 结束模式枚举
 private const val END_MODE_NEVER = 0
@@ -60,7 +59,6 @@ fun AddPeriodicTransactionScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     // [Fix] 动态获取分类列表
     val expenseCategories = remember(context) { CategoryData.getExpenseCategories(context).flatMap { it.subCategories } }
@@ -193,9 +191,9 @@ fun AddPeriodicTransactionScreen(
                 excludeFromBudget = item.excludeFromBudget
 
                 if (item.type != 2) {
-                    // [Fix] 动态获取分类列表
-                    val allCats = if(item.type == 0) expenseCategories else incomeCategories
-                    selectedCategory = allCats.find { it.title == item.category }
+                    // [Fix] 动态获取分类列表 + 兼容旧数据(title)与新数据(key)
+                    val allCats = if (item.type == 0) expenseCategories else incomeCategories
+                    selectedCategory = allCats.find { it.key == item.category || it.title == item.category }
                     selectedAccount = accounts.find { it.id == item.accountId }
                 } else {
                     fromAccount = accounts.find { it.id == item.accountId }
@@ -230,14 +228,20 @@ fun AddPeriodicTransactionScreen(
 
         val feeVal = fee.toDoubleOrNull() ?: 0.0
 
-        // [i18n] "Other" category should use stringResource
-        val defaultCategory = context.getString(R.string.sub_other)
-
         val cal = Calendar.getInstance()
         cal.time = startDate
         cal.set(Calendar.SECOND, 0)
         cal.set(Calendar.MILLISECOND, 0)
         val cleanStartDate = cal.time
+
+        // [关键修复] 非转账：存 stable key，而不是存显示名(title)
+        val stableCategoryKey = if (transactionType == 2) {
+            // transfer 的 category 字段实际不会用于生成记录分类，这里随便存一个稳定值即可
+            "Transfer"
+        } else {
+            val nameOrKey = selectedCategory?.key ?: selectedCategory?.title ?: context.getString(R.string.sub_other)
+            CategoryData.getStableKey(nameOrKey, context)
+        }
 
         val transaction = PeriodicTransaction(
             id = if (periodicId != null && periodicId != -1L) periodicId else 0,
@@ -245,10 +249,8 @@ fun AddPeriodicTransactionScreen(
             amount = amountVal,
             fee = feeVal,
             transferMode = transferMode,
-            // [i18n] 使用 stringResource 替换硬编码 "转账"
-            category = if (transactionType == 2) context.getString(R.string.type_transfer) else (selectedCategory?.title ?: defaultCategory),
-            accountId = if (transactionType == 2) (fromAccount?.id ?: 0) else (selectedAccount?.id
-                ?: 0),
+            category = stableCategoryKey,
+            accountId = if (transactionType == 2) (fromAccount?.id ?: 0) else (selectedAccount?.id ?: 0),
             targetAccountId = if (transactionType == 2) toAccount?.id else null,
             frequency = frequency,
             startDate = cleanStartDate,
@@ -271,7 +273,7 @@ fun AddPeriodicTransactionScreen(
     }
 
     // --- 动态标题 ---
-    val titleText = when(transactionType) {
+    val titleText = when (transactionType) {
         0 -> stringResource(R.string.type_expense) // 支出
         1 -> stringResource(R.string.type_income)  // 收入
         2 -> stringResource(R.string.type_transfer) // 转账
@@ -320,29 +322,46 @@ fun AddPeriodicTransactionScreen(
                     ).getOrElse(frequency) { R.string.freq_month }
 
                     // [i18n]
-                    FormItem(label = stringResource(R.string.repeat_frequency), value = stringResource(freqLabel), onClick = { showFrequencySheet = true })
+                    FormItem(
+                        label = stringResource(R.string.repeat_frequency),
+                        value = stringResource(freqLabel),
+                        onClick = { showFrequencySheet = true }
+                    )
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 
                     // [i18n] 结束规则文本
-                    val endLabel = when(endMode) {
+                    val endLabel = when (endMode) {
                         END_MODE_NEVER -> stringResource(R.string.end_never)
-                        // [Fix] 使用 R.string.date 作为日期占位符
-                        END_MODE_DATE -> endDate?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it) } ?: stringResource(R.string.date)
-                        // [Fix] 使用 count_label_unit
+                        END_MODE_DATE -> endDate?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it) }
+                            ?: stringResource(R.string.date)
                         END_MODE_COUNT -> "${endCount ?: 0} ${stringResource(R.string.count_label_unit)}"
                         else -> stringResource(R.string.end_never)
                     }
-                    FormItem(label = stringResource(R.string.end_rule), value = endLabel, onClick = { showEndRepeatSheet = true })
+                    FormItem(
+                        label = stringResource(R.string.end_rule),
+                        value = endLabel,
+                        onClick = { showEndRepeatSheet = true }
+                    )
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 
                     // [i18n] 生效日期文本
-                    val startLabel = if (isToday(startDate)) stringResource(R.string.today) else SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(startDate)
-                    FormItem(label = stringResource(R.string.start_date), value = startLabel, onClick = { startDatePicker.show() })
+                    val startLabel =
+                        if (isToday(startDate)) stringResource(R.string.today)
+                        else SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(startDate)
+                    FormItem(
+                        label = stringResource(R.string.start_date),
+                        value = startLabel,
+                        onClick = { startDatePicker.show() }
+                    )
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 
                     // [i18n] 账单时间文本
                     val timeLabel = SimpleDateFormat("HH:mm", Locale.getDefault()).format(startDate)
-                    FormItem(label = stringResource(R.string.time_day), value = timeLabel, onClick = { timePicker.show() })
+                    FormItem(
+                        label = stringResource(R.string.time_day),
+                        value = timeLabel,
+                        onClick = { timePicker.show() }
+                    )
                 }
             }
 
@@ -352,7 +371,7 @@ fun AddPeriodicTransactionScreen(
                     if (transactionType != 2) {
                         FormItem(
                             label = stringResource(R.string.category_label),
-                            value = selectedCategory?.title ?: stringResource(R.string.select_account), // 复用 select_account
+                            value = selectedCategory?.title ?: stringResource(R.string.select_category),
                             icon = selectedCategory?.icon,
                             onClick = { showCategorySheet = true }
                         )
@@ -418,27 +437,46 @@ fun AddPeriodicTransactionScreen(
 
                     // --- 转账专用字段 ---
                     if (transactionType == 2) {
-                        FormItem(label = stringResource(R.string.transfer_out_account), value = fromAccount?.name ?: stringResource(R.string.select_account), onClick = { showAccountPickerFor = "from" })
+                        FormItem(
+                            label = stringResource(R.string.transfer_out_account),
+                            value = fromAccount?.name ?: stringResource(R.string.select_account),
+                            onClick = { showAccountPickerFor = "from" }
+                        )
                         HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
-                        FormItem(label = stringResource(R.string.transfer_in_account), value = toAccount?.name ?: stringResource(R.string.select_account), onClick = { showAccountPickerFor = "to" })
+                        FormItem(
+                            label = stringResource(R.string.transfer_in_account),
+                            value = toAccount?.name ?: stringResource(R.string.select_account),
+                            onClick = { showAccountPickerFor = "to" }
+                        )
                         HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
 
                         // 手续费输入框
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(stringResource(R.string.fee_label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            Text(
+                                stringResource(R.string.fee_label),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f)
+                            )
                             BasicTextField(
                                 value = fee,
-                                onValueChange = { input -> if (input.isEmpty() || input.matches(Regex("^\\d*\\.?\\d*$"))) fee = input },
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.End, color = MaterialTheme.colorScheme.onSurface),
+                                onValueChange = { input ->
+                                    if (input.isEmpty() || input.matches(Regex("^\\d*\\.?\\d*$"))) fee = input
+                                },
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    textAlign = TextAlign.End,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 singleLine = true,
                                 modifier = Modifier.width(100.dp),
                                 decorationBox = { inner ->
                                     Box(contentAlignment = Alignment.CenterEnd) {
-                                        if(fee.isEmpty()) Text("0.00", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        if (fee.isEmpty()) Text("0.00", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         inner()
                                     }
                                 }
@@ -448,7 +486,9 @@ fun AddPeriodicTransactionScreen(
 
                         // 转账模式选择
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             ModeSelectionButton(
@@ -468,7 +508,11 @@ fun AddPeriodicTransactionScreen(
 
                     } else {
                         // 收入/支出
-                        FormItem(label = stringResource(R.string.select_account), value = selectedAccount?.name ?: stringResource(R.string.select_account), onClick = { showAccountPickerFor = "main" })
+                        FormItem(
+                            label = stringResource(R.string.select_account),
+                            value = selectedAccount?.name ?: stringResource(R.string.select_account),
+                            onClick = { showAccountPickerFor = "main" }
+                        )
                         HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
                     }
 
@@ -479,7 +523,11 @@ fun AddPeriodicTransactionScreen(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(R.string.remark_label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Text(
+                            stringResource(R.string.remark_label),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f)
+                        )
                         Spacer(Modifier.width(16.dp))
                         BasicTextField(
                             value = remark,
@@ -515,7 +563,11 @@ fun AddPeriodicTransactionScreen(
                 Card(colors = CardDefaults.cardColors(containerColor = cardColor)) {
                     Column {
                         // [i18n]
-                        FormToggleItem(label = stringResource(R.string.exclude_from_budget), checked = excludeFromBudget, onCheckedChange = { excludeFromBudget = it })
+                        FormToggleItem(
+                            label = stringResource(R.string.exclude_from_budget),
+                            checked = excludeFromBudget,
+                            onCheckedChange = { excludeFromBudget = it }
+                        )
                     }
                 }
             }
@@ -612,7 +664,9 @@ fun AddPeriodicTransactionScreen(
                         }
                     ) { Text(stringResource(R.string.confirm)) }
                 },
-                dismissButton = { TextButton(onClick = { showCountInputDialog = false }) { Text(stringResource(R.string.cancel)) } }
+                dismissButton = {
+                    TextButton(onClick = { showCountInputDialog = false }) { Text(stringResource(R.string.cancel)) }
+                }
             )
         }
 
@@ -632,7 +686,7 @@ fun AddPeriodicTransactionScreen(
                         }
                     }
 
-                    when(showAccountPickerFor) {
+                    when (showAccountPickerFor) {
                         "main" -> selectedAccount = selected
                         "from" -> {
                             fromAccount = selected
@@ -653,9 +707,17 @@ fun AddPeriodicTransactionScreen(
         if (showCategorySheet) {
             ModalBottomSheet(onDismissRequest = { showCategorySheet = false }) {
                 val cats = if (transactionType == 0) expenseCategories else incomeCategories
-                Column(Modifier.padding(bottom = 32.dp).verticalScroll(rememberScrollState())) {
+                Column(
+                    Modifier
+                        .padding(bottom = 32.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
                     // [i18n]
-                    Text(stringResource(R.string.select_category), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(16.dp))
+                    Text(
+                        stringResource(R.string.select_category),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(16.dp)
+                    )
                     cats.forEach { cat ->
                         ListItem(
                             leadingContent = { Icon(cat.icon, null, tint = MaterialTheme.colorScheme.primary) },

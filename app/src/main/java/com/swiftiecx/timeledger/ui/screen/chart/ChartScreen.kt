@@ -14,30 +14,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
+import androidx.compose.ui.platform.LocalContext // [新增]
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
+import com.swiftiecx.timeledger.ui.navigation.CategoryData // [新增]
 import com.swiftiecx.timeledger.ui.navigation.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.screen.CustomDateRangePicker
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.util.Calendar
 import kotlin.math.abs
-import kotlin.text.startsWith
 
 @Composable
 fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
+    val context = LocalContext.current // [新增] 获取 Context
     // [新增] 跨币种所需数据
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val defaultCurrency by viewModel.defaultCurrency.collectAsState(initial = "CNY")
     val accountMap = remember(allAccounts) { allAccounts.associateBy { it.id } }
-
-    val transferTypeString = stringResource(R.string.type_transfer) // [i18n]
 
     val allTransactions by viewModel.allExpenses.collectAsState(initial = emptyList())
 
@@ -62,14 +62,11 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
     var showDateRangeDialog by remember { mutableStateOf(false) }
 
     // 1. 计算当前的时间范围
-    // [修复报错点] 在 remember 内部处理 nullable 解构问题
     val (rangeStart, rangeEnd) = remember(chartMode, currentDate, customDateRange) {
-        val range = customDateRange // 使用局部变量，确保智能转换生效
+        val range = customDateRange
         if (range != null) {
             val start = range.first
             val endRaw = range.second
-
-            // 确保结束日期包含当天的最后一秒
             val endCal = Calendar.getInstance().apply {
                 timeInMillis = endRaw
                 set(Calendar.HOUR_OF_DAY, 23)
@@ -90,14 +87,19 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
         }
     }
 
-    // 3. 计算统计数据 (BUG 修复区域 - 引入汇率兑换)
-    val expensesForSum = remember(currentPeriodExpenses, accountMap, defaultCurrency, transferTypeString) {
+    // [关键修改] 使用 Stable Key 判断转账
+    fun isTransfer(expense: Expense): Boolean {
+        val key = CategoryData.getStableKey(expense.category, context)
+        return key.startsWith("Transfer")
+    }
+
+    // 3. 计算统计数据
+    val expensesForSum = remember(currentPeriodExpenses, accountMap, defaultCurrency, context) {
         currentPeriodExpenses
-            .filter { !it.category.startsWith(transferTypeString) }
+            .filter { !isTransfer(it) } // [修改] 使用新的转账判断
             .mapNotNull { expense ->
                 val account = accountMap[expense.accountId]
                 if (account != null) {
-                    // 兑换到默认货币
                     ExchangeRates.convert(expense.amount, account.currency, defaultCurrency)
                 } else {
                     null
@@ -114,12 +116,13 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
     val totalBalance = totalIncome - totalExpense
 
     // 4. 筛选图表数据 (收支类型)
-    val filteredExpenses = remember(currentPeriodExpenses, transactionType, transferTypeString) {
+    val filteredExpenses = remember(currentPeriodExpenses, transactionType, context) {
         currentPeriodExpenses.filter { expense ->
+            val isTransfer = isTransfer(expense)
             when (transactionType) {
-                TransactionType.EXPENSE -> expense.amount < 0 && !expense.category.startsWith(transferTypeString)
-                TransactionType.INCOME -> expense.amount > 0 && !expense.category.startsWith(transferTypeString)
-                TransactionType.BALANCE -> !expense.category.startsWith(transferTypeString)
+                TransactionType.EXPENSE -> expense.amount < 0 && !isTransfer
+                TransactionType.INCOME -> expense.amount > 0 && !isTransfer
+                TransactionType.BALANCE -> !isTransfer
             }
         }
     }
@@ -162,7 +165,7 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
                     totalIncome = totalIncome,
                     totalBalance = totalBalance,
                     isCustomRange = isCustomRange,
-                    defaultCurrency = defaultCurrency, // [传入]
+                    defaultCurrency = defaultCurrency,
                     onModeChange = { newMode ->
                         viewModel.setChartMode(newMode)
                         viewModel.setChartCustomDateRange(null, null)
@@ -194,8 +197,8 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
                         dateRange = rangeStart to rangeEnd,
                         mainCategories = if (transactionType == TransactionType.INCOME) incomeMainCategories else expenseMainCategories,
                         isCustomRange = isCustomRange,
-                        accountMap = accountMap, // [传入]
-                        defaultCurrency = defaultCurrency // [传入]
+                        accountMap = accountMap,
+                        defaultCurrency = defaultCurrency
                     )
                 } else {
                     EmptyState()
@@ -228,12 +231,17 @@ fun ChartPageContent(
     dateRange: Pair<Long, Long>,
     mainCategories: List<MainCategory>,
     isCustomRange: Boolean,
-    accountMap: Map<Long, Account>, // [新增]
-    defaultCurrency: String // [新增]
+    accountMap: Map<Long, Account>,
+    defaultCurrency: String
 ) {
-    val transferTypeString = stringResource(R.string.type_transfer) // [i18n]
+    val context = LocalContext.current // [新增]
 
-    // [修改调用] 传入 accountMap 和 defaultCurrency
+    // [关键修改] 使用 Stable Key 判断转账
+    fun isTransfer(expense: Expense): Boolean {
+        val key = CategoryData.getStableKey(expense.category, context)
+        return key.startsWith("Transfer")
+    }
+
     val lineData = remember(data, chartMode, transactionType, dateRange, isCustomRange, accountMap, defaultCurrency) {
         if (isCustomRange) {
             prepareCustomLineChartData(data, dateRange.first, dateRange.second, transactionType, accountMap, defaultCurrency)
@@ -242,12 +250,10 @@ fun ChartPageContent(
         }
     }
 
-    // [BUG 修复] 计算总金额时，必须使用兑换后的金额进行百分比计算
-    val expensesForStats = remember(data, accountMap, defaultCurrency, transferTypeString) {
-        data.filter { !it.category.startsWith(transferTypeString) }.mapNotNull { expense ->
+    val expensesForStats = remember(data, accountMap, defaultCurrency, context) {
+        data.filter { !isTransfer(it) }.mapNotNull { expense ->
             val account = accountMap[expense.accountId]
             if (account != null) {
-                // 将交易金额兑换成默认货币的绝对值
                 ExchangeRates.convert(abs(expense.amount), account.currency, defaultCurrency)
             } else {
                 null
@@ -257,15 +263,19 @@ fun ChartPageContent(
 
     val totalAmount = remember(expensesForStats) { expensesForStats.sumOf { it } }
 
-    val nestedStats = remember(data, mainCategories, totalAmount, accountMap, defaultCurrency, transferTypeString) {
+    // [关键修复] 嵌套统计使用 Key 匹配
+    val nestedStats = remember(data, mainCategories, totalAmount, accountMap, defaultCurrency, context) {
         mainCategories.mapNotNull { mainCat ->
-            val subCategoryNames = mainCat.subCategories.map { it.title }.toSet()
+            // [修复] 获取该大类下所有子分类的 Stable Keys
+            val subCategoryKeys = mainCat.subCategories.map { it.key }.toSet()
 
-            // 筛选出属于该大类的，且不属于转账的交易
-            val relevantExpenses = data.filter { it.category in subCategoryNames && !it.category.startsWith(transferTypeString) }
+            // [修复] 使用 Stable Key 进行匹配
+            val relevantExpenses = data.filter {
+                val expenseKey = CategoryData.getStableKey(it.category, context)
+                expenseKey in subCategoryKeys && !expenseKey.startsWith("Transfer")
+            }
 
             if (relevantExpenses.isNotEmpty()) {
-                // [BUG 修复] 计算 mainAmount 时进行兑换
                 val mainAmount = relevantExpenses.sumOf { expense ->
                     val account = accountMap[expense.accountId]
                     if (account != null) {
@@ -276,7 +286,7 @@ fun ChartPageContent(
                 }
 
                 MainCategoryStat(
-                    name = mainCat.title,
+                    name = mainCat.title, // 显示使用本地化 Title
                     amount = mainAmount,
                     percentageOfTotal = if (totalAmount > 0) (mainAmount / totalAmount * 100).toFloat() else 0f,
                     color = mainCat.color,
@@ -290,8 +300,6 @@ fun ChartPageContent(
     }
 
     val pieChartData = remember(nestedStats) {
-        // 由于 nestedStats.amount 已经是 Double，这里需要将其转换为 Long (或保持 Double 用于 PieChart)
-        // 假设 PieChart 需要 Long，且数据量不会溢出 Long
         nestedStats.associate { it.name to it.amount.toLong() }
     }
 
@@ -324,14 +332,11 @@ fun ChartPageContent(
                                 val end = when {
                                     isCustomRange -> {
                                         val label = point.label
-                                        if (label.contains("-") && label.length > 5) { // 简单判断是否是月 (MM-dd) 模式，但这里可能更复杂
-                                            // 假设 ChartUtils 中的月格式是 yyyy-MM
-                                            // 如果是月统计模式，则 end 是下个月初
+                                        if (label.contains("-") && label.length > 5) {
                                             val c = calendar.clone() as Calendar
                                             c.add(Calendar.MONTH, 1)
                                             c.timeInMillis - 1
                                         } else {
-                                            // 否则按日计算
                                             val c = calendar.clone() as Calendar
                                             c.add(Calendar.DAY_OF_MONTH, 1)
                                             c.timeInMillis - 1
@@ -384,7 +389,6 @@ fun ChartPageContent(
         }
 
         if (transactionType == TransactionType.BALANCE) {
-            // [修改调用] 传入 accountMap 和 defaultCurrency
             BalanceReportSection(data, chartMode, defaultCurrency, accountMap)
         } else {
             Card(
@@ -406,7 +410,7 @@ fun ChartPageContent(
                             PieChart(
                                 data = pieChartData,
                                 title = if(transactionType == TransactionType.EXPENSE) stringResource(R.string.chart_total_expense) else stringResource(R.string.chart_total_income),
-                                currency = defaultCurrency // [新增]
+                                currency = defaultCurrency
                             )
                         }
                     } else {
@@ -422,17 +426,17 @@ fun ChartPageContent(
                     nestedStats.forEach { mainStat ->
                         CategoryRankItem(
                             name = mainStat.name,
-                            amount = mainStat.amount, // [修正] 传递 Double
+                            amount = mainStat.amount,
                             percentage = mainStat.percentageOfTotal,
                             color = mainStat.color,
                             ratio = (mainStat.amount / maxAmount).toFloat(),
                             icon = mainStat.icon,
-                            currency = defaultCurrency, // [传入]
+                            currency = defaultCurrency,
                             onClick = {
                                 val typeInt = if (transactionType == TransactionType.INCOME) 1 else 0
                                 navController.navigate(
                                     Routes.categoryChartDetailRoute(
-                                        category = mainStat.name,
+                                        category = mainStat.name, // 传递的是 Title
                                         type = typeInt,
                                         start = dateRange.first,
                                         end = dateRange.second

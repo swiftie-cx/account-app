@@ -13,13 +13,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
+import com.swiftiecx.timeledger.ui.navigation.CategoryData // [新增]
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
-import kotlin.math.abs // [新增] 引入 abs
+import kotlin.math.abs
 import kotlin.text.startsWith
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,42 +32,42 @@ fun FullScreenChartScreen(
     endDate: Long,
     transactionType: Int // 0: 支出, 1: 收入, 2: 结余
 ) {
+    // 1. 强制横屏逻辑
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        val originalOrientation = activity?.requestedOrientation
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
+        onDispose {
+            activity?.requestedOrientation = originalOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
     // [新增] 跨币种所需数据
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val defaultCurrency by viewModel.defaultCurrency.collectAsState(initial = "CNY")
     val accountMap = remember(allAccounts) { allAccounts.associateBy { it.id } }
 
-    val transferTypeString = stringResource(R.string.type_transfer) // [i18n]
-
-    // 1. 强制横屏逻辑
-    val context = LocalContext.current
-    DisposableEffect(Unit) {
-        val activity = context as? Activity
-        // 保存原始方向
-        val originalOrientation = activity?.requestedOrientation
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-
-        onDispose {
-            // 恢复原始方向
-            activity?.requestedOrientation = originalOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
-
-    // 2. 数据准备
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
     // 重新计算图表数据
-    // [BUG 修复] 引入 accountMap 和 defaultCurrency
-    val lineData = remember(allExpenses, startDate, endDate, transactionType, accountMap, defaultCurrency) {
+    val lineData = remember(allExpenses, startDate, endDate, transactionType, accountMap, defaultCurrency, context) {
+        // [关键修改] 使用 Stable Key 判断转账
+        fun isTransfer(category: String): Boolean {
+            return CategoryData.getStableKey(category, context).startsWith("Transfer")
+        }
+
         // 第一步：筛选日期范围
         val dateFiltered = allExpenses.filter { it.date.time in startDate..endDate }
 
-        // 第二步：筛选交易类型
+        // 第二步：筛选交易类型 (并排除转账)
         val typeFiltered = dateFiltered.filter { expense ->
+            val isTrans = isTransfer(expense.category)
             when (transactionType) {
-                0 -> expense.amount < 0 && !expense.category.startsWith(transferTypeString) // 支出
-                1 -> expense.amount > 0 && !expense.category.startsWith(transferTypeString) // 收入
-                else -> !expense.category.startsWith(transferTypeString) // 结余
+                0 -> expense.amount < 0 && !isTrans // 支出
+                1 -> expense.amount > 0 && !isTrans // 收入
+                else -> !isTrans // 结余
             }
         }
 
@@ -76,14 +77,13 @@ fun FullScreenChartScreen(
             else -> TransactionType.EXPENSE
         }
 
-        // 强制使用自定义逻辑, 并传入兑换参数
         prepareCustomLineChartData(
             data = typeFiltered,
             startDate = startDate,
             endDate = endDate,
             transactionType = typeEnum,
-            accountMap = accountMap, // [传入]
-            defaultCurrency = defaultCurrency // [传入]
+            accountMap = accountMap,
+            defaultCurrency = defaultCurrency
         )
     }
 
@@ -97,15 +97,13 @@ fun FullScreenChartScreen(
 
     val scrollState = rememberScrollState()
 
-    // [关键修改] 自动滚动到最右侧 (最新的日期)
-    // 监听数据量变化，一旦数据准备好，立即滚动到底部
+    // 自动滚动到最右侧
     LaunchedEffect(lineData.size) {
         if (scrollState.maxValue > 0) {
             scrollState.scrollTo(scrollState.maxValue)
         }
     }
 
-    // [i18n] 顶部标题
     val chartTitle = when(transactionType) {
         0 -> stringResource(R.string.chart_trend_expense)
         1 -> stringResource(R.string.chart_trend_income)

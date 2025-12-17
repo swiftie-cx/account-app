@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +33,7 @@ import com.swiftiecx.timeledger.R // [新增] 引入 R 类
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
+import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
@@ -76,7 +78,7 @@ fun DetailsScreen(
         (expenseMainCategories + incomeMainCategories).forEach { main ->
             main.subCategories.forEach { sub ->
                 // 将子类名映射到：(子类图标, 大类颜色)
-                map[sub.title] = sub.icon to main.color
+                map[sub.key] = sub.icon to main.color
             }
         }
         map
@@ -602,7 +604,7 @@ private fun ExpenseItem(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = expense.category,
+                text = CategoryData.getDisplayName(expense.category, LocalContext.current),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -626,7 +628,7 @@ private fun ExpenseItem(
         }
 
         Column(horizontalAlignment = Alignment.End) {
-            // BUG FIX: 显示已经转换的金额
+            // BUG FIX: 显示已经转换的金额`
             Text(
                 text = stringResource(R.string.amount_format, displayAmount),
                 color = amountColor, // 金额颜色

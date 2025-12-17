@@ -205,7 +205,6 @@ fun BudgetScreen(
     }
 }
 
-// ... 复用之前的 BudgetSummaryCard 和 BudgetCategoryItem ...
 @Composable
 fun BudgetSummaryCard(budget: Budget, spent: Double, currency: String) {
     val progress = if (budget.amount > 0) (spent / budget.amount).toFloat() else 0f
@@ -259,9 +258,10 @@ fun BudgetCategoryItem(title: String, budgetAmount: Double, spent: Double, curre
     Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(1.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 进度圆环
-                BudgetCategoryProgressRing(percentage, barColor)
-                Spacer(Modifier.width(12.dp))
+                // 如果需要显示左侧小圆环可以解除注释，目前设为空实现避免占位
+                // BudgetCategoryProgressRing(percentage, barColor)
+                // Spacer(Modifier.width(12.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(barColor.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
@@ -284,12 +284,30 @@ fun BudgetCategoryItem(title: String, budgetAmount: Double, spent: Double, curre
                 }
             }
             Spacer(Modifier.height(12.dp))
-            LinearProgressIndicator(progress = animatedProgress, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = barColor, trackColor = trackColor)
+
+            // [修改] 替换 LinearProgressIndicator 为自定义 Box 实现，确保样式为连续实心条
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(trackColor)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(animatedProgress)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(barColor)
+                )
+            }
+
             Spacer(Modifier.height(8.dp))
             Text(text = if (remaining >= 0) stringResource(R.string.remaining_amount_format, currency, remaining) else stringResource(R.string.overspent_amount_format, currency, abs(remaining)), style = MaterialTheme.typography.bodySmall, color = if (remaining < 0) errorColor else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
+// 保留空实现或根据需要移除
 @Composable
 fun BudgetCategoryProgressRing(percentage: Float, color: Color) {}

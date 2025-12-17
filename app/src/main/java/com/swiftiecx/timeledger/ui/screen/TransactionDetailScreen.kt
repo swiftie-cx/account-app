@@ -16,12 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.ExchangeRates
+import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -35,24 +37,11 @@ fun TransactionDetailScreen(
     expenseId: Long?,
     defaultCurrency: String = "CNY"
 ) {
+    val context = LocalContext.current // [新增] 获取 Context 用于 CategoryData
+
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val accountMap = remember(accounts) { accounts.associateBy { it.id } }
-
-    // 1) 获取实时分类数据
-    val expenseMainCategories by viewModel.expenseMainCategoriesState.collectAsState()
-    val incomeMainCategories by viewModel.incomeMainCategoriesState.collectAsState()
-
-    // 2) 构建样式查找表 (分类名 -> 图标, 颜色)
-    val categoryStyleMap = remember(expenseMainCategories, incomeMainCategories) {
-        val map = mutableMapOf<String, Pair<ImageVector, Color>>()
-        (expenseMainCategories + incomeMainCategories).forEach { main ->
-            main.subCategories.forEach { sub ->
-                map[sub.title] = sub.icon to main.color
-            }
-        }
-        map
-    }
 
     val currentExpense = remember(expenses, expenseId) {
         expenses.find { it.id == expenseId }
@@ -60,11 +49,14 @@ fun TransactionDetailScreen(
 
     // 转账：找同一时间的另一条转账记录（进/出）
     val relatedTransferExpense = remember(currentExpense, expenses) {
-        if (currentExpense?.category?.startsWith("转账") == true) {
+        if (currentExpense?.category?.startsWith("转账") == true ||
+            currentExpense?.category?.startsWith("Transfer") == true ||
+            CategoryData.getStableKey(currentExpense?.category ?: "", context).startsWith("Transfer")) {
+
             expenses.find {
-                it.id != currentExpense.id &&
+                it.id != currentExpense!!.id &&
                         it.date.time == currentExpense.date.time &&
-                        it.category.startsWith("转账")
+                        (it.category.startsWith("转账") || it.category.startsWith("Transfer") || CategoryData.getStableKey(it.category, context).startsWith("Transfer"))
             }
         } else null
     }
@@ -99,25 +91,29 @@ fun TransactionDetailScreen(
         } else 0.0
     }
 
-    // 3) 确定显示的图标和颜色
-    var displayIcon: ImageVector? = null
+    // [关键修改] 使用 CategoryData 获取图标和颜色 (不再手动构建 Map)
+    var displayIcon: ImageVector = Icons.Default.HelpOutline
     var displayColor: Color = MaterialTheme.colorScheme.primary
+    var displayTitle: String = ""
 
     if (transferOut != null) {
         displayIcon = Icons.AutoMirrored.Filled.CompareArrows
         displayColor = MaterialTheme.colorScheme.primary
+        displayTitle = stringResource(R.string.internal_transfer)
     } else if (currentExpense != null) {
-        val style = categoryStyleMap[currentExpense.category]
-        if (style != null) {
-            displayIcon = style.first
-            displayColor = style.second
-        } else {
-            displayIcon = Icons.Default.HelpOutline
-            displayColor = if (currentExpense.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
-        }
+        // 使用 stable key 获取样式
+        val stableKey = CategoryData.getStableKey(currentExpense.category, context)
+        displayIcon = CategoryData.getIcon(stableKey, context)
+
+        // 0=支出, 1=收入
+        val typeInt = if (currentExpense.amount < 0) 0 else 1
+        displayColor = CategoryData.getColor(stableKey, typeInt, context)
+
+        // 获取本地化标题
+        displayTitle = CategoryData.getDisplayName(stableKey, context)
     }
 
-    // 4) 日期格式：使用系统 Locale 的 best pattern，避免韩语出现汉字
+    // 4) 日期格式
     val locale = Locale.getDefault()
     val fullPattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "yMMMdHms") }
     val shortPattern = remember(locale) { DateFormat.getBestDateTimePattern(locale, "yMMMd") }
@@ -192,28 +188,28 @@ fun TransactionDetailScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // 顶部图标+标题
-                if (displayIcon != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .background(displayColor.copy(alpha = 0.15f), CircleShape)
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = displayIcon!!,
-                            contentDescription = null,
-                            tint = displayColor,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = if (transferOut != null) stringResource(R.string.internal_transfer) else currentExpense.category,
-                        style = MaterialTheme.typography.headlineSmall
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(displayColor.copy(alpha = 0.15f), CircleShape)
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = displayIcon,
+                        contentDescription = null,
+                        tint = displayColor,
+                        modifier = Modifier.fillMaxSize()
                     )
-                    Spacer(Modifier.height(24.dp))
                 }
+                Spacer(Modifier.height(8.dp))
+
+                // [关键修改] 显示本地化标题
+                Text(
+                    text = displayTitle,
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(Modifier.height(24.dp))
 
                 Column(modifier = Modifier.fillMaxWidth()) {
 

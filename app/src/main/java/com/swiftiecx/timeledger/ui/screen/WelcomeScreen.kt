@@ -17,12 +17,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R // [新增] 引入 R 类
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.util.Currency
 import java.util.Locale
@@ -85,7 +87,8 @@ fun WelcomeScreen(
 
             // 2. 欢迎语
             Text(
-                text = "欢迎使用 拾光账本",
+                // [i18n] 欢迎使用
+                text = stringResource(R.string.welcome_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -93,9 +96,9 @@ fun WelcomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 【修改】精简文案，去掉冗余提示
+            // [i18n] 副标题
             Text(
-                text = "让我们开始第一笔记账吧",
+                text = stringResource(R.string.welcome_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -114,8 +117,9 @@ fun WelcomeScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
+                    // [i18n] 初始余额标签
                     Text(
-                        text = "初始资产余额",
+                        text = stringResource(R.string.initial_asset_balance),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -173,8 +177,9 @@ fun WelcomeScreen(
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
+                // [i18n] 开启旅程
                 Text(
-                    text = "开启旅程",
+                    text = stringResource(R.string.start_journey),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

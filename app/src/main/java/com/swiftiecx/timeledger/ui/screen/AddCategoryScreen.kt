@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.CategoryData // [关键]
+import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.navigation.MainCategory
 import com.swiftiecx.timeledger.ui.viewmodel.CategoryType
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
@@ -37,19 +37,15 @@ import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 @Composable
 fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    // [i18n]
     val tabs = listOf(stringResource(R.string.type_expense), stringResource(R.string.type_income))
 
     val context = LocalContext.current
-    // [Fix] 动态获取
     val expenseMainCategories = remember(context) { CategoryData.getExpenseCategories(context) }
     val incomeMainCategories = remember(context) { CategoryData.getIncomeCategories(context) }
 
     val currentMainCategories = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
-
     var selectedMainCategory by remember { mutableStateOf<MainCategory?>(null) }
 
-    // 初始化选择第一个
     LaunchedEffect(currentMainCategories) {
         if (selectedMainCategory == null || selectedMainCategory !in currentMainCategories) {
             selectedMainCategory = currentMainCategories.firstOrNull()
@@ -59,14 +55,12 @@ fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel)
     var categoryName by remember { mutableStateOf("") }
     var selectedIcon by remember { mutableStateOf<ImageVector?>(null) }
 
-    // 当切换 Tab 时，重置选中的大类
     LaunchedEffect(selectedTab) {
         selectedMainCategory = currentMainCategories.firstOrNull()
     }
 
     val themeColor = selectedMainCategory?.color ?: MaterialTheme.colorScheme.primary
 
-    // 预设图标列表
     val availableIcons = remember(currentMainCategories) {
         currentMainCategories.flatMap { it.subCategories }.map { it.icon }.distinct()
     }
@@ -74,51 +68,87 @@ fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel)
     Scaffold(
         topBar = {
             TopAppBar(
-                // [i18n]
                 title = { Text(stringResource(R.string.add)) },
-                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+                    }
+                },
                 actions = {
                     IconButton(
                         onClick = {
                             if (categoryName.isNotBlank() && selectedIcon != null && selectedMainCategory != null) {
+
                                 val type = if (selectedTab == 0) CategoryType.EXPENSE else CategoryType.INCOME
-                                val newSubCategory = Category(categoryName, selectedIcon!!)
-                                viewModel.addSubCategory(selectedMainCategory!!, newSubCategory, type)
+
+                                // ====== 核心修复点 ======
+                                val stableKey = categoryName
+                                    .trim()
+                                    .replace(" ", "_")
+                                    .lowercase()
+
+                                val newSubCategory = Category(
+                                    title = categoryName,
+                                    icon = selectedIcon!!,
+                                    key = stableKey
+                                )
+                                // ======================
+
+                                viewModel.addSubCategory(
+                                    selectedMainCategory!!,
+                                    newSubCategory,
+                                    type
+                                )
                                 navController.popBackStack()
                             }
                         },
                         enabled = categoryName.isNotBlank() && selectedIcon != null
                     ) {
-                        Icon(Icons.Default.Check, stringResource(R.string.save), tint = if (categoryName.isNotBlank() && selectedIcon != null) MaterialTheme.colorScheme.primary else Color.Gray)
+                        Icon(
+                            Icons.Default.Check,
+                            stringResource(R.string.save),
+                            tint = if (categoryName.isNotBlank() && selectedIcon != null)
+                                MaterialTheme.colorScheme.primary
+                            else Color.Gray
+                        )
                     }
                 }
             )
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            // Tab
+
             TabRow(
                 selectedTabIndex = selectedTab,
                 indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(tabPositions[selectedTab]), color = MaterialTheme.colorScheme.primary)
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             ) {
                 tabs.forEachIndexed { index, title ->
-                    Tab(selected = selectedTab == index, onClick = { selectedTab = index }, text = { Text(title) })
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { Text(title) }
+                    )
                 }
             }
 
             Column(modifier = Modifier.padding(16.dp)) {
-                // 1. 选择父级大类
-                // [i18n] "Parent Category" (我刚才 strings.xml 漏了这个，这里暂用 Category 替代，或者你可以加一个 parent_category)
-                Text(stringResource(R.string.category_label), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                Text(
+                    stringResource(R.string.category_label),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 Spacer(Modifier.height(8.dp))
 
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(currentMainCategories) { main ->
                         val isSelected = main == selectedMainCategory
-                        val bgColor = if (isSelected) main.color else MaterialTheme.colorScheme.surfaceVariant
-                        val contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
 
                         FilterChip(
                             selected = isSelected,
@@ -129,7 +159,7 @@ fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel)
                                     main.icon,
                                     null,
                                     modifier = Modifier.size(16.dp),
-                                    tint = contentColor
+                                    tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
@@ -143,12 +173,10 @@ fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel)
 
                 Spacer(Modifier.height(24.dp))
 
-                // 2. 输入名称
                 OutlinedTextField(
                     value = categoryName,
                     onValueChange = { categoryName = it },
-                    // [i18n] "Name"
-                    label = { Text(stringResource(R.string.account_name)) }, // 复用 Account Name
+                    label = { Text(stringResource(R.string.account_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     leadingIcon = {
@@ -156,11 +184,20 @@ fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel)
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(if (selectedIcon != null) themeColor else Color.LightGray.copy(alpha = 0.3f)),
+                                .background(
+                                    if (selectedIcon != null)
+                                        themeColor
+                                    else Color.LightGray.copy(alpha = 0.3f)
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             if (selectedIcon != null) {
-                                Icon(selectedIcon!!, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    selectedIcon!!,
+                                    null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
@@ -168,9 +205,12 @@ fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel)
 
                 Spacer(Modifier.height(24.dp))
 
-                // 3. 选择图标
-                // [i18n]
-                Text(stringResource(R.string.select_icon), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.select_icon),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 Spacer(Modifier.height(8.dp))
 
                 LazyVerticalGrid(
@@ -184,10 +224,14 @@ fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel)
                             modifier = Modifier
                                 .aspectRatio(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) themeColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .background(
+                                    if (isSelected)
+                                        themeColor.copy(alpha = 0.2f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                )
                                 .border(
-                                    width = if(isSelected) 2.dp else 0.dp,
-                                    color = if(isSelected) themeColor else Color.Transparent,
+                                    width = if (isSelected) 2.dp else 0.dp,
+                                    color = if (isSelected) themeColor else Color.Transparent,
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .clickable { selectedIcon = icon },
@@ -196,7 +240,9 @@ fun AddCategoryScreen(navController: NavController, viewModel: ExpenseViewModel)
                             Icon(
                                 icon,
                                 contentDescription = null,
-                                tint = if (isSelected) themeColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (isSelected)
+                                    themeColor
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

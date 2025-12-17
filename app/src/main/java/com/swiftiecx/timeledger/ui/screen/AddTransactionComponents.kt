@@ -1,4 +1,3 @@
-// timeledger/ui/screen/AddTransactionComponents.kt
 package com.swiftiecx.timeledger.ui.screen
 
 import androidx.compose.foundation.BorderStroke
@@ -18,13 +17,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource // [关键] 引入资源引用
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R // [关键] 引入资源ID
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.ui.navigation.Category
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -75,7 +80,6 @@ fun FeeInputCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AttachMoney, null, tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else contentColor)
                 Spacer(Modifier.width(8.dp))
-                // [i18n]
                 Text(stringResource(R.string.fee_label), style = MaterialTheme.typography.titleMedium, color = contentColor)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -120,7 +124,6 @@ fun ModeSelectionButton(
     }
 }
 
-// [i18n] 改造
 @Composable
 fun SimpleKeyboardToolbar(
     dateMillis: Long,
@@ -128,7 +131,6 @@ fun SimpleKeyboardToolbar(
     remark: String,
     onRemarkClick: () -> Unit
 ) {
-    // [Fix] 使用更通用的日期格式
     val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.getDefault()) }
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
@@ -142,7 +144,6 @@ fun SimpleKeyboardToolbar(
         )
         ActionChipItem(
             icon = if(remark.isNotEmpty()) Icons.AutoMirrored.Filled.Note else Icons.Default.Edit,
-            // [i18n]
             text = if (remark.isNotEmpty()) remark else stringResource(R.string.remark_label),
             onClick = onRemarkClick,
             modifier = Modifier.weight(1f),
@@ -202,7 +203,6 @@ fun TransferAccountCard(
                 }
                 Spacer(Modifier.width(8.dp))
                 Column {
-                    // [i18n]
                     Text(
                         text = account?.name ?: stringResource(R.string.select_account),
                         style = MaterialTheme.typography.titleSmall,
@@ -235,7 +235,6 @@ fun TransferAccountCard(
     }
 }
 
-// [i18n] 改造
 @Composable
 fun NewAmountDisplay(
     category: Category?,
@@ -277,7 +276,6 @@ fun NewAmountDisplay(
                     fontWeight = FontWeight.Bold
                 )
             } else {
-                // [i18n]
                 Text(stringResource(R.string.select_category), style = MaterialTheme.typography.titleMedium, color = contentColor.copy(alpha = 0.8f))
             }
             Spacer(modifier = Modifier.weight(1f))
@@ -292,7 +290,6 @@ fun NewAmountDisplay(
     }
 }
 
-// [i18n] 改造
 @Composable
 fun KeyboardActionToolbar(
     button1Icon: ImageVector,
@@ -304,19 +301,12 @@ fun KeyboardActionToolbar(
     remark: String,
     onRemarkClick: () -> Unit
 ) {
-    // [Fix] 使用更通用的日期格式
     val dateFormat = remember { SimpleDateFormat("MM-dd", Locale.getDefault()) }
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        // 账户/默认按钮
         ActionChipItem(icon = button1Icon, text = button1Text, onClick = button1OnClick, modifier = Modifier.weight(1f), isHighlight = button1Highlight)
-
-        // 日期按钮
         ActionChipItem(icon = Icons.Default.CalendarToday, text = dateFormat.format(Date(dateMillis)), onClick = onDateClick, modifier = Modifier.weight(1f))
-
-        // 备注按钮
         ActionChipItem(
             icon = if(remark.isNotEmpty()) Icons.AutoMirrored.Filled.Note else Icons.Default.Edit,
-            // [i18n]
             text = if (remark.isNotEmpty()) remark else stringResource(R.string.remark_hint),
             onClick = onRemarkClick,
             modifier = Modifier.weight(1.5f),
@@ -336,20 +326,17 @@ fun ActionChipItem(icon: ImageVector, text: String, onClick: () -> Unit, modifie
     }
 }
 
-// [i18n] 改造
 @Composable
 fun RemarkInputDialog(initialRemark: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(initialRemark) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        // [i18n]
         title = { Text(stringResource(R.string.remark_label)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
-                // [i18n]
                 placeholder = { Text(stringResource(R.string.remark_hint)) },
                 singleLine = true
             )
@@ -359,12 +346,10 @@ fun RemarkInputDialog(initialRemark: String, onConfirm: (String) -> Unit, onDism
     )
 }
 
-// [i18n] 改造
 @Composable
 fun AccountPickerDialog(accounts: List<Account>, onAccountSelected: (Account) -> Unit, onDismissRequest: () -> Unit, navController: NavHostController) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        // [i18n]
         title = { Text(stringResource(R.string.select_account)) },
         text = {
             LazyColumn {
@@ -385,74 +370,75 @@ fun AccountPickerDialog(accounts: List<Account>, onAccountSelected: (Account) ->
             }
         },
         confirmButton = { TextButton(onClick = onDismissRequest) { Text(stringResource(R.string.cancel)) } },
-        // [i18n]
         dismissButton = { TextButton(onClick = { navController.navigate(Routes.ACCOUNT_MANAGEMENT); onDismissRequest() }) { Text(stringResource(R.string.manage_account)) } }
     )
 }
 
-// ... evaluateExpression, MainCategoryItem, SubCategoryItem, validateInputPrecision, smartFormat 等辅助函数保持不变
-// 定义不需要小数位的货币代码集合
-private val ZERO_DECIMAL_CURRENCIES = setOf(
-    "JPY", // 日元
-    "KRW", // 韩元
-    "VND", // 越南盾
-    "IDR", // 印尼盾
-    "HUF", // 匈牙利福林
-    "CLP", // 智利比索
-    "PYG"  // 巴拉圭瓜拉尼
-)
-// 获取货币允许的最大小数位数
-fun getCurrencyDecimalLimit(currencyCode: String): Int {
-    return if (currencyCode.uppercase() in ZERO_DECIMAL_CURRENCIES) 0 else 2
-}
+private val ZERO_DECIMAL_CURRENCIES = setOf("JPY", "KRW", "VND", "IDR", "HUF", "CLP", "PYG")
+fun getCurrencyDecimalLimit(currencyCode: String): Int = if (currencyCode.uppercase() in ZERO_DECIMAL_CURRENCIES) 0 else 2
 
-/**
- * 智能金额格式化 (用于显示计算结果)
- */
 fun smartFormat(value: Double, currencyCode: String = ""): String {
     val limit = getCurrencyDecimalLimit(currencyCode)
-
-    // 如果是0位小数货币，直接四舍五入取整
-    if (limit == 0) {
-        return value.roundToInt().toString()
-    }
-
-    // 对于2位小数货币：
-    // 如果非常接近整数，显示整数 (100.00 -> 100)
-    // 否则保留2位小数 (100.8 -> 100.80)
+    if (limit == 0) return value.roundToInt().toString()
     val isInteger = abs(value - value.toLong()) < 0.001
-    return if (isInteger) {
-        value.toLong().toString()
-    } else {
-        String.format(Locale.US, "%.${limit}f", value)
-    }
+    return if (isInteger) value.toLong().toString() else String.format(Locale.US, "%.${limit}f", value)
 }
 
-/**
- * 验证输入是否符合货币精度要求 (用于键盘输入拦截)
- * @param input 用户想要输入的新字符串 (例如 "10.825")
- * @param currencyCode 当前货币代码
- */
 fun validateInputPrecision(input: String, currencyCode: String): Boolean {
-    // 允许空或中间状态 (如 "10.")
     if (input.isEmpty() || input == ".") return true
-
-    // 如果无法转为数字，视为非法
     if (input.toDoubleOrNull() == null) return false
-
     val limit = getCurrencyDecimalLimit(currencyCode)
     val dotIndex = input.indexOf('.')
-
-    // 如果没有小数点，通过
     if (dotIndex == -1) return true
-
-    // 如果是0位小数货币，却输入了小数点，拦截
     if (limit == 0) return false
-
-    // 计算小数位数
     val decimals = input.length - dotIndex - 1
     return decimals <= limit
 }
+
+// --- 核心修复：手写 AutoSizeText 组件 ---
+// 这是一个自动缩放文字大小的组件，不需要引入外部库
+@Composable
+fun AutoSizeText(
+    text: String,
+    style: TextStyle,
+    color: Color = Color.Unspecified,
+    fontSize: TextUnit = 12.sp, // 起始大小
+    minFontSize: TextUnit = 8.sp, // 最小大小
+    fontWeight: FontWeight? = null,
+    maxLines: Int = 1
+) {
+    var resizedTextStyle by remember { mutableStateOf(style.copy(fontSize = fontSize)) }
+    var readyToDraw by remember { mutableStateOf(false) }
+
+    Text(
+        text = text,
+        color = color,
+        maxLines = maxLines,
+        softWrap = false,
+        overflow = TextOverflow.Visible, // 暂时允许溢出以测量
+        style = resizedTextStyle,
+        fontWeight = fontWeight,
+        textAlign = TextAlign.Center,
+        onTextLayout = { textLayoutResult ->
+            if (textLayoutResult.didOverflowWidth || textLayoutResult.didOverflowHeight) {
+                // 如果溢出，减小字体
+                if (resizedTextStyle.fontSize > minFontSize) {
+                    val newSize = resizedTextStyle.fontSize * 0.9f
+                    resizedTextStyle = resizedTextStyle.copy(fontSize = newSize)
+                } else {
+                    readyToDraw = true // 到了最小也没办法了，显示吧
+                }
+            } else {
+                readyToDraw = true
+            }
+        },
+        modifier = Modifier.drawWithContent {
+            if (readyToDraw) drawContent()
+        }
+    )
+}
+
+// [修改] 使用我们手写的 AutoSizeText
 @Composable
 fun MainCategoryItem(mainCategory: MainCategory, isSelected: Boolean, onClick: () -> Unit) {
     val bgColor = if (isSelected) mainCategory.color.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -466,7 +452,7 @@ fun MainCategoryItem(mainCategory: MainCategory, isSelected: Boolean, onClick: (
             .clickable(onClick = onClick)
             .background(bgColor)
             .then(if (border != null) Modifier.padding(1.dp) else Modifier)
-            .padding(vertical = 12.dp, horizontal = 4.dp)
+            .padding(8.dp) // [恢复] 正方形比例
     ) {
         Icon(
             imageVector = mainCategory.icon,
@@ -475,16 +461,20 @@ fun MainCategoryItem(mainCategory: MainCategory, isSelected: Boolean, onClick: (
             modifier = Modifier.size(32.dp)
         )
         Spacer(Modifier.height(8.dp))
-        Text(
+
+        // [修改] 调用手写的 AutoSizeText
+        AutoSizeText(
             text = mainCategory.title,
             style = MaterialTheme.typography.bodyMedium,
+            fontSize = 11.sp,
             color = contentColor,
             fontWeight = if(isSelected) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1
+            minFontSize = 8.sp
         )
     }
 }
 
+// [修改] 使用我们手写的 AutoSizeText
 @Composable
 fun SubCategoryItem(
     subCategory: SubCategory,
@@ -517,14 +507,19 @@ fun SubCategoryItem(
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
+
+        // [修改] 调用手写的 AutoSizeText
+        AutoSizeText(
             text = subCategory.title,
             style = MaterialTheme.typography.bodySmall,
+            fontSize = 11.sp,
+            color = if(isSelected) mainColor else Color.Unspecified,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if(isSelected) mainColor else Color.Unspecified
+            minFontSize = 8.sp
         )
     }
 }
+
 fun evaluateExpression(expression: String): Double {
     val parts = expression.trim().split(" ")
     if (parts.size == 1) return parts[0].toDoubleOrNull() ?: 0.0
@@ -542,9 +537,6 @@ fun evaluateExpression(expression: String): Double {
     return result
 }
 
-/**
- * 执行基本的加减乘除运算
- */
 private fun calculate(operand1: Double, operator: String, operand2: Double): Double {
     return when (operator) {
         "+" -> operand1 + operand2

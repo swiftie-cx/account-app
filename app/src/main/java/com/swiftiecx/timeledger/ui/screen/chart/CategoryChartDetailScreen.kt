@@ -31,7 +31,7 @@ import kotlin.math.abs
 fun CategoryChartDetailScreen(
     navController: NavHostController,
     viewModel: ExpenseViewModel,
-    categoryName: String,
+    categoryName: String, // 这里传入的是 Title (e.g. "餐饮")
     transactionType: Int,
     startDate: Long,
     endDate: Long
@@ -53,17 +53,21 @@ fun CategoryChartDetailScreen(
 
     val categoryColor = mainCategory?.color ?: MaterialTheme.colorScheme.primary
 
-    val subCategoryNames = remember(mainCategory) {
-        mainCategory?.subCategories?.map { it.title }?.toSet() ?: emptySet()
+    // [关键修复] 获取该大类下所有子分类的 Stable Keys
+    val subCategoryKeys = remember(mainCategory) {
+        mainCategory?.subCategories?.map { it.key }?.toSet() ?: emptySet()
     }
 
-    val filteredExpenses = remember(allExpenses, subCategoryNames, startDate, endDate, transactionType) {
-        if (subCategoryNames.isEmpty()) {
+    // [关键修复] 使用 Stable Key 过滤交易
+    val filteredExpenses = remember(allExpenses, subCategoryKeys, startDate, endDate, transactionType, context) {
+        if (subCategoryKeys.isEmpty()) {
             emptyList()
         } else {
             allExpenses.filter { expense ->
                 val isTypeMatch = if (transactionType == 1) expense.amount > 0 else expense.amount < 0
-                val isCategoryMatch = expense.category in subCategoryNames
+                // 把交易记录的 key 转为 stable key 后进行匹配
+                val expenseKey = CategoryData.getStableKey(expense.category, context)
+                val isCategoryMatch = expenseKey in subCategoryKeys
                 val isDateMatch = expense.date.time in startDate..endDate
                 isTypeMatch && isCategoryMatch && isDateMatch
             }
@@ -98,8 +102,9 @@ fun CategoryChartDetailScreen(
         )
     }
 
-    val subCategorySums = remember(filteredExpenses, accountMap, defaultCurrency) {
-        filteredExpenses.groupBy { it.category }
+    // [关键修复] 聚合时使用 DisplayName (Title)
+    val subCategorySums = remember(filteredExpenses, accountMap, defaultCurrency, context) {
+        filteredExpenses.groupBy { CategoryData.getDisplayName(it.category, context) }
             .mapValues { (_, list) ->
                 list.sumOf { expense ->
                     val account = accountMap[expense.accountId]
@@ -121,7 +126,7 @@ fun CategoryChartDetailScreen(
         if (transactionType == 1) R.string.type_income else R.string.type_expense
     )
 
-    // ✅ 用 CategoryData 构建子分类 icon map（同时支持 title / key）
+    // 构建 Icon Map (Key -> Icon 和 Title -> Icon 都存一份，保险)
     val subCategoryIconMap = remember(context) {
         val expenseMains = CategoryData.getExpenseCategories(context)
         val incomeMains = CategoryData.getIncomeCategories(context)
@@ -241,7 +246,7 @@ fun CategoryChartDetailScreen(
                             val percentage = if (totalAmount > 0) (amount.toFloat() / totalAmount * 100f) else 0f
                             val barRatio = if (maxAmount > 0) (amount.toFloat() / maxAmount.toFloat()) else 0f
 
-                            // ✅ 不用 CategoryHelper：直接从 map 取
+                            // entry.key 是 DisplayName
                             val icon = subCategoryIconMap[entry.key] ?: Icons.Default.HelpOutline
 
                             CategoryRankItem(
@@ -256,7 +261,7 @@ fun CategoryChartDetailScreen(
                                     val searchType = if (transactionType == 0) 1 else 2
                                     navController.navigate(
                                         Routes.searchRoute(
-                                            category = entry.key,
+                                            category = entry.key, // 这里可以传 DisplayName，因为 SearchScreen 已经修复支持 Title 搜索
                                             startDate = startDate,
                                             endDate = endDate,
                                             type = searchType

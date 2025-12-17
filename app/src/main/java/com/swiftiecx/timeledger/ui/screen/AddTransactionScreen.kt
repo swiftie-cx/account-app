@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource // [关键] 引入资源引用
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -27,15 +27,13 @@ import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
 import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.CategoryData // [关键] 动态数据源
+import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.MainCategory
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
-
-// 【已删除】旧的静态 import 语句
 
 // 转账计算模式
 enum class TransferMode {
@@ -52,17 +50,16 @@ fun AddTransactionScreen(
     dateMillis: Long? = null,
     initialTab: Int = 0
 ) {
-    val context = LocalContext.current // [新增] 获取 Context
+    val context = LocalContext.current
 
     // 从 ViewModel 获取最新的 MainCategory 状态
     val expenseMainCategories by viewModel.expenseMainCategoriesState.collectAsState()
     val incomeMainCategories by viewModel.incomeMainCategoriesState.collectAsState()
 
-    // [Fix] 构建一个临时的扁平列表用于回填查找（解决旧的静态列表引用）
+    // 构建一个临时的扁平列表用于回填查找
     val allFlatCategories = remember(expenseMainCategories, incomeMainCategories) {
         (expenseMainCategories + incomeMainCategories).flatMap { it.subCategories }
     }
-
 
     var selectedTab by remember { mutableIntStateOf(initialTab) }
     // [i18n]
@@ -110,7 +107,7 @@ fun AddTransactionScreen(
     // 手动模式 (断开汇率自动计算)
     var isManualMode by remember { mutableStateOf(false) }
 
-    // [新增] 大类相关状态
+    // 大类相关状态
     var selectedMainCategory by remember { mutableStateOf<MainCategory?>(null) }
     var showSubCategorySheet by remember { mutableStateOf(false) }
 
@@ -129,10 +126,18 @@ fun AddTransactionScreen(
         if (expenseId != null) {
             val expenseToEdit = expenses.find { it.id == expenseId }
             if (expenseToEdit != null) {
-                selectedTab = if (expenseToEdit.category.startsWith("转账")) 2 else if (expenseToEdit.amount < 0) 0 else 1
+                // 判断 Tab
+                val isTransfer = expenseToEdit.category.startsWith("转账") ||
+                        expenseToEdit.category.startsWith("Transfer") ||
+                        CategoryData.getStableKey(expenseToEdit.category, context).startsWith("Transfer")
+
+                selectedTab = if (isTransfer) 2 else if (expenseToEdit.amount < 0) 0 else 1
+
                 if (selectedTab != 2) {
-                    // [Fix] 从扁平列表中查找分类
-                    selectedCategory = allFlatCategories.find { it.title == expenseToEdit.category }
+                    // [关键修改] 使用 key 查找分类，但也兼容旧数据的 title
+                    val categoryKey = CategoryData.getStableKey(expenseToEdit.category, context)
+                    selectedCategory = allFlatCategories.find { it.key == categoryKey || it.title == expenseToEdit.category }
+
                     amountStr = abs(expenseToEdit.amount).toString()
                     selectedDate = expenseToEdit.date.time
                     selectedAccount = accounts.find { it.id == expenseToEdit.accountId }
@@ -165,15 +170,13 @@ fun AddTransactionScreen(
         if (expenseId == null) {
             val mainList = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
 
-            // [Fix] 修复 contains 语法错误
-            if (selectedMainCategory == null || selectedMainCategory !in mainList) {
+            if (selectedMainCategory == null || !mainList.contains(selectedMainCategory)) {
                 selectedMainCategory = mainList.firstOrNull()
             }
 
             if (selectedMainCategory != null) {
                 val allSubInTab = mainList.flatMap { it.subCategories }
-                // [Fix] 修复 contains 语法错误
-                if (selectedCategory == null || selectedCategory !in allSubInTab) {
+                if (selectedCategory == null || !allSubInTab.contains(selectedCategory)) {
                     selectedCategory = selectedMainCategory!!.subCategories.firstOrNull()
                 }
             }
@@ -197,7 +200,7 @@ fun AddTransactionScreen(
         if (expenseId != null && selectedCategory != null) {
             val mainList = if (selectedTab == 0) expenseMainCategories else incomeMainCategories
             val foundMain = mainList.find { main ->
-                main.subCategories.any { sub -> sub.title == selectedCategory!!.title }
+                main.subCategories.any { sub -> sub.key == selectedCategory!!.key }
             }
             if (foundMain != null) {
                 selectedMainCategory = foundMain
@@ -224,7 +227,6 @@ fun AddTransactionScreen(
                     ExchangeRates.convert(baseInSource, fromAccount!!.currency, toAccount!!.currency)
                 }
 
-                // 【修改】传入目标账户的币种，进行智能格式化
                 toAmountStr = smartFormat(
                     value = if(toVal > 0) toVal else 0.0,
                     currencyCode = toAccount!!.currency
@@ -240,7 +242,6 @@ fun AddTransactionScreen(
                     ExchangeRates.convert(toVal, toAccount!!.currency, fromAccount!!.currency)
                 }
 
-                // 【修改】传入来源账户的币种，进行智能格式化
                 fromAmountStr = smartFormat(
                     value = baseInSource + feeVal,
                     currencyCode = fromAccount!!.currency
@@ -334,7 +335,8 @@ fun AddTransactionScreen(
                 val finalAmount = if (selectedTab == 0) -rawAmount else rawAmount
                 val expense = Expense(
                     id = expenseId ?: 0,
-                    category = selectedCategory!!.title,
+                    // [关键修改] 保存时使用 key，而不是 title
+                    category = selectedCategory!!.key,
                     amount = finalAmount,
                     date = Date(selectedDate),
                     accountId = selectedAccount!!.id,
@@ -451,7 +453,7 @@ fun AddTransactionScreen(
                         SubCategoryItem(
                             subCategory = sub,
                             mainColor = selectedMainCategory!!.color,
-                            isSelected = selectedCategory?.title == sub.title,
+                            isSelected = selectedCategory?.key == sub.key, // 使用 key 比较
                             onClick = {
                                 selectedCategory = sub
                                 showSubCategorySheet = false

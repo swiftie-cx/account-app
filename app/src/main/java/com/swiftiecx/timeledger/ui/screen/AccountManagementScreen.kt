@@ -2,7 +2,6 @@ package com.swiftiecx.timeledger.ui.screen
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,19 +10,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
+import com.swiftiecx.timeledger.ui.navigation.AccountTypeManager // [新增]
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
@@ -31,6 +34,7 @@ import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,53 +42,54 @@ fun AccountManagementScreen(
     viewModel: ExpenseViewModel,
     navController: NavHostController
 ) {
-    // 获取账户列表和默认ID
     val accounts by viewModel.allAccounts.collectAsState()
     val defaultAccountId by viewModel.defaultAccountId.collectAsState()
 
-    // 本地状态用于拖拽排序
     var listData by remember(accounts) { mutableStateOf(accounts) }
 
-    // 拖拽状态管理
     val state = rememberReorderableLazyListState(
         onMove = { from, to ->
-            // 【关键修复】这里修正了 List 操作的语法错误
             listData = listData.toMutableList().apply {
-                // removeAt 删除并返回元素，add 将其插入新位置
                 add(to.index, removeAt(from.index))
             }
         },
         onDragEnd = { _, _ ->
-            viewModel.reorderAccounts(listData) // 拖拽结束保存顺序到数据库
+            viewModel.reorderAccounts(listData)
         }
     )
 
-    // 当数据库数据更新时（例如新增了账户），同步更新列表
     LaunchedEffect(accounts) {
-        // 简单的去重/同步逻辑，防止拖拽过程中列表跳动
         if (listData.size != accounts.size || listData.map { it.id } != accounts.map { it.id }) {
             listData = accounts
         }
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.account_management_title)) },
+                title = {
+                    Text(
+                        stringResource(R.string.account_management_title),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                // 【修复】改为标准的路由常量
                 onClick = { navController.navigate(Routes.ADD_ACCOUNT) },
-                shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_account))
             }
@@ -95,12 +100,18 @@ fun AccountManagementScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            Text(
-                stringResource(R.string.account_management_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp)
-            )
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.padding(16.dp).fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(R.string.account_management_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
 
             LazyColumn(
                 state = state.listState,
@@ -108,25 +119,19 @@ fun AccountManagementScreen(
                     .fillMaxSize()
                     .reorderable(state)
                     .detectReorderAfterLongPress(state),
-                contentPadding = PaddingValues(bottom = 88.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(bottom = 100.dp, start = 16.dp, end = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(listData, key = { it.id }) { account ->
                     ReorderableItem(state, key = account.id) { isDragging ->
-                        val elevation = animateDpAsState(if (isDragging) 8.dp else 0.dp)
+                        val elevation = animateDpAsState(if (isDragging) 12.dp else 2.dp, label = "elevation")
 
-                        AccountItem(
+                        AccountItemCard(
                             account = account,
                             isDefault = (account.id == defaultAccountId),
+                            elevation = elevation.value,
                             onSetDefault = { viewModel.setDefaultAccount(account.id) },
-                            onClick = {
-                                // 【修复】改为标准的路由参数传递写法
-                                navController.navigate("${Routes.ADD_ACCOUNT}?accountId=${account.id}")
-                            },
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .shadow(elevation.value, RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surface)
+                            onClick = { navController.navigate(Routes.accountDetailRoute(account.id)) }
                         )
                     }
                 }
@@ -136,64 +141,91 @@ fun AccountManagementScreen(
 }
 
 @Composable
-fun AccountItem(
+fun AccountItemCard(
     account: Account,
     isDefault: Boolean,
+    elevation: androidx.compose.ui.unit.Dp,
     onSetDefault: () -> Unit,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ElevatedCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().shadow(elevation, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 单选框 (设为默认)
-            IconButton(onClick = onSetDefault) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    imageVector = if (isDefault) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                    contentDescription = stringResource(R.string.set_as_default),
-                    tint = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    imageVector = IconMapper.getIcon(account.iconName),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            // 图标映射
-            val icon = IconMapper.getIcon(account.iconName)
-            Icon(
-                imageVector = icon,
-                contentDescription = account.name,
-                modifier = Modifier.size(24.dp),
-                tint = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-            )
-
             Spacer(Modifier.width(16.dp))
 
-            // 账户信息
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = account.name,
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = account.type,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        // [关键修改] 使用 Manager 获取本地化名称
+                        Text(
+                            text = AccountTypeManager.getDisplayName(account.type),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "${account.currency} ${String.format(Locale.US, "%.2f", account.initialBalance)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
             }
 
-            // 拖拽把手图标
-            Icon(
-                Icons.Default.DragHandle,
-                contentDescription = stringResource(R.string.account_reorder),
-                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onSetDefault) {
+                    Icon(
+                        imageVector = if (isDefault) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                        contentDescription = stringResource(R.string.set_as_default),
+                        tint = if (isDefault) Color(0xFFFFC107) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.DragIndicator,
+                    contentDescription = stringResource(R.string.account_reorder),
+                    tint = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
         }
     }
 }

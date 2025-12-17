@@ -1,5 +1,6 @@
 package com.swiftiecx.timeledger.ui.viewmodel
 
+import android.content.Context
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -50,79 +51,86 @@ sealed class SyncUiState {
     data class Conflict(val cloudTime: Long) : SyncUiState()
 }
 
-class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() {
+class ExpenseViewModel(
+    private val repository: ExpenseRepository,
+    private val context: Context // [保留] 虽然没直接用，但工厂类传了，保留以防万一
+) : ViewModel() {
 
-    // 用于预算更新的互斥锁，防止并发冲突
+    // 用于预算更新的互斥锁
     private val budgetUpdateMutex = Mutex()
 
     // ===========================
-    // 0. 全局设置 (Currency) - [修改] 临时本地管理，解决 Repository 报错
+    // 0. 全局设置
     // ===========================
-
-    // 使用 MutableStateFlow 在内存中管理，默认 CNY
     private val _defaultCurrency = MutableStateFlow("CNY")
     val defaultCurrency: StateFlow<String> = _defaultCurrency.asStateFlow()
 
     fun setDefaultCurrency(currencyCode: String) {
         _defaultCurrency.value = currencyCode
-        // TODO: 将来需要在 Repository 中实现 saveDefaultCurrency(currencyCode)
     }
 
     init {
-        // 1. 初始化时更新汇率 (在 IO 线程)
+        // 1. 更新汇率 (IO线程)
         viewModelScope.launch(Dispatchers.IO) {
             ExchangeRates.updateRates()
         }
 
-        // 2. 启动时检查周期记账
+        // 2. 检查周期记账 (IO线程)
         viewModelScope.launch(Dispatchers.IO) {
             repository.checkAndExecutePeriodicTransactions()
+        }
+
+        // 3. 初始化加载分类
+        refreshCategories()
+    }
+
+    // ===========================
+    // 关键修复：刷新分类
+    // ===========================
+    fun refreshCategories() {
+        // [关键修复] 必须使用 Dispatchers.IO，否则访问数据库会崩溃！
+        viewModelScope.launch(Dispatchers.IO) {
+            val expenseCats = repository.getMainCategories(CategoryType.EXPENSE)
+            val incomeCats = repository.getMainCategories(CategoryType.INCOME)
+
+            _expenseMainCategories.value = expenseCats
+            _incomeMainCategories.value = incomeCats
         }
     }
 
     // ===========================
-    // 0. 欢迎页与初始化逻辑
+    // 0. 欢迎页与初始化
     // ===========================
-
     val isFirstLaunch: Boolean
         get() = repository.isFirstLaunch()
 
     fun completeOnboarding(initialBalance: Double) {
         viewModelScope.launch(Dispatchers.IO) {
-            // 1. 自动检测系统币种
             val currencyCode = try {
                 Currency.getInstance(Locale.getDefault()).currencyCode
             } catch (e: Exception) {
                 "CNY"
             }
-
-            // [修改] 更新本地状态
             _defaultCurrency.value = currencyCode
-            // TODO: repository.saveDefaultCurrency(currencyCode)
 
-            // 2. 创建默认账户
             val defaultAccount = Account(
                 name = "默认账户",
-                type = "默认",
+                type = "account_default", // 使用 Key
                 initialBalance = initialBalance,
                 currency = currencyCode,
-                iconName = "AccountBalanceWallet",
+                iconName = "Wallet",
                 isLiability = false
             )
 
-            // 插入账户并获取 ID
             val newId = repository.insertAccount(defaultAccount)
             repository.saveDefaultAccountId(newId)
-
-            // 3. 标记完成
             repository.setFirstLaunchCompleted()
         }
     }
 
     // ===========================
-    // 1. 用户认证与账号信息相关 (Firebase)
+    // 1. 用户认证
     // ===========================
-
     val isLoggedIn: StateFlow<Boolean> = repository.isLoggedIn
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -132,76 +140,49 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun register(email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.register(email, password)
-            if (result.isSuccess) {
-                onSuccess()
-            } else {
-                onError(result.exceptionOrNull()?.message ?: "注册失败")
-            }
+            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "注册失败")
         }
     }
 
     fun login(email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.login(email, password)
-            if (result.isSuccess) {
-                onSuccess()
-            } else {
-                onError(result.exceptionOrNull()?.message ?: "登录失败")
-            }
+            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "登录失败")
         }
     }
 
-    // 发送重置密码邮件
     fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.sendPasswordResetEmail(email)
-            if (result.isSuccess) {
-                onSuccess()
-            } else {
-                onError(result.exceptionOrNull()?.message ?: "发送失败")
-            }
+            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "发送失败")
         }
     }
 
-    // 修改密码
     fun changePassword(oldPass: String, newPass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.changePassword(oldPass, newPass)
-            if (result.isSuccess) {
-                onSuccess()
-            } else {
-                onError(result.exceptionOrNull()?.message ?: "修改失败")
-            }
+            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "修改失败")
         }
     }
 
     fun logout() = repository.logout()
 
-    // 注销账号：增加回调，确保 UI 能收到成功或失败的通知
     fun deleteUserAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.deleteUserAccount()
-            if (result.isSuccess) {
-                onSuccess()
-            } else {
-                onError(result.exceptionOrNull()?.message ?: "注销失败")
-            }
+            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "注销失败")
         }
     }
 
-    // 旧的隐私锁验证逻辑 (本地 PIN/Pattern)
+    // Privacy
     fun verifyPin(pin: String): Boolean = repository.verifyPin(pin)
     fun savePin(pin: String) = repository.savePin(pin)
     fun verifyPattern(pattern: List<Int>) = repository.verifyPattern(pattern)
     fun savePattern(pattern: List<Int>) = repository.savePattern(pattern)
 
     // ===========================
-    // 3. 账单与账户数据流
+    // 3. 账户数据
     // ===========================
-
-    val allExpenses: StateFlow<List<Expense>> = repository.allExpenses
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val allAccounts: StateFlow<List<Account>> = repository.allAccounts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -219,20 +200,17 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun clearAllData() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.clearAllData()
-            // 重新加载默认分类到 UI
-            _expenseMainCategories.value = repository.getMainCategories(CategoryType.EXPENSE)
-            _incomeMainCategories.value = repository.getMainCategories(CategoryType.INCOME)
+            refreshCategories()
         }
     }
 
     // ===========================
-    // 4. 分类管理 (Category)
+    // 4. 分类管理
     // ===========================
-
-    private val _expenseMainCategories = MutableStateFlow(repository.getMainCategories(CategoryType.EXPENSE))
+    private val _expenseMainCategories = MutableStateFlow<List<MainCategory>>(emptyList())
     val expenseMainCategoriesState: StateFlow<List<MainCategory>> = _expenseMainCategories.asStateFlow()
 
-    private val _incomeMainCategories = MutableStateFlow(repository.getMainCategories(CategoryType.INCOME))
+    private val _incomeMainCategories = MutableStateFlow<List<MainCategory>>(emptyList())
     val incomeMainCategoriesState: StateFlow<List<MainCategory>> = _incomeMainCategories.asStateFlow()
 
     val expenseCategoriesState: StateFlow<List<Category>> = _expenseMainCategories.map { list ->
@@ -244,28 +222,15 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // --- 操作逻辑 ---
-
     fun addSubCategory(mainCategory: MainCategory, subCategory: Category, type: CategoryType) {
         updateMainCategoryList(type) { list ->
-            list.map { main ->
-                if (main.title == mainCategory.title) {
-                    main.copy(subCategories = main.subCategories + subCategory)
-                } else {
-                    main
-                }
-            }
+            list.map { if (it.title == mainCategory.title) it.copy(subCategories = it.subCategories + subCategory) else it }
         }
     }
 
     fun deleteSubCategory(mainCategory: MainCategory, subCategory: Category, type: CategoryType) {
         updateMainCategoryList(type) { list ->
-            list.map { main ->
-                if (main.title == mainCategory.title) {
-                    main.copy(subCategories = main.subCategories.filter { it.title != subCategory.title })
-                } else {
-                    main
-                }
-            }
+            list.map { if (it.title == mainCategory.title) it.copy(subCategories = it.subCategories.filter { sub -> sub.title != subCategory.title }) else it }
         }
     }
 
@@ -275,13 +240,7 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
 
     fun reorderSubCategories(mainCategory: MainCategory, newSubOrder: List<Category>, type: CategoryType) {
         updateMainCategoryList(type) { list ->
-            list.map { main ->
-                if (main.title == mainCategory.title) {
-                    main.copy(subCategories = newSubOrder)
-                } else {
-                    main
-                }
-            }
+            list.map { if (it.title == mainCategory.title) it.copy(subCategories = newSubOrder) else it }
         }
     }
 
@@ -289,11 +248,11 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         if (type == CategoryType.EXPENSE) {
             val newList = updateAction(_expenseMainCategories.value)
             _expenseMainCategories.value = newList
-            repository.saveMainCategories(newList, type)
+            repository.saveMainCategories(newList, CategoryType.EXPENSE)
         } else {
             val newList = updateAction(_incomeMainCategories.value)
             _incomeMainCategories.value = newList
-            repository.saveMainCategories(newList, type)
+            repository.saveMainCategories(newList, CategoryType.INCOME)
         }
     }
 
@@ -302,27 +261,27 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun reorderCategories(categories: List<Category>, type: CategoryType) {}
 
     // ===========================
-    // 5. 账单操作 (CRUD)
+    // 5. 账单操作
     // ===========================
+    val allExpenses: StateFlow<List<Expense>> = repository.allExpenses
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun insert(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.insert(expense)
-        }
+        viewModelScope.launch(Dispatchers.IO) { repository.insert(expense) }
     }
 
     fun createTransfer(fromAccountId: Long, toAccountId: Long, fromAmount: Double, toAmount: Double, date: Date) {
         viewModelScope.launch(Dispatchers.IO) {
             val expenseOut = Expense(
                 accountId = fromAccountId,
-                category = "转账 (转出)",
+                category = "category_transfer_out", // 使用 Key
                 amount = -abs(fromAmount),
                 date = date,
                 remark = null
             )
             val expenseIn = Expense(
                 accountId = toAccountId,
-                category = "转账 (转入)",
+                category = "category_transfer_in", // 使用 Key
                 amount = abs(toAmount),
                 date = date,
                 remark = null
@@ -332,40 +291,34 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     }
 
     fun insertAccount(account: Account) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.insertAccount(account)
-        }
+        viewModelScope.launch(Dispatchers.IO) { repository.insertAccount(account) }
+    }
+
+    // [新增] 必须包含此方法
+    fun updateAccount(account: Account) {
+        viewModelScope.launch(Dispatchers.IO) { repository.updateAccount(account) }
     }
 
     fun updateAccountWithNewBalance(account: Account, newCurrentBalance: Double) {
         viewModelScope.launch(Dispatchers.IO) {
             val transactions = repository.allExpenses.first()
-            val transactionSum = transactions
-                .filter { it.accountId == account.id }
-                .sumOf { it.amount }
-
+            val transactionSum = transactions.filter { it.accountId == account.id }.sumOf { it.amount }
             val newInitialBalance = newCurrentBalance - transactionSum
-            val updatedAccount = account.copy(initialBalance = newInitialBalance)
-            repository.updateAccount(updatedAccount)
+            repository.updateAccount(account.copy(initialBalance = newInitialBalance))
         }
     }
 
     fun deleteExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteExpense(expense)
-        }
+        viewModelScope.launch(Dispatchers.IO) { repository.deleteExpense(expense) }
     }
 
     fun updateExpense(expense: Expense) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.updateExpense(expense)
-        }
+        viewModelScope.launch(Dispatchers.IO) { repository.updateExpense(expense) }
     }
 
     // ===========================
-    // 6. 搜索与筛选状态
+    // 6. 搜索与筛选
     // ===========================
-
     private val _searchText = MutableStateFlow("")
     val searchText: StateFlow<String> = _searchText
 
@@ -379,19 +332,14 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
         allExpenses, _searchText, _selectedTypeFilter, _selectedCategoryFilter
     ) { expenses, text, type, category ->
         expenses.filter { expense ->
-            val matchesSearchText = text.isBlank() ||
-                    (expense.remark?.contains(text, ignoreCase = true) ?: false) ||
-                    expense.category.contains(text, ignoreCase = true)
-
+            val matchesSearchText = text.isBlank() || (expense.remark?.contains(text, true) == true) || expense.category.contains(text, true)
             val matchesType = when (type) {
                 ExpenseTypeFilter.ALL -> true
-                ExpenseTypeFilter.EXPENSE -> expense.amount < 0 && !expense.category.startsWith("转账")
-                ExpenseTypeFilter.INCOME -> expense.amount > 0 && !expense.category.startsWith("转账")
-                ExpenseTypeFilter.TRANSFER -> expense.category.startsWith("转账")
+                ExpenseTypeFilter.EXPENSE -> expense.amount < 0 && !expense.category.startsWith("category_transfer")
+                ExpenseTypeFilter.INCOME -> expense.amount > 0 && !expense.category.startsWith("category_transfer")
+                ExpenseTypeFilter.TRANSFER -> expense.category.startsWith("category_transfer")
             }
-
             val matchesCategory = category == "全部" || expense.category == category
-
             matchesSearchText && matchesType && matchesCategory
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -401,9 +349,8 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun updateCategoryFilter(category: String?) { _selectedCategoryFilter.value = category ?: "全部" }
 
     // ===========================
-    // 7. 预算管理 (Budget)
+    // 7. 预算管理
     // ===========================
-
     fun getBudgetsForMonth(year: Int, month: Int): Flow<List<Budget>> {
         return repository.getBudgetsForMonth(year, month)
     }
@@ -418,13 +365,7 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
                     val manualTotalBudget = allBudgets.find { it.category == "总预算" }
                     if (manualTotalBudget == null || manualTotalBudget.amount < calculatedSum) {
                         repository.upsertBudget(
-                            Budget(
-                                id = manualTotalBudget?.id ?: 0,
-                                category = "总预算",
-                                amount = calculatedSum,
-                                year = budget.year,
-                                month = budget.month
-                            )
+                            Budget(id = manualTotalBudget?.id ?: 0, category = "总预算", amount = calculatedSum, year = budget.year, month = budget.month)
                         )
                     }
                 }
@@ -435,36 +376,26 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     fun syncBudgetsFor(year: Int, month: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             val targetMonthBudgets = getBudgetsForMonth(year, month).first()
-            if (targetMonthBudgets.isNotEmpty()) {
-                return@launch
-            }
+            if (targetMonthBudgets.isNotEmpty()) return@launch
             val recentBudget = repository.getMostRecentBudget() ?: return@launch
-            if (recentBudget.year == year && recentBudget.month == month) {
-                return@launch
-            }
+            if (recentBudget.year == year && recentBudget.month == month) return@launch
             val recentMonthBudgets = getBudgetsForMonth(recentBudget.year, recentBudget.month).first()
-            val newBudgets = recentMonthBudgets.map {
-                it.copy(id = 0, year = year, month = month)
-            }
-            if (newBudgets.isNotEmpty()) {
-                repository.upsertBudgets(newBudgets)
-            }
+            val newBudgets = recentMonthBudgets.map { it.copy(id = 0, year = year, month = month) }
+            if (newBudgets.isNotEmpty()) repository.upsertBudgets(newBudgets)
         }
     }
 
     // ===========================
-    // 8. 隐私与安全 (Privacy)
+    // 8. 隐私
     // ===========================
-
     fun getPrivacyType(): String = repository.getPrivacyType()
     fun setPrivacyType(type: String) = repository.savePrivacyType(type)
     fun setBiometricEnabled(enabled: Boolean) = repository.setBiometricEnabled(enabled)
     fun isBiometricEnabled(): Boolean = repository.isBiometricEnabled()
 
     // ===========================
-    // 9. 周期记账 (Periodic)
+    // 9. 周期记账
     // ===========================
-
     val allPeriodicTransactions: StateFlow<List<PeriodicTransaction>> = repository.allPeriodicTransactions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -487,107 +418,67 @@ class ExpenseViewModel(private val repository: ExpenseRepository) : ViewModel() 
     }
 
     // ===========================
-    // 10. 图表页面状态
+    // 10. 图表
     // ===========================
-
     private val _chartMode = MutableStateFlow(ChartMode.MONTH)
     val chartModeState = _chartMode.asStateFlow()
-
-    fun setChartMode(mode: ChartMode) {
-        _chartMode.value = mode
-    }
+    fun setChartMode(mode: ChartMode) { _chartMode.value = mode }
 
     private val _chartTransactionType = MutableStateFlow(TransactionType.EXPENSE)
     val chartTransactionTypeState = _chartTransactionType.asStateFlow()
-
-    fun setChartTransactionType(type: TransactionType) {
-        _chartTransactionType.value = type
-    }
+    fun setChartTransactionType(type: TransactionType) { _chartTransactionType.value = type }
 
     private val _chartDateMillis = MutableStateFlow(System.currentTimeMillis())
     val chartDateMillisState = _chartDateMillis.asStateFlow()
-
-    fun setChartDate(millis: Long) {
-        _chartDateMillis.value = millis
-    }
+    fun setChartDate(millis: Long) { _chartDateMillis.value = millis }
 
     private val _chartCustomDateRange = MutableStateFlow<Pair<Long, Long>?>(null)
     val chartCustomDateRangeState = _chartCustomDateRange.asStateFlow()
-
     fun setChartCustomDateRange(start: Long?, end: Long?) {
-        if (start != null && end != null) {
-            _chartCustomDateRange.value = start to end
-        } else {
-            _chartCustomDateRange.value = null
-        }
+        _chartCustomDateRange.value = if (start != null && end != null) start to end else null
     }
 
     // ===========================
-    // 11. 【新增】同步相关逻辑
+    // 11. 同步逻辑
     // ===========================
-
     private val _syncState = MutableStateFlow<SyncUiState>(SyncUiState.Idle)
     val syncState = _syncState.asStateFlow()
 
-    // 第一步：点击“同步”按钮调用此方法
     fun startSync() {
         viewModelScope.launch {
             _syncState.value = SyncUiState.Loading("正在检查云端数据...")
-
             val result = repository.checkCloudStatus()
-
             if (result.isFailure) {
                 _syncState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "连接失败")
                 return@launch
             }
-
             val status = result.getOrNull()!!
-
-            // 核心逻辑：判断是否冲突
             if (status.hasCloudData && status.hasLocalData) {
                 _syncState.value = SyncUiState.Conflict(status.cloudTimestamp)
             } else if (status.hasCloudData && !status.hasLocalData) {
-                // 本地空，云端有 -> 自动下载
                 performSync(SyncStrategy.OVERWRITE_LOCAL)
             } else {
-                // 云端空，本地有 -> 自动上传
                 performSync(SyncStrategy.OVERWRITE_CLOUD)
             }
         }
     }
 
-    // 第二步：执行具体的同步策略
     fun performSync(strategy: SyncStrategy) {
         viewModelScope.launch {
-            val strategyName = when(strategy) {
-                SyncStrategy.MERGE -> "正在智能合并..."
-                SyncStrategy.OVERWRITE_CLOUD -> "正在上传备份..."
-                SyncStrategy.OVERWRITE_LOCAL -> "正在恢复数据..."
-            }
-            _syncState.value = SyncUiState.Loading(strategyName)
-
+            _syncState.value = SyncUiState.Loading(if (strategy == SyncStrategy.MERGE) "正在智能合并..." else "正在同步...")
             val result = repository.executeSync(strategy)
-
             if (result.isSuccess) {
                 _syncState.value = SyncUiState.Success(result.getOrNull() ?: "同步成功")
-
-                // 【新增】如果执行了 恢复 或 合并，需要重新加载分类配置到 UI
                 if (strategy == SyncStrategy.OVERWRITE_LOCAL || strategy == SyncStrategy.MERGE) {
-                    _expenseMainCategories.value = repository.getMainCategories(CategoryType.EXPENSE)
-                    _incomeMainCategories.value = repository.getMainCategories(CategoryType.INCOME)
+                    refreshCategories()
                 }
-
             } else {
                 _syncState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "同步失败")
             }
-
             delay(3000)
             _syncState.value = SyncUiState.Idle
         }
     }
 
-    // 重置状态
-    fun resetSyncState() {
-        _syncState.value = SyncUiState.Idle
-    }
+    fun resetSyncState() { _syncState.value = SyncUiState.Idle }
 }
