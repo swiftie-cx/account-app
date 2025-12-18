@@ -188,6 +188,8 @@
     <string name="lang_vi">Tiếng Việt</string>
     <string name="lang_id">Bahasa Indonesia</string>
     <string name="lang_tr">Türkçe</string>
+    <string name="lang_in">हिन्दी</string>
+    <string name="lang_th">ไทย</string>
     <string name="language_title">Language</string>
 
     <!-- ========================================================= -->

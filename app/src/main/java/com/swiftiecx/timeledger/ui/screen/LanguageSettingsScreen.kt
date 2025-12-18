@@ -41,23 +41,24 @@ fun LanguageSettingsScreen(
 
     val languages = listOf(
         LanguageOption(stringResource(R.string.lang_follow_system), ""),
-        LanguageOption(stringResource(R.string.lang_zh), "zh"),
         LanguageOption(stringResource(R.string.lang_en), "en"),
+        LanguageOption(stringResource(R.string.lang_zh), "zh"),
         LanguageOption(stringResource(R.string.lang_ja), "ja"),
         LanguageOption(stringResource(R.string.lang_ko), "ko"),
+        LanguageOption(stringResource(R.string.lang_pt_br), "br"), // 对应葡萄牙语（巴西）
         LanguageOption(stringResource(R.string.lang_de), "de"),
+        LanguageOption(stringResource(R.string.lang_es), "es"),
         LanguageOption(stringResource(R.string.lang_fr), "fr"),
-        LanguageOption(stringResource(R.string.lang_es), "es-ES"),
+        LanguageOption(stringResource(R.string.lang_id), "id"),
+        LanguageOption(stringResource(R.string.lang_in), "in"),    // 对应印地语
         LanguageOption(stringResource(R.string.lang_it), "it"),
-        LanguageOption(stringResource(R.string.lang_pt_br), "pt-BR"),
-        LanguageOption(stringResource(R.string.lang_es_mx), "es-MX"),
+        LanguageOption(stringResource(R.string.lang_es_mx), "mx"), // 对应西班牙语（墨西哥）
         LanguageOption(stringResource(R.string.lang_pl), "pl"),
         LanguageOption(stringResource(R.string.lang_ru), "ru"),
-        LanguageOption(stringResource(R.string.lang_vi), "vi"),
-        LanguageOption(stringResource(R.string.lang_id), "id"),
+        LanguageOption(stringResource(R.string.lang_th), "th"),
         LanguageOption(stringResource(R.string.lang_tr), "tr"),
+        LanguageOption(stringResource(R.string.lang_vi), "vn")     // 对应越南语，Key设为vn以匹配你的列表
     )
-
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(

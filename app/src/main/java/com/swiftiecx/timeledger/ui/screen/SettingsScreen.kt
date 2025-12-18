@@ -47,6 +47,19 @@ fun SettingsScreen(
         "en" -> stringResource(R.string.lang_en)
         "ja" -> stringResource(R.string.lang_ja)
         "ko" -> stringResource(R.string.lang_ko)
+        "de" -> stringResource(R.string.lang_de)
+        "fr" -> stringResource(R.string.lang_fr)
+        "es" -> stringResource(R.string.lang_es)
+        "it" -> stringResource(R.string.lang_it)
+        "br" -> stringResource(R.string.lang_pt_br) // 对应葡萄牙语（巴西）
+        "mx" -> stringResource(R.string.lang_es_mx) // 对应西班牙语（墨西哥）
+        "pl" -> stringResource(R.string.lang_pl)
+        "ru" -> stringResource(R.string.lang_ru)
+        "id" -> stringResource(R.string.lang_id)
+        "vn" -> stringResource(R.string.lang_vi)    // 对应越南语
+        "vi" -> stringResource(R.string.lang_vi)    // 备选兼容
+        "tr" -> stringResource(R.string.lang_tr)
+        "in" -> stringResource(R.string.lang_in)    // 对应印地语
         else -> stringResource(R.string.lang_follow_system)
     }
 
