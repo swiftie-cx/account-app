@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
-import com.swiftiecx.timeledger.ui.navigation.AccountTypeManager // [新增]
+import com.swiftiecx.timeledger.ui.navigation.AccountTypeManager
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
@@ -59,7 +59,7 @@ fun AccountManagementScreen(
     )
 
     LaunchedEffect(accounts) {
-        if (listData.size != accounts.size || listData.map { it.id } != accounts.map { it.id }) {
+        if (listData.map { it.id } != accounts.map { it.id }) {
             listData = accounts
         }
     }
@@ -76,7 +76,10 @@ fun AccountManagementScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -103,7 +106,9 @@ fun AccountManagementScreen(
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.padding(16.dp).fillMaxWidth()
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
             ) {
                 Text(
                     text = stringResource(R.string.account_management_hint),
@@ -119,19 +124,30 @@ fun AccountManagementScreen(
                     .fillMaxSize()
                     .reorderable(state)
                     .detectReorderAfterLongPress(state),
-                contentPadding = PaddingValues(bottom = 100.dp, start = 16.dp, end = 16.dp),
+                contentPadding = PaddingValues(
+                    bottom = 100.dp,
+                    start = 16.dp,
+                    end = 16.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(listData, key = { it.id }) { account ->
                     ReorderableItem(state, key = account.id) { isDragging ->
-                        val elevation = animateDpAsState(if (isDragging) 12.dp else 2.dp, label = "elevation")
+                        val elevation = animateDpAsState(
+                            if (isDragging) 12.dp else 2.dp,
+                            label = "elevation"
+                        )
 
                         AccountItemCard(
                             account = account,
                             isDefault = (account.id == defaultAccountId),
                             elevation = elevation.value,
                             onSetDefault = { viewModel.setDefaultAccount(account.id) },
-                            onClick = { navController.navigate(Routes.accountDetailRoute(account.id)) }
+                            onClick = {
+                                navController.navigate(
+                                    Routes.accountDetailRoute(account.id)
+                                )
+                            }
                         )
                     }
                 }
@@ -150,7 +166,9 @@ fun AccountItemCard(
 ) {
     ElevatedCard(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().shadow(elevation, RoundedCornerShape(20.dp)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(elevation, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -163,17 +181,19 @@ fun AccountItemCard(
                 .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
+            /* ✅ 白色圆底 + 黄色图标（与账户详情页一致） */
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = IconMapper.getIcon(account.iconName),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -193,17 +213,21 @@ fun AccountItemCard(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(6.dp)
                     ) {
-                        // [关键修改] 使用 Manager 获取本地化名称
                         Text(
                             text = AccountTypeManager.getDisplayName(account.type),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(
+                                horizontal = 6.dp,
+                                vertical = 2.dp
+                            )
                         )
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "${account.currency} ${String.format(Locale.US, "%.2f", account.initialBalance)}",
+                        text = "${account.currency} ${
+                            String.format(Locale.US, "%.2f", account.initialBalance)
+                        }",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -213,9 +237,15 @@ fun AccountItemCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onSetDefault) {
                     Icon(
-                        imageVector = if (isDefault) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                        imageVector = if (isDefault)
+                            Icons.Filled.Star
+                        else
+                            Icons.Outlined.StarOutline,
                         contentDescription = stringResource(R.string.set_as_default),
-                        tint = if (isDefault) Color(0xFFFFC107) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        tint = if (isDefault)
+                            Color(0xFFFFC107)
+                        else
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                     )
                 }
 

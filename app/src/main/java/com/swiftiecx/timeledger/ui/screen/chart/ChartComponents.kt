@@ -1,6 +1,7 @@
 package com.swiftiecx.timeledger.ui.screen.chart
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -36,12 +38,11 @@ fun EmptyState() {
     }
 }
 
-// [重要] 必须包含 currency 参数
 @Composable
 fun StatSelectionCard(
     title: String,
     amount: Double,
-    currency: String, // [关键参数]
+    currency: String,
     isSelected: Boolean,
     selectedBgColor: Color,
     unselectedBgColor: Color,
@@ -50,55 +51,80 @@ fun StatSelectionCard(
     modifier: Modifier = Modifier,
     isHighlight: Boolean
 ) {
+    // 选中态内部“厚阴影/脏边”主要来自 Surface 的 tonalElevation + 半透明背景叠色
+    // 这里统一把背景色强制为不透明，并关闭 tonalElevation；
+    // 同时对结余（isHighlight）在选中态关闭 shadow，以彻底避免“内圈”观感
+    val targetBg = if (isSelected) selectedBgColor else unselectedBgColor
     val backgroundColor by animateColorAsState(
-        if (isSelected) selectedBgColor else unselectedBgColor,
+        targetValue = targetBg.copy(alpha = 1f),
         label = "bgColor"
     )
-    val elevation = if (isSelected) 0.dp else 2.dp
 
-    val displayAmount = if (isHighlight) amount else abs(amount)
+    val baseElevation = 2.dp
+    val shadow = if (isHighlight && isSelected) 0.dp else baseElevation
+
+    val isLightBg = backgroundColor.luminance() > 0.5f
+
+    val finalAmountColor = if (isSelected) {
+        if (isHighlight) {
+            if (isLightBg) Color(0xFF212121) else Color.White
+        } else {
+            textColor
+        }
+    } else {
+        textColor
+    }
+
+    val finalTitleColor = if (isSelected) {
+        if (isLightBg) Color(0xFF212121).copy(alpha = 0.7f) else Color.White.copy(alpha = 0.8f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val displayAmount = if (isHighlight) amount else kotlin.math.abs(amount)
 
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         color = backgroundColor,
-        shadowElevation = elevation,
-        modifier = modifier
+        shadowElevation = shadow,
+        tonalElevation = 0.dp,
+        modifier = modifier.padding(2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(vertical = 12.dp, horizontal = 16.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = if(isHighlight) Alignment.CenterHorizontally else Alignment.Start
+            horizontalAlignment = if (isHighlight) Alignment.CenterHorizontally else Alignment.Start
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = finalTitleColor
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.currency_amount_format_chart, currency, displayAmount),
-                style = if(isHighlight) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,
+                style = if (isHighlight) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = textColor,
+                color = finalAmountColor,
                 maxLines = 1
             )
         }
     }
 }
 
-// [重要] amount 必须是 Double，必须包含 currency 参数
+
 @Composable
 fun CategoryRankItem(
     name: String,
-    amount: Double, // [关键修改] 类型是 Double
+    amount: Double,
     percentage: Float,
     color: Color,
     ratio: Float,
     icon: ImageVector?,
-    currency: String, // [关键参数] 必须存在
+    currency: String,
     onClick: () -> Unit
 ) {
     Row(
@@ -129,7 +155,6 @@ fun CategoryRankItem(
                 Row {
                     Text(stringResource(R.string.percent_format, percentage), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(8.dp))
-                    // 这里使用传入的 currency
                     Text(stringResource(R.string.currency_amount_no_decimal_format, currency, amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
             }
@@ -153,12 +178,11 @@ fun CategoryRankItem(
     }
 }
 
-// [重要] 必须包含 currency 参数
 @Composable
 fun SubCategoryRankItem(
     stat: SubCategoryStat,
     color: Color,
-    currency: String, // [关键参数]
+    currency: String,
     onClick: () -> Unit
 ) {
     Row(

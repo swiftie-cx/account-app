@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,7 +25,6 @@ import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import com.swiftiecx.timeledger.ui.navigation.Routes
-import java.util.Locale
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,7 +66,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // 自定义标题栏 + 顶部总览卡片
             AssetHeaderSection(
                 netAssets = netAssets,
                 assets = assets,
@@ -74,7 +73,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                 currency = defaultCurrency
             )
 
-            // 账户列表
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
@@ -93,7 +91,6 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                 }
             }
 
-            // 底部操作按钮区域
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,10 +104,11 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        // 改：用 primary，更显色
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
-                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
                     Text(stringResource(R.string.add_account), style = MaterialTheme.typography.titleMedium)
                 }
@@ -122,10 +120,11 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        // 改：用 primary，更显色
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
-                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
                     Text(stringResource(R.string.manage_account), style = MaterialTheme.typography.titleMedium)
                 }
@@ -146,7 +145,6 @@ private fun AssetHeaderSection(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // 大标题
         Text(
             text = stringResource(R.string.assets_title),
             style = MaterialTheme.typography.headlineMedium,
@@ -155,66 +153,78 @@ private fun AssetHeaderSection(
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        // 总览卡片
+        val themeColor = MaterialTheme.colorScheme.primary
+
         Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                // 明细页同款：有一圈柔和外阴影（如果你不想要，就删掉这一行）
+                .shadow(
+                    8.dp,
+                    RoundedCornerShape(24.dp),
+                    ambientColor = themeColor.copy(alpha = 0.3f),
+                    spotColor = themeColor.copy(alpha = 0.3f)
+                ),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            elevation = CardDefaults.cardElevation(0.dp),
-            modifier = Modifier.fillMaxWidth()
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(0.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier
+                    // 明细页同款：primaryContainer + 0.75 透明度
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f))
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
                     text = stringResource(R.string.net_assets),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                // 【修正1】使用 currency 和 netAssets，而不是不存在的 account
-                // 【修正2】直接传 Double，不使用 String.format
+
                 Text(
                     text = stringResource(R.string.currency_amount_format, currency, netAssets),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurface   // 黑字
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.total_assets),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
-                        // 【修正】直接传 Double
                         Text(
                             text = stringResource(R.string.currency_amount_format, currency, assets),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = MaterialTheme.colorScheme.onSurface // 黑字
                         )
                     }
 
-                    Column {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.End
+                    ) {
                         Text(
                             text = stringResource(R.string.total_liabilities),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
-                        // 【修正】直接传 Double
                         Text(
                             text = stringResource(R.string.currency_amount_format, currency, liabilities),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = MaterialTheme.colorScheme.onSurface // 黑字
                         )
                     }
                 }
@@ -222,6 +232,8 @@ private fun AssetHeaderSection(
         }
     }
 }
+
+
 
 @Composable
 fun AssetAccountItem(
@@ -243,25 +255,24 @@ fun AssetAccountItem(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 图标容器
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    // 图标底也别用太淡的 container，可保持一致但更清晰
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = IconMapper.getIcon(account.iconName),
                     contentDescription = account.name,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(24.dp)
                 )
             }
 
             Spacer(Modifier.width(16.dp))
 
-            // 账户名
             Text(
                 text = account.name,
                 style = MaterialTheme.typography.bodyLarge,
@@ -270,9 +281,7 @@ fun AssetAccountItem(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            // 金额
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 【修正】直接传 Double
                 Text(
                     text = stringResource(R.string.currency_amount_format, account.currency, currentBalance),
                     style = MaterialTheme.typography.bodyLarge,

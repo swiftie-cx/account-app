@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -142,7 +143,10 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    BottomAppBar {
+    BottomAppBar(
+        containerColor = androidx.compose.ui.graphics.Color.White, // 强制设为白色
+        tonalElevation = 0.dp // 关键：设置为 0 才能彻底去掉那种浅紫色（Material 3 的色调提升）
+    ) {
         items.forEach { item ->
             val title = stringResource(item.titleResId)
 

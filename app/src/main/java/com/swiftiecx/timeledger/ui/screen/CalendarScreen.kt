@@ -1,5 +1,6 @@
 package com.swiftiecx.timeledger.ui.screen
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -34,7 +36,6 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.collections.find
 import kotlin.math.abs
-import android.text.format.DateFormat
 
 data class DailySummary(val income: Double, val expense: Double, val currency: String)
 
@@ -140,7 +141,7 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // 1. 月度汇总卡片
+            // 1. 月度汇总卡片（已改：跟明细页一致的“surface + primaryContainer 0.75f + 黑字”）
             MonthlyOverviewCard(
                 income = monthlySummary.first,
                 expense = monthlySummary.second,
@@ -182,7 +183,7 @@ fun CalendarScreen(
     }
 }
 
-// --- 组件：顶部导航 ---
+// --- 组件：顶部导航（已改：跟明细页统一的“浅黄胶囊 + 黑字”） ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CalendarTopAppBar(
@@ -192,10 +193,8 @@ private fun CalendarTopAppBar(
     onMonthClick: () -> Unit,
     onBack: () -> Unit
 ) {
-    // 这里仍然用中文格式是 OK 的（会跟随系统 Locale 数字），如果你想全局可控再做成资源即可
     val locale = Locale.getDefault()
     val monthPattern = remember(locale) {
-        // skeleton "yMMM"：year + month（会按系统语言生成最佳格式）
         DateFormat.getBestDateTimePattern(locale, "yMMM")
     }
     val monthFormat = remember(locale, monthPattern) {
@@ -210,31 +209,47 @@ private fun CalendarTopAppBar(
             }
         },
         actions = {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            // 外层用 surface，内层用 primaryContainer 0.75f，黑字
+            val themeColor = MaterialTheme.colorScheme.primary
+            Card(
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .shadow(
+                        6.dp,
+                        RoundedCornerShape(50),
+                        ambientColor = themeColor.copy(alpha = 0.18f),
+                        spotColor = themeColor.copy(alpha = 0.18f)
+                    ),
                 shape = RoundedCornerShape(50),
-                modifier = Modifier.padding(end = 16.dp)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f))
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
                     IconButton(onClick = onPrevMonth, modifier = Modifier.size(40.dp)) {
                         Icon(
                             Icons.Default.ChevronLeft,
                             contentDescription = stringResource(R.string.prev_month),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
                     Box(
                         modifier = Modifier
                             .clickable(onClick = onMonthClick)
-                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                            .padding(vertical = 8.dp, horizontal = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = monthFormat.format(calendar.time),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -242,7 +257,8 @@ private fun CalendarTopAppBar(
                         Icon(
                             Icons.Default.ChevronRight,
                             contentDescription = stringResource(R.string.next_month),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -252,20 +268,29 @@ private fun CalendarTopAppBar(
     )
 }
 
-// --- 组件：月度汇总卡片 ---
+// --- 组件：月度汇总卡片（已改：跟明细页一致） ---
 @Composable
 fun MonthlyOverviewCard(income: Double, expense: Double, currency: String) {
     val balance = income - expense
+    val themeColor = MaterialTheme.colorScheme.primary
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        shape = RoundedCornerShape(20.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .shadow(
+                8.dp,
+                RoundedCornerShape(20.dp),
+                ambientColor = themeColor.copy(alpha = 0.22f),
+                spotColor = themeColor.copy(alpha = 0.22f)
+            ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             modifier = Modifier
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f))
                 .padding(20.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -275,13 +300,13 @@ fun MonthlyOverviewCard(income: Double, expense: Double, currency: String) {
                 Text(
                     text = stringResource(R.string.calendar_month_balance),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = String.format(Locale.US, "%.2f", balance),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -292,7 +317,7 @@ fun MonthlyOverviewCard(income: Double, expense: Double, currency: String) {
                     Text(
                         text = "${stringResource(R.string.income_short)}  ${String.format(Locale.US, "%.0f", income)}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -302,7 +327,7 @@ fun MonthlyOverviewCard(income: Double, expense: Double, currency: String) {
                     Text(
                         text = "${stringResource(R.string.expense_short)}  ${String.format(Locale.US, "%.0f", expense)}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

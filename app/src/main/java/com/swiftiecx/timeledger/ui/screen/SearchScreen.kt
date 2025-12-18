@@ -65,7 +65,6 @@ fun SearchScreen(
 
     val isFromChart = initialStartDate != null || initialCategory != null
 
-    // [i18n] 类型筛选器
     val typeFilters = listOf(
         stringResource(R.string.type_all),
         stringResource(R.string.type_expense),
@@ -80,7 +79,6 @@ fun SearchScreen(
 
     var showCategoryPicker by remember { mutableStateOf(false) }
 
-    // [i18n] 时间筛选器
     val timeFilters = listOf(
         stringResource(R.string.type_all),
         stringResource(R.string.time_week_current),
@@ -146,7 +144,7 @@ fun SearchScreen(
         selectedTimeIndex,
         customDateRangeMillis,
         selectedCategories,
-        context // [新增] 依赖 context 变化
+        context
     ) {
         val timeFilteredResults = when (selectedTimeIndex) {
             1 -> {
@@ -187,7 +185,6 @@ fun SearchScreen(
         }
 
         val categoryFilteredResults = if (selectedCategories.isNotEmpty()) {
-            // [修正] 这里 selectedCategories 存的是 key，expense.category 也是 key，可以直接比较
             timeFilteredResults.filter {
                 val stableKey = CategoryData.getStableKey(it.category, context)
                 stableKey in selectedCategories || it.category in selectedCategories
@@ -324,9 +321,10 @@ fun SearchScreen(
         },
         bottomBar = {
             if (!isFromChart) {
+                // ✅ 改这里：底部栏纯白背景 + 不要“填色/压暗”的 tonal
                 BottomAppBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 8.dp
+                    containerColor = Color.White,
+                    tonalElevation = 0.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -454,11 +452,9 @@ fun SearchScreen(
                     when (item) {
                         is Expense -> {
                             val account = accountMap[item.accountId]
-
-                            // ✅ 自动映射 Key -> Icon / Color
                             val stableKey = CategoryData.getStableKey(item.category, context)
                             val icon = CategoryData.getIcon(stableKey, context)
-                            val categoryThemeColor = CategoryData.getColor(stableKey, if(item.amount<0) 0 else 1, context)
+                            val categoryThemeColor = CategoryData.getColor(stableKey, if (item.amount < 0) 0 else 1, context)
 
                             ExpenseItem(
                                 expense = item,
@@ -532,7 +528,7 @@ private fun CategoryFilterRow(
     onRemoveCategory: (String) -> Unit,
     onAddClick: () -> Unit
 ) {
-    val context = LocalContext.current // [新增]
+    val context = LocalContext.current
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -569,8 +565,7 @@ private fun CategoryFilterRow(
             items(selectedCategories) { categoryKey ->
                 InputChip(
                     selected = true,
-                    onClick = { /* 不做事 */ },
-                    // [关键修改] 显示本地化名称
+                    onClick = { },
                     label = { Text(CategoryData.getDisplayName(categoryKey, context)) },
                     trailingIcon = {
                         IconButton(
@@ -700,7 +695,7 @@ private fun ExpenseItem(
     account: Account?,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current // [新增]
+    val context = LocalContext.current
     val isExpense = expense.amount < 0
     val amountColor = if (isExpense) Color(0xFFE53935) else Color(0xFF4CAF50)
 
@@ -736,7 +731,6 @@ private fun ExpenseItem(
         Spacer(Modifier.size(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            // [关键修改] 显示本地化名称
             Text(
                 text = CategoryData.getDisplayName(expense.category, context),
                 style = MaterialTheme.typography.bodyLarge,

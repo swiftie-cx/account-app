@@ -289,7 +289,7 @@ private fun SummaryHeader(
         ) {
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f))
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {

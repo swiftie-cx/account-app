@@ -18,10 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Expense
+import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
@@ -36,19 +40,20 @@ fun DailyDetailsScreen(
     navController: NavHostController,
     dateMillis: Long
 ) {
+    val context = LocalContext.current
     val calendar = remember { Calendar.getInstance().apply { timeInMillis = dateMillis } }
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
-    // [新增] 1. 获取实时分类数据 (用于获取颜色)
+    // 实时分类数据（包含用户新增）
     val expenseMainCategories by viewModel.expenseMainCategoriesState.collectAsState()
     val incomeMainCategories by viewModel.incomeMainCategoriesState.collectAsState()
 
-    // [新增] 2. 构建样式查找表 (分类名 -> 图标, 颜色)
+    // ✅ 关键修复：用 sub.key 作为 map key（而不是 sub.title）
     val categoryStyleMap = remember(expenseMainCategories, incomeMainCategories) {
         val map = mutableMapOf<String, Pair<ImageVector, Color>>()
         (expenseMainCategories + incomeMainCategories).forEach { main ->
             main.subCategories.forEach { sub ->
-                map[sub.title] = sub.icon to main.color
+                map[sub.key] = sub.icon to main.color
             }
         }
         map
@@ -68,11 +73,15 @@ fun DailyDetailsScreen(
     val topBarFormatter = remember { SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault()) }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow, // 浅灰背景
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         topBar = {
             TopAppBar(
                 title = { Text(topBarFormatter.format(calendar.time)) },
-                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
             )
         },
@@ -83,7 +92,7 @@ fun DailyDetailsScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape
             ) {
-                Icon(Icons.Default.Add, contentDescription = "添加")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add))
             }
         }
     ) { padding ->
@@ -91,35 +100,42 @@ fun DailyDetailsScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp) // 增加水平边距
+                .padding(horizontal = 16.dp)
         ) {
             DailySummaryHeader(calendar, totalExpense, totalIncome)
 
-            // 使用 Card 包裹列表，更有层次感
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(0.dp),
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) {
                 LazyColumn(
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     items(dailyExpenses) { expense ->
-                        // [修改] 3. 动态获取样式
-                        val stylePair = categoryStyleMap[expense.category]
+                        // ✅ 统一：先转 stableKey，再取 icon/color
+                        val stableKey = CategoryData.getStableKey(expense.category, context)
+
+                        // 兼容旧数据：如果以前存的是 title，尝试用原值兜底
+                        val stylePair = categoryStyleMap[stableKey] ?: categoryStyleMap[expense.category]
+
                         val icon = stylePair?.first ?: Icons.Default.HelpOutline
-                        val color = stylePair?.second ?: if(expense.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
+                        val color = stylePair?.second ?: if (expense.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
 
                         DailyTransactionItem(
                             expense = expense,
+                            displayCategory = CategoryData.getDisplayName(stableKey, context),
                             icon = icon,
-                            categoryColor = color, // 传入颜色
+                            categoryColor = color,
                             onClick = { navController.navigate(Routes.transactionDetailRoute(expense.id)) }
                         )
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -129,7 +145,6 @@ fun DailyDetailsScreen(
 private fun DailySummaryHeader(calendar: Calendar, totalExpense: Double, totalIncome: Double) {
     val formatter = remember { SimpleDateFormat("MM月dd日 EEEE", Locale.getDefault()) }
 
-    // 美化头部汇总
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,14 +167,12 @@ private fun DailySummaryHeader(calendar: Calendar, totalExpense: Double, totalIn
                 fontWeight = FontWeight.SemiBold
             )
         }
-        if (totalIncome > 0 && totalExpense != 0.0) {
-            Spacer(Modifier.width(12.dp))
-        }
+        if (totalIncome > 0 && totalExpense != 0.0) Spacer(Modifier.width(12.dp))
         if (totalIncome > 0) {
             Text(
                 text = "收 ${String.format(Locale.US, "%.2f", totalIncome)}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF4CAF50), // 绿色
+                color = Color(0xFF4CAF50),
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -169,8 +182,9 @@ private fun DailySummaryHeader(calendar: Calendar, totalExpense: Double, totalIn
 @Composable
 private fun DailyTransactionItem(
     expense: Expense,
+    displayCategory: String,
     icon: ImageVector,
-    categoryColor: Color, // [新增参数]
+    categoryColor: Color,
     onClick: () -> Unit
 ) {
     Row(
@@ -181,23 +195,22 @@ private fun DailyTransactionItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // [修改] 4. 应用颜色
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(categoryColor.copy(alpha = 0.15f)), // 浅色背景
+                .background(categoryColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = expense.category,
-                tint = categoryColor // 深色图标
+                contentDescription = displayCategory,
+                tint = categoryColor
             )
         }
 
         Text(
-            text = expense.category,
+            text = displayCategory,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface
@@ -205,7 +218,7 @@ private fun DailyTransactionItem(
 
         Text(
             text = String.format(Locale.US, "%.2f", expense.amount),
-            style = MaterialTheme.typography.titleMedium, // 金额字体稍微加大
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = if (expense.amount < 0) MaterialTheme.colorScheme.error else Color(0xFF4CAF50)
         )

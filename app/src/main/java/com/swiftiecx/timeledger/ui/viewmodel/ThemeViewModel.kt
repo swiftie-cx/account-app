@@ -75,22 +75,22 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
     // ===========================
 
     val themeOptions = listOf(
-        ThemeColorOption("默认紫", Color(0xFF6750A4)),
-        ThemeColorOption("柔豆沙红", Color(0xFFC08886)),
-        ThemeColorOption("玫瑰黯红", Color(0xFFA85656)),
-        ThemeColorOption("枣泥红", Color(0xFF8E4444)),
-        ThemeColorOption("深勃艮第", Color(0xFF5D2E2E)),
-        ThemeColorOption("复古橘", Color(0xFFD69E68)),
-        ThemeColorOption("暖土橙", Color(0xFFC48648)),
-        ThemeColorOption("焦糖橙", Color(0xFFA66933)),
-        ThemeColorOption("陶土棕", Color(0xFF754C24)),
-        ThemeColorOption("复古芥末黄", Color(0xFFD6C047)),
-        ThemeColorOption("暗金黄", Color(0xFFB59C24)),
-        ThemeColorOption("赭黄", Color(0xFF8F7A1D)),
-        ThemeColorOption("深黄铜", Color(0xFF615213)),
-        ThemeColorOption("森林绿", Color(0xFF4CAF50)),
-        ThemeColorOption("深海蓝", Color(0xFF2196F3)),
-        ThemeColorOption("极致黑", Color(0xFF000000))
+        ThemeColorOption("复古金", Color(0xFFFED040)), // 第一位：提取自 App 图标的黄色
+        ThemeColorOption("经典紫", Color(0xFF6750A4)), // 第二位：原默认紫
+        ThemeColorOption("朱砂红", Color(0xFFB71C1C)),
+        ThemeColorOption("胭脂粉", Color(0xFFC2185B)),
+        ThemeColorOption("枫叶橙", Color(0xFFE65100)),
+        ThemeColorOption("琥珀棕", Color(0xFF8D6E63)),
+        ThemeColorOption("橄榄绿", Color(0xFF558B2F)),
+        ThemeColorOption("青黛绿", Color(0xFF00695C)),
+        ThemeColorOption("孔雀蓝", Color(0xFF00838F)),
+        ThemeColorOption("晴空蓝", Color(0xFF0277BD)),
+        ThemeColorOption("靛青蓝", Color(0xFF283593)),
+        ThemeColorOption("罗兰紫", Color(0xFF8E24AA)),
+        ThemeColorOption("丁香色", Color(0xFF9575CD)),
+        ThemeColorOption("冷岩灰", Color(0xFF546E7A)),
+        ThemeColorOption("咖啡色", Color(0xFF4E342E)),
+        ThemeColorOption("夜幕蓝", Color(0xFF263238))
     )
 
     // 当前选中的主题颜色

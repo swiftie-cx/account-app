@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,7 +41,7 @@ fun AccountDetailScreen(
     accountId: Long,
     defaultCurrency: String
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
@@ -67,7 +68,10 @@ fun AccountDetailScreen(
                 title = { Text(account?.name ?: stringResource(R.string.account_detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
                 },
                 actions = {
@@ -75,7 +79,10 @@ fun AccountDetailScreen(
                         IconButton(onClick = {
                             navController.navigate(Routes.addAccountRoute(account.id))
                         }) {
-                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit_account))
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.edit_account)
+                            )
                         }
                     }
                 }
@@ -137,45 +144,59 @@ fun AccountDetailScreen(
 }
 
 @Composable
-fun AccountHeaderCard(account: Account, currentBalance: Double) {
+fun AccountHeaderCard(
+    account: Account,
+    currentBalance: Double
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        )
     ) {
-        // [关键修复] 添加 fillMaxWidth() 确保 Column 占满卡片宽度，从而使居中生效
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = IconMapper.getIcon(account.iconName),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+
+            // ✅ 白色圆底 + 黄色图标（避免融色）
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = IconMapper.getIcon(account.iconName),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = stringResource(R.string.current_balance),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                color = Color.Black.copy(alpha = 0.7f)
             )
 
             Text(
                 text = stringResource(
                     R.string.currency_amount_format,
                     account.currency,
-                    currentBalance // [保留之前的防闪退修复] 传入 Double
+                    currentBalance
                 ),
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = Color.Black
             )
         }
     }
@@ -189,8 +210,14 @@ fun AccountTransactionItem(
     expense: Expense,
     onClick: () -> Unit
 ) {
-    val dateFormat = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) }
-    val amountColor = if (expense.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
+    val dateFormat = remember {
+        SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+    }
+    val amountColor = if (expense.amount < 0) {
+        Color(0xFFE53935)
+    } else {
+        Color(0xFF4CAF50)
+    }
 
     Row(
         modifier = Modifier
@@ -218,7 +245,9 @@ fun AccountTransactionItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = displayName,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = dateFormat.format(expense.date),
