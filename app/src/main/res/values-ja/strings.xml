@@ -137,6 +137,17 @@
     <string name="lang_ja">日本語</string>
     <string name="lang_ko">韓国語</string>
     <string name="lang_zh">简体中文</string>
+    <string name="lang_de">Deutsch</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_es">Español (España)</string>
+    <string name="lang_it">Italiano</string>
+    <string name="lang_pt_br">Português (Brasil)</string>
+    <string name="lang_es_mx">Español (México)</string>
+    <string name="lang_pl">Polski</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_vi">Tiếng Việt</string>
+    <string name="lang_id">Bahasa Indonesia</string>
+    <string name="lang_tr">Türkçe</string>
     <string name="language_title">言語</string>
 
     <string name="confirm_clear_code">CLEAR</string>
@@ -546,4 +557,22 @@
     <string name="welcome_subtitle">最初の記録を始めましょう</string>
     <string name="initial_asset_balance">初期の資産残高</string>
     <string name="start_journey">利用を開始</string>
+
+    <string name="theme_color_retro_gold">レトロゴールド</string>
+    <string name="theme_color_classic_purple">クラシックパープル</string>
+    <string name="theme_color_cinnabar_red">朱色</string>
+    <string name="theme_color_rouge_pink">ローズピンク</string>
+    <string name="theme_color_maple_orange">メープルオレンジ</string>
+    <string name="theme_color_amber_brown">アンバーブラウン</string>
+    <string name="theme_color_olive_green">オリーブグリーン</string>
+    <string name="theme_color_teal_green">青黛グリーン</string>
+    <string name="theme_color_peacock_blue">ピーコックブルー</string>
+    <string name="theme_color_sky_blue">スカイブルー</string>
+    <string name="theme_color_indigo_blue">インディゴブルー</string>
+    <string name="theme_color_lilac_purple">ライラックパープル</string>
+    <string name="theme_color_lavender">ラベンダー</string>
+    <string name="theme_color_cool_gray">クールグレー</string>
+    <string name="theme_color_coffee_brown">コーヒーブラウン</string>
+    <string name="theme_color_midnight_blue">ミッドナイトブルー</string>
+
 </resources>

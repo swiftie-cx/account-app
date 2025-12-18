@@ -63,10 +63,29 @@ class ExpenseViewModel(
     private fun detectAutoCurrency(): String {
         return try {
             val locale = Locale.getDefault()
-            when (locale.language) {
-                "ja" -> "JPY"
-                "ko" -> "KRW"
-                "zh" -> "CNY"
+            val language = locale.language
+            val country = locale.country
+
+            // 根据你支持的 16 种语言进行精准匹配
+            when (language) {
+                "zh" -> "CNY" // 简体中文 - 人民币
+                "en" -> "USD" // 英语 - 美元 (通用)
+                "ja" -> "JPY" // 日本语 - 日元
+                "ko" -> "KRW" // 韩语 - 韩元
+                "de" -> "EUR" // 德语 - 欧元
+                "fr" -> "EUR" // 法语 - 欧元
+                "it" -> "EUR" // 意大利语 - 欧元
+                "pt" -> "BRL" // 葡萄牙语 (巴西) - 巴西雷亚尔
+                "pl" -> "PLN" // 波兰语 - 波兰兹罗提
+                "ru" -> "RUB" // 俄语 - 俄罗斯卢布
+                "vi" -> "VND" // 越南语 - 越南盾
+                "id" -> "IDR" // 印尼语 - 印尼盾
+                "tr" -> "TRY" // 土耳其语 - 土耳其里拉
+                "es" -> {
+                    // 西班牙语区分：墨西哥使用 MXN，其他（如西班牙）使用 EUR
+                    if (country == "MX") "MXN" else "EUR"
+                }
+                // 如果不在上述 16 种语言定义内，返回 USD
                 else -> "USD"
             }
         } catch (e: Exception) {

@@ -101,7 +101,7 @@ fun ThemeSettingsScreen(
                 items(themeOptions) { option ->
                     ThemeOptionItem(
                         color = option.color,
-                        name = option.name,
+                        name = stringResource(option.nameResId),
                         isSelected = (option.color.toArgb() == currentThemeColor.toArgb()),
                         onClick = { themeViewModel.updateThemeColor(option.color) }
                     )

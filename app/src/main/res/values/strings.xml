@@ -177,6 +177,17 @@
     <string name="lang_ja">日本語</string>
     <string name="lang_ko">한국어</string>
     <string name="lang_zh">简体中文</string>
+    <string name="lang_de">Deutsch</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_es">Español (España)</string>
+    <string name="lang_it">Italiano</string>
+    <string name="lang_pt_br">Português (Brasil)</string>
+    <string name="lang_es_mx">Español (México)</string>
+    <string name="lang_pl">Polski</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_vi">Tiếng Việt</string>
+    <string name="lang_id">Bahasa Indonesia</string>
+    <string name="lang_tr">Türkçe</string>
     <string name="language_title">Language</string>
 
     <!-- ========================================================= -->
@@ -624,4 +635,22 @@
     <string name="welcome_subtitle">Let\'s start your first entry</string>
     <string name="initial_asset_balance">Initial Asset Balance</string>
     <string name="start_journey">Start Journey</string>
+
+    <string name="theme_color_retro_gold">Retro Gold</string>
+    <string name="theme_color_classic_purple">Classic Purple</string>
+    <string name="theme_color_cinnabar_red">Cinnabar Red</string>
+    <string name="theme_color_rouge_pink">Rouge Pink</string>
+    <string name="theme_color_maple_orange">Maple Orange</string>
+    <string name="theme_color_amber_brown">Amber Brown</string>
+    <string name="theme_color_olive_green">Olive Green</string>
+    <string name="theme_color_teal_green">Teal Green</string>
+    <string name="theme_color_peacock_blue">Peacock Blue</string>
+    <string name="theme_color_sky_blue">Sky Blue</string>
+    <string name="theme_color_indigo_blue">Indigo Blue</string>
+    <string name="theme_color_lilac_purple">Lilac Purple</string>
+    <string name="theme_color_lavender">Lavender</string>
+    <string name="theme_color_cool_gray">Cool Gray</string>
+    <string name="theme_color_coffee_brown">Coffee Brown</string>
+    <string name="theme_color_midnight_blue">Midnight Blue</string>
+
 </resources>

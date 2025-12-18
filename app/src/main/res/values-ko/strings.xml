@@ -138,6 +138,17 @@
     <string name="lang_ja">日本語</string>
     <string name="lang_ko">한국어</string>
     <string name="lang_zh">简体中文</string>
+    <string name="lang_de">Deutsch</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_es">Español (España)</string>
+    <string name="lang_it">Italiano</string>
+    <string name="lang_pt_br">Português (Brasil)</string>
+    <string name="lang_es_mx">Español (México)</string>
+    <string name="lang_pl">Polski</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_vi">Tiếng Việt</string>
+    <string name="lang_id">Bahasa Indonesia</string>
+    <string name="lang_tr">Türkçe</string>
     <string name="language_title">언어 설정</string>
 
     <string name="confirm_clear_code">초기화</string>
@@ -547,4 +558,22 @@
     <string name="welcome_subtitle">첫 번째 기록을 시작해보세요</string>
     <string name="initial_asset_balance">초기 자산 잔액</string>
     <string name="start_journey">시작하기</string>
+
+    <string name="theme_color_retro_gold">레트로 골드</string>
+    <string name="theme_color_classic_purple">클래식 퍼플</string>
+    <string name="theme_color_cinnabar_red">주사홍</string>
+    <string name="theme_color_rouge_pink">루즈 핑크</string>
+    <string name="theme_color_maple_orange">메이플 오렌지</string>
+    <string name="theme_color_amber_brown">앰버 브라운</string>
+    <string name="theme_color_olive_green">올리브 그린</string>
+    <string name="theme_color_teal_green">틸 그린</string>
+    <string name="theme_color_peacock_blue">피콕 블루</string>
+    <string name="theme_color_sky_blue">스카이 블루</string>
+    <string name="theme_color_indigo_blue">인디고 블루</string>
+    <string name="theme_color_lilac_purple">라일락 퍼플</string>
+    <string name="theme_color_lavender">라벤더</string>
+    <string name="theme_color_cool_gray">쿨 그레이</string>
+    <string name="theme_color_coffee_brown">커피 브라운</string>
+    <string name="theme_color_midnight_blue">미드나이트 블루</string>
+
 </resources>

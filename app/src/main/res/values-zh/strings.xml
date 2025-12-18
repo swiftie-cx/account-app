@@ -177,6 +177,17 @@
     <string name="lang_ja">日本語</string>
     <string name="lang_ko">한국어</string>
     <string name="lang_zh">简体中文</string>
+    <string name="lang_de">Deutsch</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_es">Español (España)</string>
+    <string name="lang_it">Italiano</string>
+    <string name="lang_pt_br">Português (Brasil)</string>
+    <string name="lang_es_mx">Español (México)</string>
+    <string name="lang_pl">Polski</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_vi">Tiếng Việt</string>
+    <string name="lang_id">Bahasa Indonesia</string>
+    <string name="lang_tr">Türkçe</string>
     <string name="language_title">语言设置</string>
 
     <!-- ========================================================= -->
@@ -628,4 +639,22 @@
     <string name="welcome_subtitle">让我们开始第一笔记账吧</string>
     <string name="initial_asset_balance">初始资产余额</string>
     <string name="start_journey">开启旅程</string>
+
+    <string name="theme_color_retro_gold">复古金</string>
+    <string name="theme_color_classic_purple">经典紫</string>
+    <string name="theme_color_cinnabar_red">朱砂红</string>
+    <string name="theme_color_rouge_pink">胭脂粉</string>
+    <string name="theme_color_maple_orange">枫叶橙</string>
+    <string name="theme_color_amber_brown">琥珀棕</string>
+    <string name="theme_color_olive_green">橄榄绿</string>
+    <string name="theme_color_teal_green">青黛绿</string>
+    <string name="theme_color_peacock_blue">孔雀蓝</string>
+    <string name="theme_color_sky_blue">晴空蓝</string>
+    <string name="theme_color_indigo_blue">靛青蓝</string>
+    <string name="theme_color_lilac_purple">罗兰紫</string>
+    <string name="theme_color_lavender">丁香色</string>
+    <string name="theme_color_cool_gray">冷岩灰</string>
+    <string name="theme_color_coffee_brown">咖啡色</string>
+    <string name="theme_color_midnight_blue">夜幕蓝</string>
+
 </resources>
