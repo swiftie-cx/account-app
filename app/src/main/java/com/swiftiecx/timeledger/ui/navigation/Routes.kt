@@ -23,8 +23,19 @@ object Routes {
 
     // 账户管理相关
     const val ACCOUNT_MANAGEMENT = "account_management"
-    const val ADD_ACCOUNT = "add_account?accountId={accountId}"
-    fun addAccountRoute(accountId: Long? = null) = "add_account?accountId=${accountId ?: -1L}"
+    const val ADD_ACCOUNT = "add_account"
+    fun addAccountRoute(
+        accountId: Long? = null,
+        category: String = "FUNDS",
+        debtType: String? = null
+    ): String {
+        val id = accountId ?: -1L
+        return if (debtType.isNullOrBlank()) {
+            "$ADD_ACCOUNT?accountId=$id&category=$category"
+        } else {
+            "$ADD_ACCOUNT?accountId=$id&category=$category&debtType=$debtType"
+        }
+    }
 
     const val ACCOUNT_DETAIL = "account_detail/{accountId}"
     fun accountDetailRoute(accountId: Long) = "account_detail/$accountId"
@@ -74,4 +85,9 @@ object Routes {
     const val SYNC = "sync_screen"
 
     const val LANGUAGE_SETTINGS = "language_settings"
+
+    const val ADD_ACCOUNT_WITH_TYPE = "add_account?type={type}"
+
+    fun addAccountRoute(type: String): String = "add_account?type=$type"
+
 }

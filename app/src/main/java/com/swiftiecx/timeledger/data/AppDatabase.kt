@@ -6,17 +6,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-// [修改] entities 中加入了 MainCategory 和 SubCategory
 @Database(
     entities = [
         Expense::class,
         Budget::class,
         Account::class,
         PeriodicTransaction::class,
-        MainCategory::class, // 👈 新增
-        SubCategory::class   // 👈 新增
+        MainCategory::class,
+        SubCategory::class
     ],
-    version = 1, // 既然卸载重装，版本号设为 1 即可
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -26,8 +25,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun budgetDao(): BudgetDao
     abstract fun accountDao(): AccountDao
     abstract fun periodicDao(): PeriodicTransactionDao
-
-    // [必须] 注册 CategoryDao，否则 Repository 无法获取实例
     abstract fun categoryDao(): CategoryDao
 
     companion object {
@@ -41,12 +38,26 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "expense_database"
                 )
-                    .fallbackToDestructiveMigration()
-                    // .allowMainThreadQueries() // 建议移除此行，主线程查库会导致卡顿(ANR)
+                    .fallbackToDestructiveMigration() // ← 加这一行
+                    // .addMigrations(MIGRATION_1_2)   // ← 可以先注释掉
                     .build()
                 INSTANCE = instance
                 instance
             }
+        }
+
+        /**
+         * v1 -> v2
+         * - accounts 新增：category/creditLimit/debtType
+         * - 旧字段 isLiability=true 的账户默认映射为 CREDIT，否则 FUNDS
+         */
+        private val MIGRATION_1_2 = androidx.room.migration.Migration(1, 2) { db ->
+            db.execSQL("ALTER TABLE accounts ADD COLUMN category TEXT NOT NULL DEFAULT 'FUNDS'")
+            db.execSQL("ALTER TABLE accounts ADD COLUMN creditLimit REAL NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE accounts ADD COLUMN debtType TEXT")
+
+            db.execSQL("UPDATE accounts SET category = 'CREDIT' WHERE isLiability = 1")
+            db.execSQL("UPDATE accounts SET category = 'FUNDS'  WHERE isLiability = 0")
         }
     }
 }

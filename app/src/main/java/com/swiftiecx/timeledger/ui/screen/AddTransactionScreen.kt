@@ -78,7 +78,7 @@ fun AddTransactionScreen(
     val defaultAccountId by viewModel.defaultAccountId.collectAsState()
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     var selectedAccount by remember { mutableStateOf<Account?>(null) }
-
+    val selectableAccounts = remember(accounts) { accounts.filter { it.category != "DEBT" } }
     // --- 弹窗控制 ---
     var showDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
@@ -153,17 +153,17 @@ fun AddTransactionScreen(
     }
 
     // 2. 默认账户
-    LaunchedEffect(accounts, defaultAccountId) {
+    LaunchedEffect(selectableAccounts, defaultAccountId) {
         if (selectedAccount == null) {
-            val defaultAcc = accounts.find { it.id == defaultAccountId }
-            selectedAccount = defaultAcc ?: accounts.firstOrNull()
+            val defaultAcc = selectableAccounts.find { it.id == defaultAccountId }
+            selectedAccount = defaultAcc ?: selectableAccounts.firstOrNull()
         }
-        if (expenseId == null && fromAccount == null && accounts.isNotEmpty()) {
-            val defaultAcc = accounts.find { it.id == defaultAccountId }
-            fromAccount = defaultAcc ?: accounts.firstOrNull()
-            toAccount = accounts.firstOrNull { it.id != defaultAcc?.id }
+        if (expenseId == null && fromAccount == null && selectableAccounts.isNotEmpty()) {
+            val defaultAcc = selectableAccounts.find { it.id == defaultAccountId }
+            fromAccount = defaultAcc ?: selectableAccounts.firstOrNull()
         }
     }
+
 
     // 3. Tab 切换
     LaunchedEffect(selectedTab, expenseId) {
@@ -362,7 +362,7 @@ fun AddTransactionScreen(
     // --- UI ---
     if (showAccountPickerFor != null) {
         AccountPickerDialog(
-            accounts = accounts,
+            accounts = selectableAccounts,
             onAccountSelected = { selected ->
                 when(showAccountPickerFor) {
                     "main" -> selectedAccount = selected
@@ -406,7 +406,7 @@ fun AddTransactionScreen(
 
     if (showAccountPicker) {
         AccountPickerDialog(
-            accounts = accounts,
+            accounts = selectableAccounts,
             onAccountSelected = { selectedAccount = it; showAccountPicker = false },
             onDismissRequest = { showAccountPicker = false },
             navController = navController

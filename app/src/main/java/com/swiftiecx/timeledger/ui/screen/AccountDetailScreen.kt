@@ -148,6 +148,11 @@ fun AccountHeaderCard(
     account: Account,
     currentBalance: Double
 ) {
+    val isCredit = account.category == "CREDIT"
+    val creditLimit = account.creditLimit ?: 0.0
+    val debt = if (isCredit) kotlin.math.max(currentBalance, 0.0) else 0.0
+    val available = if (isCredit) kotlin.math.max(creditLimit - debt, 0.0) else 0.0
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -182,22 +187,95 @@ fun AccountHeaderCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = stringResource(R.string.current_balance),
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Black.copy(alpha = 0.7f)
-            )
+            if (!isCredit) {
+                Text(
+                    text = stringResource(R.string.current_balance),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.Black.copy(alpha = 0.7f)
+                )
 
-            Text(
-                text = stringResource(
-                    R.string.currency_amount_format,
-                    account.currency,
-                    currentBalance
-                ),
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
+                Text(
+                    text = stringResource(
+                        R.string.currency_amount_format,
+                        account.currency,
+                        currentBalance
+                    ),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            } else {
+                // 信贷账户：欠款/总额度/可用额度/还款日
+                Text(
+                    text = "当前欠款",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.Black.copy(alpha = 0.7f)
+                )
+                Text(
+                    text = stringResource(R.string.currency_amount_format, account.currency, debt),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val progress = if (creditLimit > 0) (debt / creditLimit).toFloat().coerceIn(0f, 1f) else 0f
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(999.dp)),
+                    trackColor = Color.Black.copy(alpha = 0.08f)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("总额度", style = MaterialTheme.typography.labelSmall, color = Color.Black.copy(alpha = 0.7f))
+                        Text(
+                            text = stringResource(R.string.currency_amount_format, account.currency, creditLimit),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Black
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("可用额度", style = MaterialTheme.typography.labelSmall, color = Color.Black.copy(alpha = 0.7f))
+                        Text(
+                            text = stringResource(R.string.currency_amount_format, account.currency, available),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Black
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val billingText = account.billingDay?.takeIf { it > 0 }?.toString() ?: "未设置"
+                    val repayText = account.repaymentDay?.takeIf { it > 0 }?.toString() ?: "未设置"
+                    Text(
+                        text = "出账日：$billingText",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Black.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "还款日：$repayText",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Black.copy(alpha = 0.7f)
+                    )
+                }
+            }
         }
     }
 }

@@ -218,8 +218,11 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Details.route) {
-            // 这里会接收到 MainScreen 传下来的最新 defaultCurrency
-            DetailsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
+            DetailsScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                defaultCurrency = defaultCurrency
+            )
         }
 
         composable(BottomNavItem.Chart.route) {
@@ -282,14 +285,16 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Assets.route) {
-            // 资产页也会接收到正确的 defaultCurrency，从而停止错误的汇率转换
-            AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
+            AssetsScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                defaultCurrency = defaultCurrency
+            )
         }
 
         composable(BottomNavItem.Mine.route) {
             SettingsScreen(
                 navController = navController,
-                // defaultCurrency = defaultCurrency, // SettingsScreen 内部已经自己监听了，这里不需要传了
                 viewModel = expenseViewModel,
                 themeViewModel = themeViewModel
             )
@@ -318,42 +323,64 @@ fun NavigationGraph(
 
         composable(
             route = Routes.BUDGET_SETTINGS,
-            arguments = listOf(navArgument("year") { type = NavType.IntType }, navArgument("month") { type = NavType.IntType })
+            arguments = listOf(
+                navArgument("year") { type = NavType.IntType },
+                navArgument("month") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
             val year = backStackEntry.arguments?.getInt("year") ?: 0
             val month = backStackEntry.arguments?.getInt("month") ?: 0
-            BudgetSettingsScreen(viewModel = expenseViewModel, navController = navController, year = year, month = month)
+            BudgetSettingsScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                year = year,
+                month = month
+            )
         }
 
         composable(Routes.ACCOUNT_MANAGEMENT) {
             AccountManagementScreen(viewModel = expenseViewModel, navController = navController)
         }
 
+        // ✅ 关键：add_account 路由（支持 category / debtType 预设）
         composable(
-            route = Routes.ADD_ACCOUNT,
-            arguments = listOf(navArgument("accountId") { type = NavType.LongType; defaultValue = -1L })
-        ) { backStackEntry ->
-            val accountId = backStackEntry.arguments?.getLong("accountId")
-            AddAccountScreen(viewModel = expenseViewModel, navController = navController, accountId = if (accountId == -1L) null else accountId)
-        }
-
-        composable(
-            route = Routes.ACCOUNT_DETAIL,
-            arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+            route = "add_account?accountId={accountId}&category={category}&debtType={debtType}",
+            arguments = listOf(
+                navArgument("accountId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+                navArgument("category") {
+                    type = NavType.StringType
+                    defaultValue = "FUNDS"
+                },
+                navArgument("debtType") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
         ) { backStackEntry ->
             val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
-            if (accountId != -1L) {
-                AccountDetailScreen(
-                    viewModel = expenseViewModel,
-                    navController = navController,
-                    accountId = accountId,
-                    defaultCurrency = defaultCurrency
-                )
-            }
+            val category = backStackEntry.arguments?.getString("category") ?: "FUNDS"
+            val debtType = backStackEntry.arguments
+                ?.getString("debtType")
+                ?.takeIf { it.isNotBlank() }
+
+            AddAccountScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                accountId = if (accountId == -1L) null else accountId,
+                presetCategory = category,
+                presetDebtType = debtType
+            )
         }
 
         composable(Routes.CALENDAR) {
-            CalendarScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
+            CalendarScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                defaultCurrency = defaultCurrency
+            )
         }
 
         composable(
@@ -362,14 +389,17 @@ fun NavigationGraph(
         ) { backStackEntry ->
             val dateMillis = backStackEntry.arguments?.getLong("dateMillis")
             if (dateMillis != null) {
-                DailyDetailsScreen(viewModel = expenseViewModel, navController = navController, dateMillis = dateMillis)
+                DailyDetailsScreen(
+                    viewModel = expenseViewModel,
+                    navController = navController,
+                    dateMillis = dateMillis
+                )
             }
         }
 
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 navController = navController,
-                // defaultCurrency = defaultCurrency, // SettingsScreen 内部已经自己监听了
                 viewModel = expenseViewModel,
                 themeViewModel = themeViewModel
             )
@@ -384,9 +414,10 @@ fun NavigationGraph(
         }
 
         composable(Routes.CURRENCY_SELECTION) {
-            // 当用户在选择页点击新货币时，会触发 onDefaultCurrencyChange
-            // 这会回调 MainScreen 里的 lambda，从而调用 expenseViewModel.setDefaultCurrency()
-            CurrencySelectionScreen(navController = navController, onCurrencySelected = onDefaultCurrencyChange)
+            CurrencySelectionScreen(
+                navController = navController,
+                onCurrencySelected = onDefaultCurrencyChange
+            )
         }
 
         composable(Routes.CATEGORY_SETTINGS) {
@@ -402,7 +433,12 @@ fun NavigationGraph(
             arguments = listOf(navArgument("expenseId") { type = NavType.LongType })
         ) { backStackEntry ->
             val expenseId = backStackEntry.arguments?.getLong("expenseId")
-            TransactionDetailScreen(viewModel = expenseViewModel, navController = navController, expenseId = expenseId, defaultCurrency = defaultCurrency)
+            TransactionDetailScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                expenseId = expenseId,
+                defaultCurrency = defaultCurrency
+            )
         }
 
         composable(
@@ -472,8 +508,26 @@ fun NavigationGraph(
         }
 
         composable(Routes.LANGUAGE_SETTINGS) {
-            LanguageSettingsScreen(navController = navController, themeViewModel = themeViewModel,expenseViewModel = expenseViewModel)
+            LanguageSettingsScreen(
+                navController = navController,
+                themeViewModel = themeViewModel,
+                expenseViewModel = expenseViewModel
+            )
         }
 
+        composable(
+            route = Routes.ACCOUNT_DETAIL,
+            arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
+            if (accountId != -1L) {
+                AccountDetailScreen(
+                    viewModel = expenseViewModel,
+                    navController = navController,
+                    accountId = accountId,
+                    defaultCurrency = defaultCurrency
+                )
+            }
+        }
     }
 }

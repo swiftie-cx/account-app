@@ -99,7 +99,7 @@ fun AddPeriodicTransactionScreen(
     var fromAccount by remember { mutableStateOf<Account?>(null) }
     var toAccount by remember { mutableStateOf<Account?>(null) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
-
+    val selectableAccounts = remember(accounts) { accounts.filter { it.category != "DEBT" } }
     // 弹窗控制
     var showFrequencySheet by remember { mutableStateOf(false) }
     var showEndRepeatSheet by remember { mutableStateOf(false) }
@@ -672,7 +672,7 @@ fun AddPeriodicTransactionScreen(
 
         if (showAccountPickerFor != null) {
             AccountPickerDialog(
-                accounts = accounts,
+                accounts = selectableAccounts,
                 onAccountSelected = { selected ->
                     val otherAccount = if (showAccountPickerFor == "from") toAccount else fromAccount
                     var shouldClearOther = false
