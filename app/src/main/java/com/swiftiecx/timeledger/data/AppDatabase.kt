@@ -13,9 +13,10 @@ import androidx.room.TypeConverters
         Account::class,
         PeriodicTransaction::class,
         MainCategory::class,
-        SubCategory::class
+        SubCategory::class,
+        DebtRecord::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -26,6 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
     abstract fun periodicDao(): PeriodicTransactionDao
     abstract fun categoryDao(): CategoryDao
+    abstract fun debtRecordDao(): DebtRecordDao
 
     companion object {
         @Volatile
@@ -39,7 +41,6 @@ abstract class AppDatabase : RoomDatabase() {
                     "expense_database"
                 )
                     .fallbackToDestructiveMigration() // ← 加这一行
-                    // .addMigrations(MIGRATION_1_2)   // ← 可以先注释掉
                     .build()
                 INSTANCE = instance
                 instance

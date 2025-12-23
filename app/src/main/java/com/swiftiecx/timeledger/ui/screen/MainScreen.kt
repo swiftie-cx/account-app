@@ -23,6 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -38,7 +39,7 @@ import java.util.Calendar
 import com.swiftiecx.timeledger.ui.screen.chart.ChartScreen
 import com.swiftiecx.timeledger.ui.screen.chart.CategoryChartDetailScreen
 import com.swiftiecx.timeledger.ui.screen.chart.FullScreenChartScreen
-
+import com.swiftiecx.timeledger.ui.screen.AddDebtScreen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -218,11 +219,7 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Details.route) {
-            DetailsScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                defaultCurrency = defaultCurrency
-            )
+            DetailsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
         composable(BottomNavItem.Chart.route) {
@@ -285,11 +282,7 @@ fun NavigationGraph(
         }
 
         composable(BottomNavItem.Assets.route) {
-            AssetsScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                defaultCurrency = defaultCurrency
-            )
+            AssetsScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
         composable(BottomNavItem.Mine.route) {
@@ -330,34 +323,19 @@ fun NavigationGraph(
         ) { backStackEntry ->
             val year = backStackEntry.arguments?.getInt("year") ?: 0
             val month = backStackEntry.arguments?.getInt("month") ?: 0
-            BudgetSettingsScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                year = year,
-                month = month
-            )
+            BudgetSettingsScreen(viewModel = expenseViewModel, navController = navController, year = year, month = month)
         }
 
         composable(Routes.ACCOUNT_MANAGEMENT) {
             AccountManagementScreen(viewModel = expenseViewModel, navController = navController)
         }
 
-        // ✅ 关键：add_account 路由（支持 category / debtType 预设）
         composable(
             route = "add_account?accountId={accountId}&category={category}&debtType={debtType}",
             arguments = listOf(
-                navArgument("accountId") {
-                    type = NavType.LongType
-                    defaultValue = -1L
-                },
-                navArgument("category") {
-                    type = NavType.StringType
-                    defaultValue = "FUNDS"
-                },
-                navArgument("debtType") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                }
+                navArgument("accountId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("category") { type = NavType.StringType; defaultValue = "FUNDS" },
+                navArgument("debtType") { type = NavType.StringType; defaultValue = "" }
             )
         ) { backStackEntry ->
             val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
@@ -376,11 +354,7 @@ fun NavigationGraph(
         }
 
         composable(Routes.CALENDAR) {
-            CalendarScreen(
-                viewModel = expenseViewModel,
-                navController = navController,
-                defaultCurrency = defaultCurrency
-            )
+            CalendarScreen(viewModel = expenseViewModel, navController = navController, defaultCurrency = defaultCurrency)
         }
 
         composable(
@@ -389,11 +363,7 @@ fun NavigationGraph(
         ) { backStackEntry ->
             val dateMillis = backStackEntry.arguments?.getLong("dateMillis")
             if (dateMillis != null) {
-                DailyDetailsScreen(
-                    viewModel = expenseViewModel,
-                    navController = navController,
-                    dateMillis = dateMillis
-                )
+                DailyDetailsScreen(viewModel = expenseViewModel, navController = navController, dateMillis = dateMillis)
             }
         }
 
@@ -414,10 +384,7 @@ fun NavigationGraph(
         }
 
         composable(Routes.CURRENCY_SELECTION) {
-            CurrencySelectionScreen(
-                navController = navController,
-                onCurrencySelected = onDefaultCurrencyChange
-            )
+            CurrencySelectionScreen(navController = navController, onCurrencySelected = onDefaultCurrencyChange)
         }
 
         composable(Routes.CATEGORY_SETTINGS) {
@@ -529,5 +496,30 @@ fun NavigationGraph(
                 )
             }
         }
+        composable(
+            route = Routes.ADD_BORROW,
+            arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
+            // 【修正】将 viewModel 改为 expenseViewModel
+            AddDebtScreen(expenseViewModel, navController, accountId, isBorrow = true)
+        }
+
+        composable(
+            route = Routes.ADD_LEND,
+            arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
+            // 【修正】将 viewModel 改为 expenseViewModel
+            AddDebtScreen(expenseViewModel, navController, accountId, isBorrow = false)
+        }
+        composable(Routes.DEBT_MANAGEMENT) {
+            DebtManagementScreen(
+                viewModel = expenseViewModel,
+                navController = navController
+            )
+        }
+
     }
 }
+

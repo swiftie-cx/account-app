@@ -37,7 +37,7 @@ import java.util.Locale
 import kotlin.collections.map
 import kotlin.collections.plus
 import kotlin.math.abs
-
+import com.swiftiecx.timeledger.data.DebtRecord
 enum class ExpenseTypeFilter { ALL, EXPENSE, INCOME, TRANSFER }
 enum class CategoryType { EXPENSE, INCOME }
 
@@ -204,31 +204,49 @@ class ExpenseViewModel(
     val userEmail: StateFlow<String> = repository.userEmail
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-    fun register(email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun register(
+        email: String,
+        password: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             val result = repository.register(email, password)
-            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "注册失败")
+            if (result.isSuccess) onSuccess() else onError(
+                result.exceptionOrNull()?.message ?: "注册失败"
+            )
         }
     }
 
     fun login(email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.login(email, password)
-            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "登录失败")
+            if (result.isSuccess) onSuccess() else onError(
+                result.exceptionOrNull()?.message ?: "登录失败"
+            )
         }
     }
 
     fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.sendPasswordResetEmail(email)
-            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "发送失败")
+            if (result.isSuccess) onSuccess() else onError(
+                result.exceptionOrNull()?.message ?: "发送失败"
+            )
         }
     }
 
-    fun changePassword(oldPass: String, newPass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun changePassword(
+        oldPass: String,
+        newPass: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             val result = repository.changePassword(oldPass, newPass)
-            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "修改失败")
+            if (result.isSuccess) onSuccess() else onError(
+                result.exceptionOrNull()?.message ?: "修改失败"
+            )
         }
     }
 
@@ -237,7 +255,9 @@ class ExpenseViewModel(
     fun deleteUserAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.deleteUserAccount()
-            if (result.isSuccess) onSuccess() else onError(result.exceptionOrNull()?.message ?: "注销失败")
+            if (result.isSuccess) onSuccess() else onError(
+                result.exceptionOrNull()?.message ?: "注销失败"
+            )
         }
     }
 
@@ -275,10 +295,12 @@ class ExpenseViewModel(
     // 4. 分类管理
     // ===========================
     private val _expenseMainCategories = MutableStateFlow<List<MainCategory>>(emptyList())
-    val expenseMainCategoriesState: StateFlow<List<MainCategory>> = _expenseMainCategories.asStateFlow()
+    val expenseMainCategoriesState: StateFlow<List<MainCategory>> =
+        _expenseMainCategories.asStateFlow()
 
     private val _incomeMainCategories = MutableStateFlow<List<MainCategory>>(emptyList())
-    val incomeMainCategoriesState: StateFlow<List<MainCategory>> = _incomeMainCategories.asStateFlow()
+    val incomeMainCategoriesState: StateFlow<List<MainCategory>> =
+        _incomeMainCategories.asStateFlow()
 
     val expenseCategoriesState: StateFlow<List<Category>> = _expenseMainCategories.map { list ->
         list.flatMap { it.subCategories }
@@ -305,13 +327,20 @@ class ExpenseViewModel(
         updateMainCategoryList(type) { newOrder }
     }
 
-    fun reorderSubCategories(mainCategory: MainCategory, newSubOrder: List<Category>, type: CategoryType) {
+    fun reorderSubCategories(
+        mainCategory: MainCategory,
+        newSubOrder: List<Category>,
+        type: CategoryType
+    ) {
         updateMainCategoryList(type) { list ->
             list.map { if (it.title == mainCategory.title) it.copy(subCategories = newSubOrder) else it }
         }
     }
 
-    private fun updateMainCategoryList(type: CategoryType, updateAction: (List<MainCategory>) -> List<MainCategory>) {
+    private fun updateMainCategoryList(
+        type: CategoryType,
+        updateAction: (List<MainCategory>) -> List<MainCategory>
+    ) {
         if (type == CategoryType.EXPENSE) {
             val newList = updateAction(_expenseMainCategories.value)
             _expenseMainCategories.value = newList
@@ -337,7 +366,13 @@ class ExpenseViewModel(
         viewModelScope.launch(Dispatchers.IO) { repository.insert(expense) }
     }
 
-    fun createTransfer(fromAccountId: Long, toAccountId: Long, fromAmount: Double, toAmount: Double, date: Date) {
+    fun createTransfer(
+        fromAccountId: Long,
+        toAccountId: Long,
+        fromAmount: Double,
+        toAmount: Double,
+        date: Date
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             val expenseOut = Expense(
                 accountId = fromAccountId,
@@ -369,7 +404,8 @@ class ExpenseViewModel(
     fun updateAccountWithNewBalance(account: Account, newCurrentBalance: Double) {
         viewModelScope.launch(Dispatchers.IO) {
             val transactions = repository.allExpenses.first()
-            val transactionSum = transactions.filter { it.accountId == account.id }.sumOf { it.amount }
+            val transactionSum =
+                transactions.filter { it.accountId == account.id }.sumOf { it.amount }
             val newInitialBalance = newCurrentBalance - transactionSum
             repository.updateAccount(account.copy(initialBalance = newInitialBalance))
         }
@@ -399,7 +435,10 @@ class ExpenseViewModel(
         allExpenses, _searchText, _selectedTypeFilter, _selectedCategoryFilter
     ) { expenses, text, type, category ->
         expenses.filter { expense ->
-            val matchesSearchText = text.isBlank() || (expense.remark?.contains(text, true) == true) || expense.category.contains(text, true)
+            val matchesSearchText = text.isBlank() || (expense.remark?.contains(
+                text,
+                true
+            ) == true) || expense.category.contains(text, true)
             val matchesType = when (type) {
                 ExpenseTypeFilter.ALL -> true
                 ExpenseTypeFilter.EXPENSE -> expense.amount < 0 && !expense.category.startsWith("category_transfer")
@@ -411,9 +450,17 @@ class ExpenseViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun updateSearchText(text: String) { _searchText.value = text }
-    fun updateTypeFilter(filter: ExpenseTypeFilter) { _selectedTypeFilter.value = filter }
-    fun updateCategoryFilter(category: String?) { _selectedCategoryFilter.value = category ?: "全部" }
+    fun updateSearchText(text: String) {
+        _searchText.value = text
+    }
+
+    fun updateTypeFilter(filter: ExpenseTypeFilter) {
+        _selectedTypeFilter.value = filter
+    }
+
+    fun updateCategoryFilter(category: String?) {
+        _selectedCategoryFilter.value = category ?: "全部"
+    }
 
     // ===========================
     // 7. 预算管理
@@ -427,12 +474,20 @@ class ExpenseViewModel(
             budgetUpdateMutex.withLock {
                 repository.upsertBudget(budget)
                 if (budget.category != "总预算") {
-                    val allBudgets = repository.getBudgetsForMonth(budget.year, budget.month).first()
-                    val calculatedSum = allBudgets.filter { it.category in allCategoryTitles }.sumOf { it.amount }
+                    val allBudgets =
+                        repository.getBudgetsForMonth(budget.year, budget.month).first()
+                    val calculatedSum =
+                        allBudgets.filter { it.category in allCategoryTitles }.sumOf { it.amount }
                     val manualTotalBudget = allBudgets.find { it.category == "总预算" }
                     if (manualTotalBudget == null || manualTotalBudget.amount < calculatedSum) {
                         repository.upsertBudget(
-                            Budget(id = manualTotalBudget?.id ?: 0, category = "总预算", amount = calculatedSum, year = budget.year, month = budget.month)
+                            Budget(
+                                id = manualTotalBudget?.id ?: 0,
+                                category = "总预算",
+                                amount = calculatedSum,
+                                year = budget.year,
+                                month = budget.month
+                            )
                         )
                     }
                 }
@@ -446,7 +501,8 @@ class ExpenseViewModel(
             if (targetMonthBudgets.isNotEmpty()) return@launch
             val recentBudget = repository.getMostRecentBudget() ?: return@launch
             if (recentBudget.year == year && recentBudget.month == month) return@launch
-            val recentMonthBudgets = getBudgetsForMonth(recentBudget.year, recentBudget.month).first()
+            val recentMonthBudgets =
+                getBudgetsForMonth(recentBudget.year, recentBudget.month).first()
             val newBudgets = recentMonthBudgets.map { it.copy(id = 0, year = year, month = month) }
             if (newBudgets.isNotEmpty()) repository.upsertBudgets(newBudgets)
         }
@@ -463,8 +519,9 @@ class ExpenseViewModel(
     // ===========================
     // 9. 周期记账
     // ===========================
-    val allPeriodicTransactions: StateFlow<List<PeriodicTransaction>> = repository.allPeriodicTransactions
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allPeriodicTransactions: StateFlow<List<PeriodicTransaction>> =
+        repository.allPeriodicTransactions
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun insertPeriodic(transaction: PeriodicTransaction) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -489,15 +546,21 @@ class ExpenseViewModel(
     // ===========================
     private val _chartMode = MutableStateFlow(ChartMode.MONTH)
     val chartModeState = _chartMode.asStateFlow()
-    fun setChartMode(mode: ChartMode) { _chartMode.value = mode }
+    fun setChartMode(mode: ChartMode) {
+        _chartMode.value = mode
+    }
 
     private val _chartTransactionType = MutableStateFlow(TransactionType.EXPENSE)
     val chartTransactionTypeState = _chartTransactionType.asStateFlow()
-    fun setChartTransactionType(type: TransactionType) { _chartTransactionType.value = type }
+    fun setChartTransactionType(type: TransactionType) {
+        _chartTransactionType.value = type
+    }
 
     private val _chartDateMillis = MutableStateFlow(System.currentTimeMillis())
     val chartDateMillisState = _chartDateMillis.asStateFlow()
-    fun setChartDate(millis: Long) { _chartDateMillis.value = millis }
+    fun setChartDate(millis: Long) {
+        _chartDateMillis.value = millis
+    }
 
     private val _chartCustomDateRange = MutableStateFlow<Pair<Long, Long>?>(null)
     val chartCustomDateRangeState = _chartCustomDateRange.asStateFlow()
@@ -516,7 +579,8 @@ class ExpenseViewModel(
             _syncState.value = SyncUiState.Loading("正在检查云端数据...")
             val result = repository.checkCloudStatus()
             if (result.isFailure) {
-                _syncState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "连接失败")
+                _syncState.value =
+                    SyncUiState.Error(result.exceptionOrNull()?.message ?: "连接失败")
                 return@launch
             }
             val status = result.getOrNull()!!
@@ -532,7 +596,8 @@ class ExpenseViewModel(
 
     fun performSync(strategy: SyncStrategy) {
         viewModelScope.launch {
-            _syncState.value = SyncUiState.Loading(if (strategy == SyncStrategy.MERGE) "正在智能合并..." else "正在同步...")
+            _syncState.value =
+                SyncUiState.Loading(if (strategy == SyncStrategy.MERGE) "正在智能合并..." else "正在同步...")
             val result = repository.executeSync(strategy)
             if (result.isSuccess) {
                 _syncState.value = SyncUiState.Success(result.getOrNull() ?: "同步成功")
@@ -540,12 +605,49 @@ class ExpenseViewModel(
                     refreshCategories()
                 }
             } else {
-                _syncState.value = SyncUiState.Error(result.exceptionOrNull()?.message ?: "同步失败")
+                _syncState.value =
+                    SyncUiState.Error(result.exceptionOrNull()?.message ?: "同步失败")
             }
             delay(3000)
             _syncState.value = SyncUiState.Idle
         }
     }
 
-    fun resetSyncState() { _syncState.value = SyncUiState.Idle }
+    fun resetSyncState() {
+        _syncState.value = SyncUiState.Idle
+    }
+
+    // ===========================
+    //  12. 借贷记录 (修正后)
+    // ===========================
+
+    fun getAllDebtRecords(): Flow<List<DebtRecord>> {
+        return repository.getAllDebtRecords() // 需确保 Repository 中有此方法
+    }
+
+    fun getDebtRecords(accountId: Long): Flow<List<DebtRecord>> {
+        return repository.getDebtRecords(accountId)
+    }
+
+    // [核心修改] 插入借贷记录并自动生成账单明细
+    fun insertDebtRecord(record: DebtRecord) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. 插入原始借贷记录
+            repository.insertDebtRecord(record)
+
+            // 2. 自动生成对应的账单明细 (Expense)
+            // 借入：资金到账，属于收入(+金额)；借出：资金支出，属于支出(-金额)
+            val fundAccountId = record.inAccountId ?: record.outAccountId
+            if (fundAccountId != null) {
+                val expense = Expense(
+                    accountId = fundAccountId,
+                    amount = if (record.inAccountId != null) record.amount else -record.amount,
+                    category = if (record.inAccountId != null) "借入" else "借出",
+                    remark = "来自借贷对象: ${record.personName}${if (record.note != null) " (${record.note})" else ""}",
+                    date = record.borrowTime
+                )
+                repository.insert(expense) // 同步到明细流水表
+            }
+        }
+    }
 }

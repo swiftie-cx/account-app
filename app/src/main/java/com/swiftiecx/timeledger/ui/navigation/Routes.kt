@@ -70,6 +70,9 @@ object Routes {
     const val CHANGE_PASSWORD = "change_password"
     const val FORGOT_PASSWORD = "forgot_password"
 
+    const val ADD_BORROW = "add_borrow/{accountId}"
+    const val ADD_LEND = "add_lend/{accountId}"
+
     // 周期记账相关
     const val PERIODIC_BOOKKEEPING = "periodic_bookkeeping"
     const val ADD_PERIODIC_TRANSACTION = "add_periodic_transaction?id={id}"
@@ -89,5 +92,10 @@ object Routes {
     const val ADD_ACCOUNT_WITH_TYPE = "add_account?type={type}"
 
     fun addAccountRoute(type: String): String = "add_account?type=$type"
+
+    fun addBorrowRoute(accountId: Long) = "add_borrow/$accountId"
+    fun addLendRoute(accountId: Long) = "add_lend/$accountId"
+
+    const val DEBT_MANAGEMENT = "debt_management" // [新增] 债务管理入口路由
 
 }

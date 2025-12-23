@@ -56,7 +56,8 @@ class ExpenseRepository(
     private val budgetDao: BudgetDao,
     private val accountDao: AccountDao,
     private val periodicDao: PeriodicTransactionDao,
-    private val categoryDao: CategoryDao, // [新增]
+    private val categoryDao: CategoryDao,
+    private val debtRecordDao: DebtRecordDao,
     private val context: Context
 ) {
     // --- 偏好设置 (SharedPreferences) ---
@@ -862,4 +863,23 @@ class ExpenseRepository(
             categoryDao.updateSubCategoryName(key, newTitle)
         }
     }
+    // ===========================
+    //  Debt Record Methods (新增)
+    // ===========================
+
+    // 获取指定账户的借贷记录
+    fun getDebtRecords(accountId: Long): Flow<List<DebtRecord>> {
+        return debtRecordDao.observeByAccount(accountId)
+    }
+
+    // 插入借贷记录
+    suspend fun insertDebtRecord(record: DebtRecord) = debtRecordDao.insert(record)
+
+    // 更新借贷记录
+    suspend fun updateDebtRecord(record: DebtRecord) = debtRecordDao.update(record)
+
+    // 删除借贷记录
+    suspend fun deleteDebtRecord(record: DebtRecord) = debtRecordDao.delete(record)
+
+    fun getAllDebtRecords(): Flow<List<DebtRecord>> = debtRecordDao.getAllDebtRecords()
 }
