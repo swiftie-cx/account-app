@@ -26,6 +26,7 @@ import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Expense
 import com.swiftiecx.timeledger.ui.navigation.CategoryData
+import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
@@ -122,7 +123,10 @@ fun DailyDetailsScreen(
                         // 兼容旧数据：如果以前存的是 title，尝试用原值兜底
                         val stylePair = categoryStyleMap[stableKey] ?: categoryStyleMap[expense.category]
 
-                        val icon = stylePair?.first ?: Icons.Default.HelpOutline
+                        // [修改] 如果在 map 里找不到（比如借贷记录），尝试用 IconMapper 获取统一图标
+                        val icon = stylePair?.first ?: IconMapper.getIcon(expense.category)
+
+                        // [修改] 颜色兜底逻辑：如果没有配置颜色（借贷），按收支显示绿/红
                         val color = stylePair?.second ?: if (expense.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
 
                         DailyTransactionItem(

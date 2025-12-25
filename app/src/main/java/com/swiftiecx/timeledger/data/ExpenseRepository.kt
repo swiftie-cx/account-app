@@ -61,7 +61,6 @@ class ExpenseRepository(
     private val context: Context
 ) {
     // --- 偏好设置 (SharedPreferences) ---
-    // [修复] 全局统一使用这一个 prefs，避免重复定义
     private val prefs = context.getSharedPreferences("expense_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
 
@@ -77,12 +76,10 @@ class ExpenseRepository(
     //  默认货币设置 (New)
     // ===========================
 
-    // 读取保存的货币 (如果没有保存过，返回 null)
     fun getSavedCurrency(): String? {
         return prefs.getString("key_default_currency", null)
     }
 
-    // 保存货币
     fun saveDefaultCurrency(currencyCode: String) {
         prefs.edit().putString("key_default_currency", currencyCode).apply()
     }
@@ -97,18 +94,15 @@ class ExpenseRepository(
 
     fun getString(@StringRes id: Int, vararg args: Any): String = s(id, *args)
 
-    // [关键修改] 不再强制转换 Key。CategoryData 已经是单一数据源，Repository 只需要原样存储。
     fun normalizeCategoryValue(value: String): String {
         return value
     }
 
-    // [关键修改] 显示名称的转换交由 CategoryData.getDisplayName 处理，这里只做直通。
     fun localizeCategoryValue(value: String): String {
         return value
     }
 
     fun isTransferCategory(value: String): Boolean {
-        // 兼容旧的资源名 key，防止旧数据识别错误
         return value == KEY_CATEGORY_TRANSFER_OUT || value == KEY_CATEGORY_TRANSFER_IN ||
                 value == "category_transfer_out" || value == "category_transfer_in"
     }
@@ -116,13 +110,11 @@ class ExpenseRepository(
     fun transferOutCategoryKey(): String = KEY_CATEGORY_TRANSFER_OUT
     fun transferInCategoryKey(): String = KEY_CATEGORY_TRANSFER_IN
 
-    // Built-in account type keys (string resource names)
     private val builtinAccountTypeKeys: Set<String> = setOf(
         "account_cash", "account_card", "account_credit", "account_investment", "account_ewallet", "account_default"
     )
 
     fun normalizeAccountTypeValue(value: String): String {
-        // Account 类型目前逻辑比较简单，暂时保留原样
         if (builtinAccountTypeKeys.contains(value)) return value
         val id = context.resources.getIdentifier(value, "string", context.packageName)
         return if (id != 0) value else value
@@ -148,11 +140,10 @@ class ExpenseRepository(
     fun saveMainCategories(categories: List<MainCategory>, type: CategoryType) {
         val dtoList = categories.map { main ->
             MainCategoryDto(
-                title = main.title, // [修改] 直接存 title
+                title = main.title,
                 iconName = IconMapper.getIconName(main.icon),
                 colorInt = main.color.toArgb(),
                 subs = main.subCategories.map { sub ->
-                    // [修改] 直接存 key (sub.key 现在是 stable key)
                     SubCategoryDto(sub.key, IconMapper.getIconName(sub.icon))
                 }
             )
@@ -177,9 +168,7 @@ class ExpenseRepository(
                         icon = IconMapper.getIcon(dto.iconName),
                         color = Color(dto.colorInt),
                         subCategories = dto.subs.map { subDto ->
-                            // 这里 subDto.title 实际上存的是 key
                             val stableKey = subDto.title
-                            // 尝试从 CategoryData 恢复正确的本地化 title
                             val displayTitle = CategoryData.getDisplayName(stableKey, context)
                             Category(displayTitle, IconMapper.getIcon(subDto.iconName), key = stableKey)
                         }
@@ -187,16 +176,13 @@ class ExpenseRepository(
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // 解析失败，回退到动态默认值
                 getDefaultCategories(type)
             }
         } else {
-            // 无缓存，使用动态默认值 (跟随系统语言)
             getDefaultCategories(type)
         }
     }
 
-    // 辅助方法：获取默认的多语言分类
     private fun getDefaultCategories(type: CategoryType): List<MainCategory> {
         return if (type == CategoryType.EXPENSE) {
             CategoryData.getExpenseCategories(context)
@@ -362,7 +348,7 @@ class ExpenseRepository(
 
     // --- Expense methods ---
     val allExpenses: Flow<List<Expense>> = expenseDao.getAllExpenses()
-    // [修改] 直接存，不 normalize
+
     suspend fun insert(expense: Expense) = expenseDao.insertExpense(expense)
     suspend fun createTransfer(expenseOut: Expense, expenseIn: Expense) = expenseDao.insertTransfer(expenseOut, expenseIn)
     suspend fun deleteExpense(expense: Expense) = expenseDao.deleteExpense(expense)
@@ -408,6 +394,8 @@ class ExpenseRepository(
         expenseDao.deleteAll()
         budgetDao.deleteAll()
         accountDao.deleteAll()
+        // ✅ [新增] 必须调用，以删除债务数据
+        debtRecordDao.deleteAll()
 
         val editor = prefs.edit()
         editor.remove("default_account_id")
@@ -417,14 +405,10 @@ class ExpenseRepository(
         editor.remove("privacy_pattern")
         editor.remove("privacy_biometric")
 
-        // 同时清空分类
         editor.remove("main_cats_expense")
         editor.remove("main_cats_income")
         editor.remove("cats_expense")
         editor.remove("cats_income")
-
-        // 移除货币设置 (可选，看您是否想保留设置)
-        // editor.remove("key_default_currency")
 
         editor.apply()
 
@@ -511,7 +495,7 @@ class ExpenseRepository(
         } else {
             val finalAmount = if (rule.type == 0) -abs(rule.amount) else abs(rule.amount)
             val expense = Expense(
-                category = rule.category, // 直接存，不 normalize
+                category = rule.category,
                 amount = finalAmount,
                 date = rule.nextExecutionDate,
                 accountId = rule.accountId,
@@ -552,7 +536,6 @@ class ExpenseRepository(
         val cloudTimestamp: Long
     )
 
-    // 辅助方法：智能解析日期
     private fun parseDate(obj: Any?): Date {
         return when (obj) {
             is Timestamp -> obj.toDate()
@@ -561,7 +544,6 @@ class ExpenseRepository(
         }
     }
 
-    // 1. 检查云端状态
     suspend fun checkCloudStatus(): Result<SyncCheckResult> {
         val uid = firebaseAuth.currentUser?.uid ?: return Result.failure(Exception(s(R.string.error_not_logged_in)))
         return try {
@@ -585,7 +567,6 @@ class ExpenseRepository(
         }
     }
 
-    // 2. 执行同步
     suspend fun executeSync(strategy: SyncStrategy): Result<String> {
         val uid = firebaseAuth.currentUser?.uid ?: return Result.failure(Exception(s(R.string.error_not_logged_in)))
 
@@ -596,6 +577,7 @@ class ExpenseRepository(
 
             val localExpenses = expenseDao.getAllExpenses().first()
             val localAccounts = accountDao.getAllAccounts().first()
+            val localDebts = debtRecordDao.getAllDebtRecords().first()
 
             when (strategy) {
                 SyncStrategy.OVERWRITE_CLOUD -> {
@@ -622,6 +604,7 @@ class ExpenseRepository(
                     val cloudData = doc.data!!
                     val cloudExpensesMap = cloudData["expenses"] as? List<Map<String, Any>> ?: emptyList()
                     val cloudAccountsMap = cloudData["accounts"] as? List<Map<String, Any>> ?: emptyList()
+                    val cloudDebtsMap = cloudData["debt_records"] as? List<Map<String, Any>> ?: emptyList()
 
                     val accountIdMap = mutableMapOf<Long, Long>()
 
@@ -657,7 +640,6 @@ class ExpenseRepository(
                         val date = parseDate(expMap["date"])
                         val remark = expMap["remark"] as? String ?: ""
                         val categoryRaw = expMap["category"] as String
-                        // [修改] 直接取值，不 normalize
                         val category = categoryRaw
                         val cloudAccountId = (expMap["accountId"] as Number).toLong()
 
@@ -683,6 +665,50 @@ class ExpenseRepository(
                         }
                     }
 
+                    // ✅ [新增] 3. 合并债务记录 (修正版)
+                    cloudDebtsMap.forEach { debtMap ->
+                        val personName = debtMap["personName"] as String
+                        val amount = (debtMap["amount"] as Number).toDouble()
+                        val borrowTime = parseDate(debtMap["borrowTime"])
+                        val note = debtMap["note"] as? String
+
+                        val isDuplicate = localDebts.any { local ->
+                            local.personName == personName &&
+                                    abs(local.amount - amount) < 0.01 &&
+                                    local.borrowTime.time == borrowTime.time &&
+                                    local.note == note
+                        }
+
+                        if (!isDuplicate) {
+                            // 1. 映射 Account ID
+                            val oldAccountId = (debtMap["accountId"] as? Number)?.toLong()
+                            // 【修复】如果映射失败，使用 oldAccountId 或者默认值，避免记录丢失
+                            val newAccountId = oldAccountId?.let { accountIdMap[it] } ?: oldAccountId ?: -1L
+
+                            val oldInId = (debtMap["inAccountId"] as? Number)?.toLong()
+                            val oldOutId = (debtMap["outAccountId"] as? Number)?.toLong()
+                            val newInId = oldInId?.let { accountIdMap[it] }
+                            val newOutId = oldOutId?.let { accountIdMap[it] }
+
+                            val settleTimeRaw = debtMap["settleTime"]
+                            val settleTime = if (settleTimeRaw != null) parseDate(settleTimeRaw) else null
+
+                            val newRecord = com.swiftiecx.timeledger.data.DebtRecord(
+                                id = 0L,
+                                accountId = newAccountId,
+                                personName = personName,
+                                amount = amount,
+                                note = note,
+                                borrowTime = borrowTime,
+                                settleTime = settleTime,
+                                inAccountId = newInId,
+                                outAccountId = newOutId
+                            )
+                            debtRecordDao.insert(newRecord)
+                            addedCount++
+                        }
+                    }
+
                     val finalExpenses = expenseDao.getAllExpenses().first()
                     val finalAccounts = accountDao.getAllAccounts().first()
                     uploadData(uid, finalExpenses, finalAccounts)
@@ -697,17 +723,15 @@ class ExpenseRepository(
     }
 
     private suspend fun uploadData(uid: String, expenses: List<Expense>, accounts: List<Account>) {
-        // 【新增】获取当前所有的分类设置
         val expenseCats = getMainCategories(CategoryType.EXPENSE)
         val incomeCats = getMainCategories(CategoryType.INCOME)
 
-        // 转换成 DTO 结构，方便 JSON 序列化 (复用现有的 DTO 逻辑)
         val expenseCatsDto = expenseCats.map { main ->
             MainCategoryDto(
                 title = main.title,
                 iconName = IconMapper.getIconName(main.icon),
                 colorInt = main.color.toArgb(),
-                subs = main.subCategories.map { SubCategoryDto(it.key, IconMapper.getIconName(it.icon)) } // 存 Key
+                subs = main.subCategories.map { SubCategoryDto(it.key, IconMapper.getIconName(it.icon)) }
             )
         }
         val incomeCatsDto = incomeCats.map { main ->
@@ -715,13 +739,15 @@ class ExpenseRepository(
                 title = main.title,
                 iconName = IconMapper.getIconName(main.icon),
                 colorInt = main.color.toArgb(),
-                subs = main.subCategories.map { SubCategoryDto(it.key, IconMapper.getIconName(it.icon)) } // 存 Key
+                subs = main.subCategories.map { SubCategoryDto(it.key, IconMapper.getIconName(it.icon)) }
             )
         }
 
-        // 转为 JSON 字符串，确保存储格式稳定
         val expenseCatsJson = gson.toJson(expenseCatsDto)
         val incomeCatsJson = gson.toJson(incomeCatsDto)
+
+        // ✅ [新增] 获取所有债务记录
+        val debtRecords = debtRecordDao.getAllDebtRecords().first()
 
         val backupData = hashMapOf(
             "version" to 1,
@@ -729,9 +755,9 @@ class ExpenseRepository(
             "device" to Build.MODEL,
             "expenses" to expenses,
             "accounts" to accounts,
-            // 【新增】把分类配置也传上去
             "categories_expense_json" to expenseCatsJson,
-            "categories_income_json" to incomeCatsJson
+            "categories_income_json" to incomeCatsJson,
+            "debt_records" to debtRecords
         )
 
         firestore.collection("users").document(uid)
@@ -744,8 +770,9 @@ class ExpenseRepository(
         expenseDao.deleteAll()
         accountDao.deleteAll()
         budgetDao.deleteAll()
+        // ✅ [新增] 先清空本地债务
+        debtRecordDao.deleteAll()
 
-        // 【新增】恢复分类配置
         val expJson = data["categories_expense_json"] as? String
         val incJson = data["categories_income_json"] as? String
 
@@ -781,12 +808,48 @@ class ExpenseRepository(
 
             val expense = Expense(
                 accountId = newAccountId,
-                category = map["category"] as String, // [修改] 直接取，不 normalize
+                category = map["category"] as String,
                 amount = (map["amount"] as Number).toDouble(),
                 date = date,
                 remark = map["remark"] as? String
             )
             expenseDao.insertExpense(expense)
+        }
+
+        // ✅ [新增] 恢复债务记录 (修正版)
+        val debtList = data["debt_records"] as? List<Map<String, Any>>
+        debtList?.forEach { map ->
+            // 1. 映射 accountId
+            val oldAccountId = (map["accountId"] as? Number)?.toLong()
+            // 【修复】如果映射失败，使用 oldAccountId 或者默认值，避免记录丢失
+            val newAccountId = oldAccountId?.let { accountIdMap[it] } ?: oldAccountId ?: -1L
+
+            // 2. 映射关联账户
+            val oldInId = (map["inAccountId"] as? Number)?.toLong()
+            val oldOutId = (map["outAccountId"] as? Number)?.toLong()
+
+            val newInId = oldInId?.let { accountIdMap[it] }
+            val newOutId = oldOutId?.let { accountIdMap[it] }
+
+            // 3. 日期
+            val borrowTime = parseDate(map["borrowTime"])
+            val settleTimeRaw = map["settleTime"]
+            val settleTime = if (settleTimeRaw != null) parseDate(settleTimeRaw) else null
+
+            // 4. 构建对象 (匹配最新的 DebtRecord 结构)
+            val record = com.swiftiecx.timeledger.data.DebtRecord(
+                id = 0L, // 必填，0L 表示新增
+                accountId = newAccountId,
+                personName = map["personName"] as String,
+                amount = (map["amount"] as Number).toDouble(),
+                note = map["note"] as? String,
+                borrowTime = borrowTime,
+                settleTime = settleTime,
+                inAccountId = newInId,
+                outAccountId = newOutId
+            )
+
+            debtRecordDao.insert(record)
         }
     }
     // =================================================
@@ -794,7 +857,6 @@ class ExpenseRepository(
     // =================================================
 
     // 1. 定义映射表：数据库里的 Key -> strings.xml 里的资源ID
-    // 必须与 strings.xml 里的 name 一一对应
     private val mainCategoryMap = mapOf(
         "cat_food" to R.string.cat_food,
         "cat_shopping" to R.string.cat_shopping,
@@ -820,7 +882,6 @@ class ExpenseRepository(
         "sub_bonus" to R.string.sub_bonus,
         "sub_part_time" to R.string.sub_part_time,
         "sub_other" to R.string.sub_other,
-        // ... 请根据您 strings.xml 中所有的 sub_xxx 继续补充 ...
         "sub_clothes" to R.string.sub_clothes,
         "sub_daily" to R.string.sub_daily,
         "sub_electronics" to R.string.sub_electronics,
@@ -846,10 +907,6 @@ class ExpenseRepository(
         "sub_second_hand" to R.string.sub_second_hand
     )
 
-    /**
-     * [关键实现] 强制更新分类名称
-     * 使用传入的 Context (包含新语言环境) 来读取字符串，并更新数据库
-     */
     suspend fun forceUpdateCategoryNames(context: Context) {
         // 1. 更新主分类
         mainCategoryMap.forEach { (key, resId) ->
@@ -867,19 +924,19 @@ class ExpenseRepository(
     //  Debt Record Methods (新增)
     // ===========================
 
-    // 获取指定账户的借贷记录
-    fun getDebtRecords(accountId: Long): Flow<List<DebtRecord>> {
+    fun getDebtRecords(accountId: Long): Flow<List<com.swiftiecx.timeledger.data.DebtRecord>> {
         return debtRecordDao.observeByAccount(accountId)
     }
 
-    // 插入借贷记录
-    suspend fun insertDebtRecord(record: DebtRecord) = debtRecordDao.insert(record)
+    suspend fun insertDebtRecord(record: com.swiftiecx.timeledger.data.DebtRecord) = debtRecordDao.insert(record)
 
-    // 更新借贷记录
-    suspend fun updateDebtRecord(record: DebtRecord) = debtRecordDao.update(record)
+    suspend fun updateDebtRecord(record: com.swiftiecx.timeledger.data.DebtRecord) = debtRecordDao.update(record)
 
-    // 删除借贷记录
-    suspend fun deleteDebtRecord(record: DebtRecord) = debtRecordDao.delete(record)
+    suspend fun deleteDebtRecord(record: com.swiftiecx.timeledger.data.DebtRecord) = debtRecordDao.delete(record)
 
-    fun getAllDebtRecords(): Flow<List<DebtRecord>> = debtRecordDao.getAllDebtRecords()
+    fun getAllDebtRecords(): Flow<List<com.swiftiecx.timeledger.data.DebtRecord>> = debtRecordDao.getAllDebtRecords()
+
+    suspend fun deleteAllDebtRecords() {
+        debtRecordDao.deleteAll()
+    }
 }

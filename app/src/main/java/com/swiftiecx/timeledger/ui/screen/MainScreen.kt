@@ -7,23 +7,12 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScaffoldDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -39,7 +28,7 @@ import java.util.Calendar
 import com.swiftiecx.timeledger.ui.screen.chart.ChartScreen
 import com.swiftiecx.timeledger.ui.screen.chart.CategoryChartDetailScreen
 import com.swiftiecx.timeledger.ui.screen.chart.FullScreenChartScreen
-import com.swiftiecx.timeledger.ui.screen.AddDebtScreen
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -47,15 +36,11 @@ fun MainScreen(
     themeViewModel: ThemeViewModel
 ) {
     val navController = rememberNavController()
-
     val calendar = Calendar.getInstance()
     var budgetScreenYear by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
     var budgetScreenMonth by rememberSaveable { mutableIntStateOf(calendar.get(Calendar.MONTH) + 1) }
 
-    // [核心修复 1] 删除本地状态，直接监听 ViewModel！
-    // 之前这里写死了 "CNY"，导致无论 ViewModel 怎么变，传给首页的永远是 CNY
     val defaultCurrency by expenseViewModel.defaultCurrency.collectAsState()
-
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -103,9 +88,8 @@ fun MainScreen(
                     budgetScreenYear = year
                     budgetScreenMonth = month
                 },
-                defaultCurrency = defaultCurrency, // 这里传入的现在是 ViewModel 里的最新值 (USD)
+                defaultCurrency = defaultCurrency,
                 onDefaultCurrencyChange = { currency ->
-                    // [核心修复 2] 当用户切换货币时，直接通知 ViewModel 更新
                     expenseViewModel.setDefaultCurrency(currency)
                 }
             )
@@ -124,7 +108,6 @@ fun MainScreen(
             },
             defaultCurrency = defaultCurrency,
             onDefaultCurrencyChange = { currency ->
-                // [核心修复 2] 同样通知 ViewModel
                 expenseViewModel.setDefaultCurrency(currency)
             }
         )
@@ -145,12 +128,11 @@ fun AppBottomBar(navController: NavHostController, onBudgetTabClick: () -> Unit)
     val currentRoute = navBackStackEntry?.destination?.route
 
     BottomAppBar(
-        containerColor = androidx.compose.ui.graphics.Color.White, // 强制设为白色
-        tonalElevation = 0.dp // 关键：设置为 0 才能彻底去掉那种浅紫色（Material 3 的色调提升）
+        containerColor = androidx.compose.ui.graphics.Color.White,
+        tonalElevation = 0.dp
     ) {
         items.forEach { item ->
             val title = stringResource(item.titleResId)
-
             val isSelected = currentRoute == item.route
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = title) },
@@ -496,30 +478,83 @@ fun NavigationGraph(
                 )
             }
         }
-        composable(
-            route = Routes.ADD_BORROW,
-            arguments = listOf(navArgument("accountId") { type = NavType.LongType })
-        ) { backStackEntry ->
-            val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
-            // 【修正】将 viewModel 改为 expenseViewModel
-            AddDebtScreen(expenseViewModel, navController, accountId, isBorrow = true)
+
+        // === 债务管理核心路由注册 ===
+
+        // 1. 债务总览管理页
+        composable(Routes.DEBT_MANAGEMENT) {
+            DebtManagementScreen(expenseViewModel, navController)
         }
 
+        // 2. 个人债务详情页
         composable(
-            route = Routes.ADD_LEND,
-            arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+            route = Routes.DEBT_PERSON_DETAIL,
+            arguments = listOf(navArgument("personName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val personName = backStackEntry.arguments?.getString("personName") ?: ""
+            DebtPersonDetailScreen(expenseViewModel, navController, personName)
+        }
+
+        // 3. 收款/还款结算页 (修复闪退的关键)
+        composable(
+            route = Routes.SETTLE_DEBT,
+            arguments = listOf(
+                navArgument("personName") { type = NavType.StringType },
+                navArgument("isBorrow") { type = NavType.BoolType }
+            )
+        ) { backStackEntry ->
+            val personName = backStackEntry.arguments?.getString("personName") ?: ""
+            val isBorrow = backStackEntry.arguments?.getBoolean("isBorrow") ?: false
+            SettleDebtScreen(expenseViewModel, navController, personName, isBorrow)
+        }
+
+        // 4. 借入页面 (支持可选姓名参数)
+        composable(
+            route = Routes.ADD_BORROW,
+            arguments = listOf(
+                navArgument("accountId") { type = NavType.LongType },
+                navArgument("personName") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
         ) { backStackEntry ->
             val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
-            // 【修正】将 viewModel 改为 expenseViewModel
-            AddDebtScreen(expenseViewModel, navController, accountId, isBorrow = false)
-        }
-        composable(Routes.DEBT_MANAGEMENT) {
-            DebtManagementScreen(
+            // 获取传递过来的姓名
+            val personName = backStackEntry.arguments?.getString("personName")
+
+            AddDebtScreen(
                 viewModel = expenseViewModel,
-                navController = navController
+                navController = navController,
+                accountId = accountId,
+                isBorrow = true,
+                presetName = personName // [新增参数] 传递预设姓名
             )
         }
 
+        // 5. 借出页面 (支持可选姓名参数)
+        composable(
+            route = Routes.ADD_LEND,
+            arguments = listOf(
+                navArgument("accountId") { type = NavType.LongType },
+                navArgument("personName") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
+            // 获取传递过来的姓名
+            val personName = backStackEntry.arguments?.getString("personName")
+
+            AddDebtScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                accountId = accountId,
+                isBorrow = false,
+                presetName = personName // [新增参数] 传递预设姓名
+            )
+        }
+        composable(
+            route = Routes.EDIT_DEBT,
+            arguments = listOf(navArgument("recordId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val recordId = backStackEntry.arguments?.getLong("recordId") ?: -1L
+            EditDebtScreen(expenseViewModel, navController, recordId)
+        }
     }
 }
-

@@ -23,17 +23,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
 import com.swiftiecx.timeledger.ui.navigation.CategoryData
+import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
@@ -242,7 +243,9 @@ fun DetailsScreen(
 
                             // [关键修改] 从实时 Map 中获取样式
                             val stylePair = categoryStyleMap[item.category]
-                            val icon = stylePair?.first
+                            // 如果 Map 里没有（如借贷），尝试从 IconMapper 获取，确保借贷图标统一
+                            val icon = stylePair?.first ?: IconMapper.getIcon(item.category)
+
                             // 如果找不到颜色（极少情况），回退到红/绿默认色
                             val color = stylePair?.second ?: if(item.amount < 0) Color(0xFFE53935) else Color(0xFF4CAF50)
 

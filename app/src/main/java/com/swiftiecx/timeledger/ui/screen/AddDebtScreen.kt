@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,20 +41,17 @@ import java.util.*
 fun AddDebtScreen(
     viewModel: ExpenseViewModel,
     navController: NavHostController,
-    accountId: Long, // 债务账户ID，如果是从资产页新建则为-1
-    isBorrow: Boolean // true: 新增借入, false: 新增借出
+    accountId: Long, // 债务账户ID
+    isBorrow: Boolean, // true: 新增借入, false: 新增借出
+    presetName: String? = null // 接收来自详情页的预设姓名
 ) {
-    val context = LocalContext.current
-    // 从 ViewModel 获取所有账户
-    val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+    // --- 状态与逻辑初始化 ---
 
-    // 筛选出资产账户(FUNDS)和信贷账户(CREDIT)
-    val filteredAccounts = remember(allAccounts) {
-        allAccounts.filter { it.category == "FUNDS" || it.category == "CREDIT" }
-    }
+    // 判断是否为“追加模式” (姓名是否固定)
+    val isAppendMode = !presetName.isNullOrEmpty()
 
-    // 表单状态
-    var personName by remember { mutableStateOf("") }
+    // 姓名：如果有预设值则初始化为预设值
+    var personName by remember { mutableStateOf(presetName ?: "") }
     var amount by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var borrowTime by remember { mutableStateOf(Date()) }
@@ -61,6 +59,12 @@ fun AddDebtScreen(
 
     // 选中的资金/支出账户ID
     var selectedFundsAccountId by remember { mutableStateOf<Long?>(null) }
+
+    // 数据监听
+    val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+    val filteredAccounts = remember(allAccounts) {
+        allAccounts.filter { it.category == "FUNDS" || it.category == "CREDIT" }
+    }
 
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
@@ -94,14 +98,36 @@ fun AddDebtScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 姓名
+            // --- 姓名输入框 (核心逻辑：追加模式下锁定) ---
             OutlinedTextField(
                 value = personName,
-                onValueChange = { personName = it },
+                onValueChange = {
+                    // 仅在非追加模式下允许修改
+                    if (!isAppendMode) personName = it
+                },
                 label = { Text("姓名") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                readOnly = isAppendMode, // 设置为只读
+                trailingIcon = {
+                    if (isAppendMode) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "已锁定",
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                },
+                colors = if (isAppendMode) {
+                    // 追加模式下稍微变灰
+                    OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                    )
+                } else {
+                    OutlinedTextFieldDefaults.colors()
+                }
             )
 
             // 金额
@@ -130,11 +156,11 @@ fun AddDebtScreen(
                 }
             )
 
-            // 到期时间
+            // 到期时间 (选填)
             OutlinedTextField(
                 value = settleTime?.let { dateFormat.format(it) } ?: "未设置",
                 onValueChange = {},
-                label = { Text(if (isBorrow) "还款时间" else "收款时间") },
+                label = { Text(if (isBorrow) "约定还款时间" else "约定收款时间") },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 shape = RoundedCornerShape(12.dp),
@@ -145,7 +171,7 @@ fun AddDebtScreen(
                 }
             )
 
-            // --- 资金账户选择 (实装部分) ---
+            // 资金账户选择
             val selectedAccount = filteredAccounts.find { it.id == selectedFundsAccountId }
             OutlinedTextField(
                 value = selectedAccount?.name ?: "点击选择账户",
@@ -155,7 +181,7 @@ fun AddDebtScreen(
                     .fillMaxWidth()
                     .clickable { showAccountPicker = true },
                 readOnly = true,
-                enabled = false, // 禁用输入，仅响应点击
+                enabled = false,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     disabledTextColor = MaterialTheme.colorScheme.onSurface,
@@ -178,7 +204,7 @@ fun AddDebtScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 保存按钮
             Button(
@@ -194,7 +220,7 @@ fun AddDebtScreen(
                         inAccountId = if (isBorrow) selectedFundsAccountId else null,
                         outAccountId = if (!isBorrow) selectedFundsAccountId else null
                     )
-                    viewModel.insertDebtRecord(record) //
+                    viewModel.insertDebtRecord(record)
                     navController.popBackStack()
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -206,7 +232,7 @@ fun AddDebtScreen(
         }
     }
 
-    // --- 日期选择器 ---
+    // --- 日期选择器逻辑 ---
     if (showBorrowDatePicker) {
         DebtDatePicker(
             initialDate = borrowTime,
@@ -223,7 +249,7 @@ fun AddDebtScreen(
         )
     }
 
-    // --- 账户选择底部弹窗 (实装部分) ---
+    // --- 账户选择弹窗 ---
     if (showAccountPicker) {
         AccountSelectionBottomSheet(
             accounts = filteredAccounts,

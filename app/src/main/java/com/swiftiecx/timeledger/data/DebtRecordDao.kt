@@ -27,4 +27,7 @@ interface DebtRecordDao {
 
     @Query("SELECT * FROM debt_records ORDER BY borrowTime DESC")
     fun getAllDebtRecords(): Flow<List<DebtRecord>>
+
+    @Query("DELETE FROM debt_records")
+    suspend fun deleteAll()
 }

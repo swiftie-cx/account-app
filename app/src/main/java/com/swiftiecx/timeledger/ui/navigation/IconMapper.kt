@@ -22,6 +22,13 @@ object IconMapper {
             "Euro" -> Icons.Default.Euro
             "ShowChart" -> Icons.Default.ShowChart
             "PieChart" -> Icons.Default.PieChart
+
+            // [新增] 借贷相关图标映射
+            // 兼容中文 "借出" 和英文 "Lend"
+            "Lend", "借出" -> Icons.Default.ArrowCircleUp
+            // 兼容中文 "借入" 和英文 "Borrow"
+            "Borrow", "借入" -> Icons.Default.ArrowCircleDown
+
             else -> Icons.Default.AccountBalanceWallet // Default icon
         }
     }
@@ -40,6 +47,11 @@ object IconMapper {
             Icons.Default.Euro -> "Euro"
             Icons.Default.ShowChart -> "ShowChart"
             Icons.Default.PieChart -> "PieChart"
+
+            // [新增] 借贷相关图标反向映射
+            Icons.Default.ArrowCircleUp -> "Lend"
+            Icons.Default.ArrowCircleDown -> "Borrow"
+
             else -> "Wallet"
         }
     }

@@ -273,6 +273,19 @@ class ExpenseViewModel(
     val allAccounts: StateFlow<List<Account>> = repository.allAccounts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    fun deleteAccount(account: Account) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteAccount(account) // 请确保 repository 中已实现该方法
+        }
+    }
+
+    fun deleteDebtRecordsByPerson(personName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // 获取该联系人的所有记录并循环删除
+            val records = repository.getAllDebtRecords().first().filter { it.personName == personName }
+            records.forEach { repository.deleteDebtRecord(it) }
+        }
+    }
     val defaultAccountId: StateFlow<Long> = repository.defaultAccountId
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), -1L)
 
@@ -617,37 +630,220 @@ class ExpenseViewModel(
         _syncState.value = SyncUiState.Idle
     }
 
-    // ===========================
-    //  12. 借贷记录 (修正后)
-    // ===========================
+// ===================================
+    //  12. 债务管理核心逻辑 (完整实装版)
+    // ===================================
 
-    fun getAllDebtRecords(): Flow<List<DebtRecord>> {
-        return repository.getAllDebtRecords() // 需确保 Repository 中有此方法
+    /**
+     * 获取所有借贷记录 (用于债务管理页)
+     */
+    fun getAllDebtRecords(): Flow<List<DebtRecord>> = repository.getAllDebtRecords()
+
+    /**
+     * 获取特定账户的记录 (用于账户详情页)
+     */
+    fun getDebtRecords(accountId: Long): Flow<List<DebtRecord>> = repository.getDebtRecords(accountId)
+
+    /**
+     * 获取特定往来对象的记录 (用于个人债务详情页)
+     */
+    fun getDebtRecordsByPerson(personName: String): Flow<List<DebtRecord>> {
+        return repository.getAllDebtRecords().map { all ->
+            all.filter { it.personName == personName }
+        }
     }
 
-    fun getDebtRecords(accountId: Long): Flow<List<DebtRecord>> {
-        return repository.getDebtRecords(accountId)
+    /**
+     * 根据 ID 获取单条债务记录
+     */
+    fun getDebtRecordById(id: Long): Flow<DebtRecord?> {
+        return repository.getAllDebtRecords().map { all -> all.find { it.id == id } }
     }
 
-    // [核心修改] 插入借贷记录并自动生成账单明细
+    /**
+     * [同步修改逻辑] 更新债务记录，并同步寻找并修改明细页中对应的收支流水 (Expense)
+     * 确保在修改借入/借出日期或金额时，明细页同步变动
+     */
+    fun updateDebtWithTransaction(record: DebtRecord, oldDate: Date, oldAmount: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. 更新债务表
+            repository.updateDebtRecord(record)
+
+            // 2. 匹配并更新对应的流水记录 (通过旧日期、金额、对象姓名匹配)
+            val expenses = repository.allExpenses.first()
+            val matchedExpense = expenses.find {
+                it.date.time == oldDate.time &&
+                        abs(it.amount) == abs(oldAmount) &&
+                        it.remark?.contains(record.personName) == true
+            }
+
+            matchedExpense?.let {
+                repository.updateExpense(it.copy(
+                    date = record.borrowTime, // 同步修改日期
+                    amount = if (it.amount < 0) -record.amount else record.amount, // 同步修改金额
+                    remark = "对象: ${record.personName}${if (!record.note.isNullOrEmpty()) " | ${record.note}" else ""}"
+                ))
+            }
+        }
+    }
+
+    /**
+     * 更新单条债务记录
+     */
+    fun updateDebtRecord(record: DebtRecord) = viewModelScope.launch(Dispatchers.IO) {
+        repository.updateDebtRecord(record)
+    }
+
+    /**
+     * 删除债务记录
+     */
+    fun deleteDebtRecord(record: DebtRecord) = viewModelScope.launch(Dispatchers.IO) {
+        repository.deleteDebtRecord(record)
+    }
+
+    /**
+     * [核心] 插入原始借贷记录，并自动生成账单明细 (Expense)
+     */
     fun insertDebtRecord(record: DebtRecord) {
         viewModelScope.launch(Dispatchers.IO) {
             // 1. 插入原始借贷记录
             repository.insertDebtRecord(record)
 
-            // 2. 自动生成对应的账单明细 (Expense)
-            // 借入：资金到账，属于收入(+金额)；借出：资金支出，属于支出(-金额)
+            // 2. 自动生成对应的账单明细 (Expense) 来改变账户余额
+            // 逻辑：借出 = 账户资金流出 (-)；借入 = 账户资金流入 (+)
             val fundAccountId = record.inAccountId ?: record.outAccountId
-            if (fundAccountId != null) {
-                val expense = Expense(
+
+            // 关键：必须确保关联了有效的账户 ID (不能是 -1L)
+            if (fundAccountId != null && fundAccountId != -1L) {
+                val isLending = record.outAccountId != null // 是否是借出
+
+                repository.insert(Expense(
                     accountId = fundAccountId,
-                    amount = if (record.inAccountId != null) record.amount else -record.amount,
-                    category = if (record.inAccountId != null) "借入" else "借出",
-                    remark = "来自借贷对象: ${record.personName}${if (record.note != null) " (${record.note})" else ""}",
+                    // 借出记录为负数，借入记录为正数
+                    amount = if (isLending) -abs(record.amount) else abs(record.amount),
+                    category = if (isLending) "借出" else "借入",
+                    remark = "对象: ${record.personName} | ${record.note ?: ""}",
                     date = record.borrowTime
-                )
-                repository.insert(expense) // 同步到明细流水表
+                ))
             }
         }
     }
+
+    /**
+     * [核心] 处理债务结算 (收款/还款)
+     * 实现本金与利息拆分，并向明细页生成双重收支记录
+     */
+    fun settleDebt(
+        personName: String,
+        amount: Double,   // 结算本金
+        interest: Double, // 利息金额
+        accountId: Long,
+        isBorrow: Boolean, // true 为还款, false 为收款
+        remark: String?,
+        date: Date,
+        generateBill: Boolean
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. 插入债务冲抵记录 (债务额度仅扣除本金，利息存入备注标签供正则统计)
+            val settleRecord = DebtRecord(
+                accountId = -1,
+                personName = personName,
+                amount = amount,
+                borrowTime = date,
+                note = "结算: $remark ${if(interest > 0) "|利息:$interest|" else ""}",
+                inAccountId = if (!isBorrow) accountId else null,
+                outAccountId = if (isBorrow) accountId else null
+            )
+            repository.insertDebtRecord(settleRecord)
+
+            // 2. 同步生成收支流水
+            if (generateBill && accountId != -1L) {
+                // 第一笔：本金结算流水
+                repository.insert(Expense(
+                    accountId = accountId,
+                    amount = if (!isBorrow) amount else -amount,
+                    category = if (!isBorrow) "债务收款" else "债务还款",
+                    remark = "对象: $personName | $remark",
+                    date = date
+                ))
+
+                // 第二笔：利息流水 (独立计入收支)
+                if (interest > 0) {
+                    repository.insert(Expense(
+                        accountId = accountId,
+                        amount = if (!isBorrow) interest else -interest,
+                        category = if (!isBorrow) "收入-其他" else "其他",
+                        remark = "$personName ${if(!isBorrow) "收款" else "还款"}利息",
+                        date = date
+                    ))
+                }
+            }
+        }
+    }
+
+    /**
+     * [重要] 获取全局债务统计 (用于资产页汇总)
+     * 遵循原则：借出不抵消借入，分开统计总资产项与总负债项
+     */
+    fun getGlobalDebtSummary(): Flow<Pair<Double, Double>> {
+        return repository.getAllDebtRecords().map { all ->
+            // 1. 统计全局总【借出】本金 - 全局已【收回】本金 = 总应收资产
+            val totalLend = all.filter { it.outAccountId != null && !it.note.toString().contains("结算") }.sumOf { it.amount }
+            val totalCollected = all.filter { it.inAccountId != null && it.note.toString().contains("结算") }.sumOf { it.amount }
+
+            // 2. 统计全局总【借入】本金 - 全局已【还清】本金 = 总债务负债
+            val totalBorrow = all.filter { it.inAccountId != null && !it.note.toString().contains("结算") }.sumOf { it.amount }
+            val totalPaid = all.filter { it.outAccountId != null && it.note.toString().contains("结算") }.sumOf { it.amount }
+
+            val receivable = (totalLend - totalCollected).coerceAtLeast(0.0)
+            val payable = (totalBorrow - totalPaid).coerceAtLeast(0.0)
+
+            receivable to payable // 返回 (总应收, 总应付)
+        }
+    }
+
+    /**
+     * 汇总特定人的债务统计数据 (用于详情页顶部卡片)
+     */
+    fun getPersonDebtSummary(personName: String): Flow<PersonDebtSummaryInfo> {
+        return repository.getAllDebtRecords().map { all ->
+            val personRecords = all.filter { it.personName == personName }
+
+            // 1. 统计原始本金 (备注不含“结算”)
+            val lendTotal = personRecords.filter { it.outAccountId != null && !it.note.toString().contains("结算") }.sumOf { it.amount }
+            val borrowTotal = personRecords.filter { it.inAccountId != null && !it.note.toString().contains("结算") }.sumOf { it.amount }
+
+            // 2. 统计已结算本金 (备注含“结算”)
+            val settledIn = personRecords.filter { it.inAccountId != null && it.note.toString().contains("结算") }.sumOf { it.amount }
+            val settledOut = personRecords.filter { it.outAccountId != null && it.note.toString().contains("结算") }.sumOf { it.amount }
+
+            // 3. 计算剩余金额与已收/付金额
+            val netOriginal = lendTotal - borrowTotal
+            val isReceivable = netOriginal >= 0
+
+            val remaining = if (isReceivable) (netOriginal - settledIn) else (abs(netOriginal) - settledOut)
+            val collectedPrincipal = if (isReceivable) settledIn else settledOut
+
+            // 4. 正则解析统计利息总额
+            val interestRegex = "\\|利息:([\\d.]+)\\|".toRegex()
+            val totalInterest = personRecords.sumOf {
+                interestRegex.find(it.note ?: "")?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
+            }
+
+            PersonDebtSummaryInfo(
+                totalAmount = remaining,
+                collectedAmount = collectedPrincipal,
+                interest = totalInterest
+            )
+        }
+    }
 }
+
+/**
+ * 个人债务汇总信息模型 (用于详情页 UI)
+ */
+data class PersonDebtSummaryInfo(
+    val totalAmount: Double,    // 剩余待收/还
+    val collectedAmount: Double, // 已收/还本金
+    val interest: Double        // 累计利息总额
+)

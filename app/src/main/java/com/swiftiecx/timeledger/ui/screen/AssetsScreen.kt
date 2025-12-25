@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.ArrowCircleDown
+import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
@@ -29,6 +31,7 @@ import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
+import kotlin.math.abs
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,6 +39,8 @@ import kotlin.math.max
 fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, defaultCurrency: String) {
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
+    // ✅ 核心修改：获取全局不抵消的借入、借出总额
+    val globalDebt by viewModel.getGlobalDebtSummary().collectAsState(initial = 0.0 to 0.0)
 
     // 控制添加账户/记录的选择弹窗
     var showAddAccountSheet by remember { mutableStateOf(false) }
@@ -46,39 +51,45 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
             .mapValues { (_, transactions) -> transactions.sumOf { it.amount } }
     }
 
+    // 算出每个账户的实时当前余额
     val accountsWithBalance = remember(accounts, expenseSumsByAccount) {
         accounts.map { account ->
             val txSum = expenseSumsByAccount[account.id] ?: 0.0
-            val currentBalance =
-                if (account.category == "CREDIT") account.initialBalance - txSum
-                else account.initialBalance + txSum
+
+            // [修复] 信贷账户特殊处理：
+            // 如果是 CREDIT 账户，且 initialBalance > 0，通常代表初始欠款，需要转为负数计算。
+            // 这样 2000 的初始欠款就会变成 -2000，加上支出的 -1000，总余额就是 -3000 (欠款3000)。
+            val initialBalance = if (account.category == "CREDIT" && account.initialBalance > 0) {
+                -account.initialBalance
+            } else {
+                account.initialBalance
+            }
+
+            val currentBalance = initialBalance + txSum
             account to currentBalance
         }
     }
 
-    // --- 资产/负债汇总统计 ---
-    val assets = remember(accountsWithBalance, defaultCurrency) {
-        accountsWithBalance.sumOf { (account, balance) ->
-            val v = ExchangeRates.convert(balance, account.currency, defaultCurrency)
-            when (account.category) {
-                "FUNDS" -> max(v, 0.0)
-                "CREDIT" -> max(-v, 0.0)
-                "DEBT" -> if (account.debtType == "RECEIVABLE") max(v, 0.0) else 0.0
-                else -> max(v, 0.0)
-            }
+    // --- [修正] 资产/负债汇总统计逻辑 ---
+
+    // 1. 总资产 = 资金账户的正余额 + 别人的欠款(应收总额)
+    val assets = remember(accountsWithBalance, globalDebt, defaultCurrency) {
+        val accountAssetsSum = accountsWithBalance.sumOf { (account, balance) ->
+            val converted = ExchangeRates.convert(balance, account.currency, defaultCurrency)
+            // 仅统计 FUNDS 账户中的正资产
+            if (account.category == "FUNDS" && converted > 0) converted else 0.0
         }
+        accountAssetsSum + globalDebt.first // 加上总借出
     }
 
-    val liabilities = remember(accountsWithBalance, defaultCurrency) {
-        accountsWithBalance.sumOf { (account, balance) ->
-            val v = ExchangeRates.convert(balance, account.currency, defaultCurrency)
-            when (account.category) {
-                "FUNDS" -> 0.0
-                "CREDIT" -> max(v, 0.0)
-                "DEBT" -> if (account.debtType == "PAYABLE") max(v, 0.0) else 0.0
-                else -> 0.0
-            }
+    // 2. 总负债 = 信贷账户的使用额度(绝对值) + 资金账户的欠款 + 我欠别人的钱(总借入)
+    val liabilities = remember(accountsWithBalance, globalDebt, defaultCurrency) {
+        val accountLiabilitiesSum = accountsWithBalance.sumOf { (account, balance) ->
+            val converted = ExchangeRates.convert(balance, account.currency, defaultCurrency)
+            // 统计信贷账户的欠款或资金账户的透支
+            if (account.category == "CREDIT" || converted < 0) abs(converted) else 0.0
         }
+        accountLiabilitiesSum + globalDebt.second // 加上总借入，不再抵消借出
     }
 
     val netAssets = assets - liabilities
@@ -303,11 +314,12 @@ private fun AssetHeaderSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
+                        // 修改：负债显示为红色强调
                         Text(
                             text = stringResource(R.string.currency_amount_format, currency, liabilities),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = if (liabilities > 0) Color.Red else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -325,7 +337,8 @@ fun AssetAccountItem(
     val isCredit = account.category == "CREDIT"
     val creditLimit = (account.creditLimit ?: 0.0)
 
-    val debt = if (isCredit) max(currentBalance, 0.0) else 0.0
+    // 修改：如果余额是负数，则绝对值是已用额度
+    val debt = if (isCredit) abs(currentBalance.coerceAtMost(0.0)) else 0.0
     val available = if (isCredit) max(creditLimit - debt, 0.0) else 0.0
 
     val progress = remember(isCredit, creditLimit, available) {
@@ -380,7 +393,7 @@ fun AssetAccountItem(
                         text = stringResource(R.string.currency_amount_format, account.currency, currentBalance),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = if (currentBalance < 0) Color.Red else MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.width(8.dp))
                     Icon(
@@ -478,7 +491,7 @@ private fun AddAccountTypeBottomSheet(
             Spacer(Modifier.height(10.dp))
 
             AddAccountSheetItem(
-                icon = Icons.Default.SwapHoriz,
+                icon = Icons.Default.ArrowCircleDown, // 统一使用借入图标
                 title = "新增借入",
                 subtitle = "我欠别人的：录入一笔借入记录",
                 onClick = onSelectBorrow
@@ -486,7 +499,7 @@ private fun AddAccountTypeBottomSheet(
             Spacer(Modifier.height(10.dp))
 
             AddAccountSheetItem(
-                icon = Icons.Default.SwapHoriz,
+                icon = Icons.Default.ArrowCircleUp, // 统一使用借出图标
                 title = "新增借出",
                 subtitle = "别人欠我的：录入一笔外借记录",
                 onClick = onSelectLend
