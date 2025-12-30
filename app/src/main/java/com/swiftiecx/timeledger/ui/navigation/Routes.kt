@@ -118,5 +118,9 @@ object Routes {
     const val EDIT_DEBT = "edit_debt/{recordId}"
     fun editDebtRoute(recordId: Long) = "edit_debt/$recordId"
 
+    // === 信贷账户还款 ===
+    const val CREDIT_REPAY = "credit_repay/{accountId}/{maxAmount}"
+    fun creditRepayRoute(accountId: Long, maxAmount: Double) = "credit_repay/$accountId/$maxAmount"
+
     const val transferRoute = "transfer"
 }

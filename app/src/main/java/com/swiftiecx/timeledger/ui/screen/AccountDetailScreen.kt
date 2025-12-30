@@ -135,16 +135,10 @@ fun AccountDetailScreen(
                     account = account,
                     currentBalance = currentBalance,
                     onRepayClick = {
-                        // [新增] 点击还款，跳转到转账页面，预填充转入账户为当前信贷账户
-                        // 假设 Routes.transferRoute 可以带参数，或者通过 ViewModel 共享状态
-                        // 这里我们假设可以通过 URL 参数传递 targetAccountId，或者您需要在 NavGraph 中处理
-                        // 如果暂不支持 URL 参数，您可能需要修改 Routes 和 NavGraph
-                        // 简单方案：使用 ViewModel 临时存储 targetAccount，或者直接跳转让用户选
-
-                        // 这里使用 Routes.transferRoute()，通常是 "transfer"
-                        // 如果您还没实现带参数的转账路由，建议让用户自己选，或者稍后我们完善路由
-                        // 暂时跳转到通用转账页
-                        navController.navigate(Routes.transferRoute)
+                        // ✅ 修复：NavGraph 中没有 "transfer" 这个目的地，会直接崩溃。
+                        // 这里直接跳到「记一笔」页面的【转账】Tab。
+                        // type=2 -> 转账 (与 AddTransactionScreen 的 tabs 索引一致)
+                        navController.navigate(Routes.creditRepayRoute(accountId = account!!.id, maxAmount = currentBalance))
                     }
                 )
 

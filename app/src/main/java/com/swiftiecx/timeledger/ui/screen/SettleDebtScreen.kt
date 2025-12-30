@@ -46,7 +46,9 @@ fun SettleDebtScreen(
     navController: NavHostController,
     personName: String,
     isBorrow: Boolean, // true=还款(我付钱), false=收款(我收钱)
-    maxAmount: Double
+    maxAmount: Double,
+    mode: String = "DEBT", // DEBT | CREDIT
+    creditAccountId: Long = -1L
 ) {
     // 状态管理
     var amount by remember { mutableStateOf("") }
@@ -54,7 +56,7 @@ fun SettleDebtScreen(
     var remark by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(Date()) }
     var selectedAccountId by remember { mutableStateOf<Long?>(null) }
-    var generateBill by remember { mutableStateOf(true) }
+    var generateBill by remember { mutableStateOf(mode != "CREDIT") }
 
     // 弹窗控制
     var showAccountPicker by remember { mutableStateOf(false) }
@@ -242,25 +244,29 @@ fun SettleDebtScreen(
             )
 
             // --- 6. 生成流水开关 ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.label_sync_transaction), style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        text = if (isBorrow) stringResource(R.string.desc_sync_transaction_repay) else stringResource(R.string.desc_sync_transaction_collect),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            if (mode != "CREDIT") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.label_sync_transaction), style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            text = if (isBorrow) stringResource(R.string.desc_sync_transaction_repay) else stringResource(R.string.desc_sync_transaction_collect),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = generateBill,
+                        onCheckedChange = { generateBill = it }
                     )
                 }
-                Switch(
-                    checked = generateBill,
-                    onCheckedChange = { generateBill = it }
-                )
+
+
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -270,16 +276,33 @@ fun SettleDebtScreen(
 
             Button(
                 onClick = {
-                    viewModel.settleDebt(
-                        personName = personName,
-                        amount = amount.toDoubleOrNull() ?: 0.0,
-                        interest = interest.toDoubleOrNull() ?: 0.0,
-                        accountId = selectedAccountId ?: -1L,
-                        isBorrow = isBorrow,
-                        remark = remark,
-                        date = date,
-                        generateBill = generateBill
-                    )
+                    val amountVal = amount.toDoubleOrNull() ?: 0.0
+                    val interestVal = interest.toDoubleOrNull() ?: 0.0
+
+                    if (mode == "CREDIT") {
+                        // 信贷账户还款：从「支出账户」转账到信贷账户，生成一组 TRANSFER 记录，不影响收支统计
+                        if (amountVal > 0 && selectedAccountId != null && creditAccountId > 0) {
+                            viewModel.createTransfer(
+                                fromAccountId = selectedAccountId!!,
+                                toAccountId = creditAccountId,
+                                fromAmount = amountVal,
+                                toAmount = amountVal,
+                                date = date,
+                                remark = remark.takeIf { it.isNotBlank() }
+                            )
+                        }
+                    } else {
+                        viewModel.settleDebt(
+                            personName = personName,
+                            amount = amountVal,
+                            interest = interestVal,
+                            accountId = selectedAccountId ?: -1L,
+                            isBorrow = isBorrow,
+                            remark = remark,
+                            date = date,
+                            generateBill = generateBill
+                        )
+                    }
                     navController.popBackStack()
                 },
                 enabled = isAmountValid && selectedAccountId != null,

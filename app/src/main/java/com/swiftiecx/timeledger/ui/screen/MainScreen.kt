@@ -518,6 +518,40 @@ fun NavigationGraph(
             )
         }
 
+
+
+        // === 信贷账户还款页面 ===
+        composable(
+            route = Routes.CREDIT_REPAY,
+            arguments = listOf(
+                navArgument("accountId") { type = NavType.LongType },
+                navArgument("maxAmount") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getLong("accountId") ?: -1L
+            val maxAmountStr = backStackEntry.arguments?.getString("maxAmount") ?: "0.0"
+            val maxAmount = maxAmountStr.toDoubleOrNull() ?: 0.0
+
+            val accounts by expenseViewModel.allAccounts.collectAsState()
+            val accountName = accounts.firstOrNull { it.id == accountId }?.name ?: ""
+
+            SettleDebtScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                personName = accountName,
+                isBorrow = true,
+                maxAmount = maxAmount,
+                mode = "CREDIT",
+                creditAccountId = accountId
+            )
+        }
+
+
+
+
+
+
+
         // 4. 借入页面 (支持可选姓名参数)
         composable(
             route = Routes.ADD_BORROW,

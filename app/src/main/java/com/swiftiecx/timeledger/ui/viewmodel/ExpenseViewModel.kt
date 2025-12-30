@@ -353,26 +353,28 @@ class ExpenseViewModel(
         toAccountId: Long,
         fromAmount: Double,
         toAmount: Double,
-        date: Date
+        date: Date,
+        remark: String? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val expenseOut = Expense(
                 accountId = fromAccountId,
-                category = "category_transfer_out", // 这里的 string 仅作兼容，逻辑走 RecordType
-                amount = -abs(fromAmount),
+                category = "category_transfer_out",
+                amount = -kotlin.math.abs(fromAmount),
                 date = date,
-                remark = null
+                remark = remark
             )
             val expenseIn = Expense(
                 accountId = toAccountId,
-                category = "category_transfer_in", // 这里的 string 仅作兼容，逻辑走 RecordType
-                amount = abs(toAmount),
+                category = "category_transfer_in",
+                amount = kotlin.math.abs(toAmount),
                 date = date,
-                remark = null
+                remark = remark
             )
             repository.createTransfer(expenseOut, expenseIn)
         }
     }
+
 
     fun insertAccount(account: Account) {
         viewModelScope.launch(Dispatchers.IO) { repository.insertAccount(account) }
