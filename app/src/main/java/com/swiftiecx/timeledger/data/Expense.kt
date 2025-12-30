@@ -8,6 +8,12 @@ import androidx.room.Ignore
 import com.swiftiecx.timeledger.ui.viewmodel.CategoryType
 import java.util.Date
 
+// ✅ [新增] 记录类型常量
+object RecordType {
+    const val INCOME_EXPENSE = 0 // 普通收支
+    const val TRANSFER = 1       // 转账
+}
+
 // ===========================
 // 1. 消费记录表 (Expense)
 // ===========================
@@ -31,9 +37,15 @@ data class Expense(
     val remark: String? = null,
     val excludeFromBudget: Boolean = false,
 
-    // ✅ [新增] 关联的债务ID (默认为空)
-    // 当该条流水是由债务产生时，这里存储对应的 DebtRecord ID，以便删除流水时级联删除债务
-    val debtId: Long? = null
+    // 关联的债务ID
+    val debtId: Long? = null,
+
+    // ✅ [新增] 记录类型：显式区分 "收支"(0) 和 "转账"(1)
+    val recordType: Int = RecordType.INCOME_EXPENSE,
+
+    // ✅ [新增] 转账关联字段 (仅当 recordType = TRANSFER 时使用)
+    val transferId: Long? = null,      // 唯一标识，用于关联转出和转入
+    val relatedAccountId: Long? = null // 对方账户ID (直接存储，方便UI显示 "转账给->招商银行")
 )
 
 // ===========================

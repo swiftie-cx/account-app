@@ -32,6 +32,7 @@ import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
+import com.swiftiecx.timeledger.data.RecordType
 import com.swiftiecx.timeledger.data.Expense
 import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -93,13 +94,16 @@ fun DetailsScreen(
         }
     }
 
+
+
     // --- 2. 预处理列表 ---
-    val displayItems = remember(monthlyExpenses, accountMap, transferTypeString) {
-        val transferExpenses = monthlyExpenses.filter { it.category.startsWith(transferTypeString) }
-        val regularExpenses = monthlyExpenses.filter { !it.category.startsWith(transferTypeString) }
+    // ✅ 基于 recordType/transferId 识别并合并转账（不再依赖 category 文本前缀）
+    val displayItems = remember(monthlyExpenses, accountMap) {
+        val transferExpenses = monthlyExpenses.filter { it.recordType == RecordType.TRANSFER }
+        val regularExpenses = monthlyExpenses.filter { it.recordType == RecordType.INCOME_EXPENSE }
 
         val processedTransfers = transferExpenses
-            .groupBy { it.date }
+            .groupBy { it.transferId ?: it.date.time } // 优先用 transferId，旧数据回退到时间戳
             .mapNotNull { (_, pair) ->
                 val outTx = pair.find { it.amount < 0 }
                 val inTx = pair.find { it.amount > 0 }
@@ -113,7 +117,7 @@ fun DetailsScreen(
                 val fee = if (feeRaw < 0.01) 0.0 else feeRaw
 
                 DisplayTransferItem(
-                    expenseId = outTx.id,
+                    expenseId = outTx.id, // 用转出那条作为详情入口
                     date = outTx.date,
                     fromAccount = fromAccount,
                     toAccount = toAccount,
@@ -135,16 +139,19 @@ fun DetailsScreen(
     }
 
     // --- 3. 计算总额 ---
+
     val allExpensesForSum = remember(monthlyExpenses, accountMap, defaultCurrency) {
-        monthlyExpenses.mapNotNull { expense ->
-            val account = accountMap[expense.accountId]
-            if (account != null) {
-                val convertedAmount = ExchangeRates.convert(expense.amount, account.currency, defaultCurrency)
-                convertedAmount to expense.amount
-            } else {
-                null
+        monthlyExpenses
+            .filter { it.recordType == com.swiftiecx.timeledger.data.RecordType.INCOME_EXPENSE }
+            .mapNotNull { expense ->
+                val account = accountMap[expense.accountId]
+                if (account != null) {
+                    val convertedAmount = ExchangeRates.convert(expense.amount, account.currency, defaultCurrency)
+                    convertedAmount to expense.amount
+                } else {
+                    null
+                }
             }
-        }
     }
 
     val totalIncome = remember(allExpensesForSum) {

@@ -70,6 +70,7 @@ fun CalendarScreen(
                 val cal = Calendar.getInstance().apply { time = expense.date }
                 cal.get(Calendar.YEAR) == year && cal.get(Calendar.MONTH) == month
             }
+            .filter { it.recordType == com.swiftiecx.timeledger.data.RecordType.INCOME_EXPENSE }
             .groupBy {
                 val cal = Calendar.getInstance().apply { time = it.date }
                 cal.get(Calendar.DAY_OF_MONTH)

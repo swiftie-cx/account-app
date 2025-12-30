@@ -10,6 +10,7 @@ import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.Budget
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
+import com.swiftiecx.timeledger.data.RecordType
 import com.swiftiecx.timeledger.data.ExpenseRepository
 import com.swiftiecx.timeledger.data.PeriodicTransaction
 import com.swiftiecx.timeledger.data.SyncStrategy
@@ -357,14 +358,14 @@ class ExpenseViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val expenseOut = Expense(
                 accountId = fromAccountId,
-                category = "category_transfer_out", // 使用 Key
+                category = "category_transfer_out", // 这里的 string 仅作兼容，逻辑走 RecordType
                 amount = -abs(fromAmount),
                 date = date,
                 remark = null
             )
             val expenseIn = Expense(
                 accountId = toAccountId,
-                category = "category_transfer_in", // 使用 Key
+                category = "category_transfer_in", // 这里的 string 仅作兼容，逻辑走 RecordType
                 amount = abs(toAmount),
                 date = date,
                 remark = null
@@ -412,21 +413,46 @@ class ExpenseViewModel(
     private val _selectedCategoryFilter = MutableStateFlow<String?>("全部")
     val selectedCategoryFilter: StateFlow<String?> = _selectedCategoryFilter
 
+    // ✅ [核心修改] 筛选逻辑：基于 RecordType 而非字符串
     val filteredExpenses: StateFlow<List<Expense>> = combine(
         allExpenses, _searchText, _selectedTypeFilter, _selectedCategoryFilter
     ) { expenses, text, type, category ->
         expenses.filter { expense ->
+            // 1. 搜索匹配
             val matchesSearchText = text.isBlank() || (expense.remark?.contains(
                 text,
                 true
             ) == true) || expense.category.contains(text, true)
+
+            // 2. 类型匹配 (基于 RecordType)
             val matchesType = when (type) {
-                ExpenseTypeFilter.ALL -> true
-                ExpenseTypeFilter.EXPENSE -> expense.amount < 0 && !expense.category.startsWith("category_transfer")
-                ExpenseTypeFilter.INCOME -> expense.amount > 0 && !expense.category.startsWith("category_transfer")
-                ExpenseTypeFilter.TRANSFER -> expense.category.startsWith("category_transfer")
+                ExpenseTypeFilter.ALL -> {
+                    // 在"全部"列表中：
+                    // 如果是普通收支(0) -> 显示
+                    // 如果是转账(1) -> 只显示"支出"(amount < 0)的那条，作为转账事务的代表。
+                    if (expense.recordType == RecordType.TRANSFER) {
+                        expense.amount < 0
+                    } else {
+                        true
+                    }
+                }
+                ExpenseTypeFilter.EXPENSE -> {
+                    // 仅显示普通支出
+                    expense.recordType == RecordType.INCOME_EXPENSE && expense.amount < 0
+                }
+                ExpenseTypeFilter.INCOME -> {
+                    // 仅显示普通收入
+                    expense.recordType == RecordType.INCOME_EXPENSE && expense.amount > 0
+                }
+                ExpenseTypeFilter.TRANSFER -> {
+                    // 仅显示转账 (同样只显示"支出"那条作为代表)
+                    expense.recordType == RecordType.TRANSFER && expense.amount < 0
+                }
             }
+
+            // 3. 分类匹配
             val matchesCategory = category == "全部" || expense.category == category
+
             matchesSearchText && matchesType && matchesCategory
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -682,7 +708,8 @@ class ExpenseViewModel(
                     amount = if (isLending) -abs(record.amount) else abs(record.amount),
                     category = if (isLending) "借出" else "借入",
                     remark = finalRemark,
-                    date = record.borrowTime
+                    date = record.borrowTime,
+                    recordType = RecordType.INCOME_EXPENSE // 债务相关流水目前视为收支
                 )
                 repository.saveDebtWithTransaction(record, expense)
 
@@ -733,7 +760,8 @@ class ExpenseViewModel(
                     amount = if (!isBorrow) amount else -amount,
                     category = if (!isBorrow) "债务收款" else "债务还款",
                     remark = finalRemark,
-                    date = date
+                    date = date,
+                    recordType = RecordType.INCOME_EXPENSE
                 )
 
                 repository.saveDebtWithTransaction(settleRecord, expense)
@@ -748,7 +776,8 @@ class ExpenseViewModel(
                         amount = if (!isBorrow) interest else -interest,
                         category = if (!isBorrow) "收入-其他" else "其他",
                         remark = "$personName $actionLabel$interestLabel",
-                        date = date
+                        date = date,
+                        recordType = RecordType.INCOME_EXPENSE
                     ))
                 }
             } else {
@@ -900,7 +929,8 @@ class ExpenseViewModel(
                             category = incomeCats.random(),
                             amount = amount,
                             date = date,
-                            remark = "Income source"
+                            remark = "Income source",
+                            recordType = RecordType.INCOME_EXPENSE
                         ))
                     } else {
                         val accId = listOf(accCashId, accBankId, accCreditId).random()
@@ -913,7 +943,8 @@ class ExpenseViewModel(
                             category = cat,
                             amount = -amount,
                             date = date,
-                            remark = remarks.random()
+                            remark = remarks.random(),
+                            recordType = RecordType.INCOME_EXPENSE
                         ))
                     }
                 }
@@ -926,6 +957,7 @@ class ExpenseViewModel(
                 val date = calendar.time
                 val amount = 1000.0 + random.nextInt(2000)
 
+                // ✅ 使用 createTransfer 保证数据结构正确
                 repository.createTransfer(
                     Expense(accountId = accBankId, category = "category_transfer_out", amount = -amount, date = date, remark = "Credit Card Repayment"),
                     Expense(accountId = accCreditId, category = "category_transfer_in", amount = amount, date = date, remark = "Repayment Received")

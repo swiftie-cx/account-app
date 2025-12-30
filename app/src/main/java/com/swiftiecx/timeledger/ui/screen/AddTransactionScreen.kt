@@ -26,6 +26,7 @@ import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
+import com.swiftiecx.timeledger.data.RecordType // ✅ [新增] 引入记录类型
 import com.swiftiecx.timeledger.ui.navigation.Category
 import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -126,15 +127,15 @@ fun AddTransactionScreen(
         if (expenseId != null) {
             val expenseToEdit = expenses.find { it.id == expenseId }
             if (expenseToEdit != null) {
-                // 判断 Tab
-                val isTransfer = expenseToEdit.category.startsWith("转账") ||
-                        expenseToEdit.category.startsWith("Transfer") ||
-                        CategoryData.getStableKey(expenseToEdit.category, context).startsWith("Transfer")
+                // ✅ [修改] 优先使用 recordType 判断转账
+                val isTransfer = expenseToEdit.recordType == RecordType.TRANSFER ||
+                        // 兼容旧数据兜底
+                        expenseToEdit.category.startsWith("转账") ||
+                        expenseToEdit.category.startsWith("Transfer")
 
                 selectedTab = if (isTransfer) 2 else if (expenseToEdit.amount < 0) 0 else 1
 
                 if (selectedTab != 2) {
-                    // [关键修改] 使用 key 查找分类，但也兼容旧数据的 title
                     val categoryKey = CategoryData.getStableKey(expenseToEdit.category, context)
                     selectedCategory = allFlatCategories.find { it.key == categoryKey || it.title == expenseToEdit.category }
 
@@ -143,10 +144,22 @@ fun AddTransactionScreen(
                     selectedAccount = accounts.find { it.id == expenseToEdit.accountId }
                     remarks[selectedTab] = expenseToEdit.remark ?: ""
                 } else {
+                    // ✅ [修改] 转账回填逻辑
                     selectedDate = expenseToEdit.date.time
                     fromAccount = accounts.find { it.id == expenseToEdit.accountId }
+
+                    // 利用 relatedAccountId 自动找到对方账户
+                    if (expenseToEdit.relatedAccountId != null) {
+                        toAccount = accounts.find { it.id == expenseToEdit.relatedAccountId }
+                    }
+
                     fromAmountStr = abs(expenseToEdit.amount).toString()
                     remarks[selectedTab] = expenseToEdit.remark ?: ""
+
+                    // 如果同币种，尝试自动回填转入金额 (简化体验)
+                    if (toAccount != null && fromAccount?.currency == toAccount?.currency) {
+                        toAmountStr = fromAmountStr
+                    }
                 }
             }
         }
@@ -335,12 +348,13 @@ fun AddTransactionScreen(
                 val finalAmount = if (selectedTab == 0) -rawAmount else rawAmount
                 val expense = Expense(
                     id = expenseId ?: 0,
-                    // [关键修改] 保存时使用 key，而不是 title
                     category = selectedCategory!!.key,
                     amount = finalAmount,
                     date = Date(selectedDate),
                     accountId = selectedAccount!!.id,
-                    remark = remarks[selectedTab].takeIf { it.isNotBlank() }
+                    remark = remarks[selectedTab].takeIf { it.isNotBlank() },
+                    // ✅ [修改] 显式标记为普通收支
+                    recordType = RecordType.INCOME_EXPENSE
                 )
 
                 if (expenseId != null && shouldFinish) {

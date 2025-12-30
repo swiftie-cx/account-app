@@ -93,29 +93,29 @@ fun BudgetScreen(
 
     val totalBudget = budgetMap[totalBudgetKey]
 
-    val monthlyExpenses = remember(expenses, year, month, transferTypeString) {
+    val monthlyExpenses = remember(expenses, year, month) {
         expenses.filter {
             val expenseCalendar = Calendar.getInstance().apply { time = it.date }
             val isTargetMonth = (expenseCalendar.get(Calendar.YEAR) == year && expenseCalendar.get(Calendar.MONTH) + 1 == month)
             val isExpense = it.amount < 0
-            val isNotTransfer = !it.category.startsWith(transferTypeString)
-            isTargetMonth && isExpense && isNotTransfer
+            val isRegular = it.recordType == com.swiftiecx.timeledger.data.RecordType.INCOME_EXPENSE
+            isTargetMonth && isExpense && isRegular
         }
     }
 
-    val expenseMap = remember(monthlyExpenses, defaultCurrency, accountMap, expenseCategoryKeys) {
-        monthlyExpenses.groupBy { it.category }.mapValues { (_, expenses) ->
-            expenses.sumOf { exp ->
-                val account = accountMap[exp.accountId]
-                // [修正] 调用 CategoryData.getStableKey
-                val stableKey = CategoryData.getStableKey(exp.category, context)
-                if (account != null) {
-                    ExchangeRates.convert(abs(exp.amount), account.currency, defaultCurrency)
-                } else {
-                    0.0
+    val expenseMap = remember(monthlyExpenses, defaultCurrency, accountMap, expenseCategoryKeys, context) {
+        monthlyExpenses
+            .groupBy { exp -> CategoryData.getStableKey(exp.category, context) }
+            .mapValues { (_, expenses) ->
+                expenses.sumOf { exp ->
+                    val account = accountMap[exp.accountId]
+                    if (account != null) {
+                        ExchangeRates.convert(abs(exp.amount), account.currency, defaultCurrency)
+                    } else {
+                        0.0
+                    }
                 }
             }
-        }
     }
 
     val totalSpent = remember(expenseMap) { expenseMap.values.sum() }

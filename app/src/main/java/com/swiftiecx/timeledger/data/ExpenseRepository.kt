@@ -349,10 +349,34 @@ class ExpenseRepository(
     // --- Expense methods ---
     val allExpenses: Flow<List<Expense>> = expenseDao.getAllExpenses()
 
-    suspend fun insert(expense: Expense) = expenseDao.insertExpense(expense)
-    suspend fun createTransfer(expenseOut: Expense, expenseIn: Expense) = expenseDao.insertTransfer(expenseOut, expenseIn)
+    // ✅ [修复] 普通记账：强制标记为 INCOME_EXPENSE (0)
+    suspend fun insert(expense: Expense) {
+        val newExpense = expense.copy(recordType = RecordType.INCOME_EXPENSE)
+        expenseDao.insertExpense(newExpense)
+    }
 
-    // ✅ [修改] 删除收支时，级联删除关联的债务 (如果存在)
+    // ✅ [修复] 转账：强制标记为 TRANSFER (1) 并生成关联ID
+    suspend fun createTransfer(expenseOut: Expense, expenseIn: Expense) {
+        val uniqueTransferId = System.currentTimeMillis()
+
+        // 补全转出方信息
+        val finalOut = expenseOut.copy(
+            recordType = RecordType.TRANSFER, // ✅ 必须是 1
+            transferId = uniqueTransferId,
+            relatedAccountId = expenseIn.accountId
+        )
+
+        // 补全转入方信息
+        val finalIn = expenseIn.copy(
+            recordType = RecordType.TRANSFER, // ✅ 必须是 1
+            transferId = uniqueTransferId,
+            relatedAccountId = expenseOut.accountId
+        )
+
+        expenseDao.insertTransfer(finalOut, finalIn)
+    }
+
+    // ✅ [修复] 删除收支时，级联删除关联的债务 (如果存在)
     suspend fun deleteExpense(expense: Expense) {
         expenseDao.deleteExpense(expense)
         if (expense.debtId != null) {
@@ -485,19 +509,30 @@ class ExpenseRepository(
                 finalIn = amountVal
             }
 
+            // ✅ [修复] 周期性转账也需生成 ID 和 Type
+            val uniqueTransferId = System.currentTimeMillis()
+
             val expenseOut = Expense(
                 accountId = rule.accountId,
                 category = transferOutCategoryKey(),
                 amount = finalOut,
                 date = rule.nextExecutionDate,
-                remark = rule.remark ?: s(R.string.periodic_remark_transfer_default)
+                remark = rule.remark ?: s(R.string.periodic_remark_transfer_default),
+                // 关键
+                recordType = RecordType.TRANSFER,
+                transferId = uniqueTransferId,
+                relatedAccountId = rule.targetAccountId
             )
             val expenseIn = Expense(
                 accountId = rule.targetAccountId,
                 category = transferInCategoryKey(),
                 amount = finalIn,
                 date = rule.nextExecutionDate,
-                remark = rule.remark ?: s(R.string.periodic_remark_transfer_default)
+                remark = rule.remark ?: s(R.string.periodic_remark_transfer_default),
+                // 关键
+                recordType = RecordType.TRANSFER,
+                transferId = uniqueTransferId,
+                relatedAccountId = rule.accountId
             )
             expenseDao.insertTransfer(expenseOut, expenseIn)
         } else {
@@ -508,7 +543,9 @@ class ExpenseRepository(
                 date = rule.nextExecutionDate,
                 accountId = rule.accountId,
                 remark = rule.remark ?: s(R.string.periodic_remark_auto_default),
-                excludeFromBudget = rule.excludeFromBudget
+                excludeFromBudget = rule.excludeFromBudget,
+                // 关键
+                recordType = RecordType.INCOME_EXPENSE
             )
             expenseDao.insertExpense(expense)
         }
@@ -651,6 +688,12 @@ class ExpenseRepository(
                         val category = categoryRaw
                         val cloudAccountId = (expMap["accountId"] as Number).toLong()
 
+                        // ✅ [修复] 读取新字段
+                        val recordType = (expMap["recordType"] as? Number)?.toInt() ?: RecordType.INCOME_EXPENSE
+                        val transferId = (expMap["transferId"] as? Number)?.toLong()
+                        val relatedAccountIdRaw = (expMap["relatedAccountId"] as? Number)?.toLong()
+                        val relatedAccountId = relatedAccountIdRaw?.let { accountIdMap[it] }
+
                         val targetAccountId = accountIdMap[cloudAccountId] ?: return@forEach
 
                         val isDuplicate = localExpenses.any { local ->
@@ -666,14 +709,17 @@ class ExpenseRepository(
                                 category = category,
                                 amount = amount,
                                 date = date,
-                                remark = remark
+                                remark = remark,
+                                // 写入新字段
+                                recordType = recordType,
+                                transferId = transferId,
+                                relatedAccountId = relatedAccountId
                             )
                             expenseDao.insertExpense(newExpense)
                             addedCount++
                         }
                     }
 
-                    // ✅ [新增] 3. 合并债务记录 (修正版)
                     cloudDebtsMap.forEach { debtMap ->
                         val personName = debtMap["personName"] as String
                         val amount = (debtMap["amount"] as Number).toDouble()
@@ -688,9 +734,7 @@ class ExpenseRepository(
                         }
 
                         if (!isDuplicate) {
-                            // 1. 映射 Account ID
                             val oldAccountId = (debtMap["accountId"] as? Number)?.toLong()
-                            // 【修复】如果映射失败，使用 oldAccountId 或者默认值，避免记录丢失
                             val newAccountId = oldAccountId?.let { accountIdMap[it] } ?: oldAccountId ?: -1L
 
                             val oldInId = (debtMap["inAccountId"] as? Number)?.toLong()
@@ -754,7 +798,6 @@ class ExpenseRepository(
         val expenseCatsJson = gson.toJson(expenseCatsDto)
         val incomeCatsJson = gson.toJson(incomeCatsDto)
 
-        // ✅ [新增] 获取所有债务记录
         val debtRecords = debtRecordDao.getAllDebtRecords().first()
 
         val backupData = hashMapOf(
@@ -778,7 +821,6 @@ class ExpenseRepository(
         expenseDao.deleteAll()
         accountDao.deleteAll()
         budgetDao.deleteAll()
-        // ✅ [新增] 先清空本地债务
         debtRecordDao.deleteAll()
 
         val expJson = data["categories_expense_json"] as? String
@@ -814,39 +856,43 @@ class ExpenseRepository(
 
             val date = parseDate(map["date"])
 
+            // ✅ [修复] 读取新字段
+            val recordType = (map["recordType"] as? Number)?.toInt() ?: RecordType.INCOME_EXPENSE
+            val transferId = (map["transferId"] as? Number)?.toLong()
+            val relatedAccountIdRaw = (map["relatedAccountId"] as? Number)?.toLong()
+            val relatedAccountId = relatedAccountIdRaw?.let { accountIdMap[it] }
+
             val expense = Expense(
                 accountId = newAccountId,
                 category = map["category"] as String,
                 amount = (map["amount"] as Number).toDouble(),
                 date = date,
-                remark = map["remark"] as? String
+                remark = map["remark"] as? String,
+                // 写入
+                recordType = recordType,
+                transferId = transferId,
+                relatedAccountId = relatedAccountId
             )
             expenseDao.insertExpense(expense)
         }
 
-        // ✅ [新增] 恢复债务记录 (修正版)
         val debtList = data["debt_records"] as? List<Map<String, Any>>
         debtList?.forEach { map ->
-            // 1. 映射 accountId
             val oldAccountId = (map["accountId"] as? Number)?.toLong()
-            // 【修复】如果映射失败，使用 oldAccountId 或者默认值，避免记录丢失
             val newAccountId = oldAccountId?.let { accountIdMap[it] } ?: oldAccountId ?: -1L
 
-            // 2. 映射关联账户
             val oldInId = (map["inAccountId"] as? Number)?.toLong()
             val oldOutId = (map["outAccountId"] as? Number)?.toLong()
 
             val newInId = oldInId?.let { accountIdMap[it] }
             val newOutId = oldOutId?.let { accountIdMap[it] }
 
-            // 3. 日期
             val borrowTime = parseDate(map["borrowTime"])
             val settleTimeRaw = map["settleTime"]
             val settleTime = if (settleTimeRaw != null) parseDate(settleTimeRaw) else null
 
-            // 4. 构建对象 (匹配最新的 DebtRecord 结构)
             val record = com.swiftiecx.timeledger.data.DebtRecord(
-                id = 0L, // 必填，0L 表示新增
+                id = 0L,
                 accountId = newAccountId,
                 personName = map["personName"] as String,
                 amount = (map["amount"] as Number).toDouble(),
@@ -939,7 +985,7 @@ class ExpenseRepository(
     // ✅ [新增] 组合方法：先插入债务，再插入带关联ID的收支
     suspend fun saveDebtWithTransaction(debt: com.swiftiecx.timeledger.data.DebtRecord, expense: Expense) {
         val debtId = debtRecordDao.insert(debt)
-        val linkedExpense = expense.copy(debtId = debtId)
+        val linkedExpense = expense.copy(debtId = debtId, recordType = RecordType.INCOME_EXPENSE)
         expenseDao.insertExpense(linkedExpense)
     }
 

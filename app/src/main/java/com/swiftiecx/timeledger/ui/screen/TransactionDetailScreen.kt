@@ -47,16 +47,15 @@ fun TransactionDetailScreen(
         expenses.find { it.id == expenseId }
     }
 
-    // 转账：找同一时间的另一条转账记录（进/出）
+    // 转账：基于 recordType/transferId 找另一条转账记录（进/出）
     val relatedTransferExpense = remember(currentExpense, expenses) {
-        if (currentExpense?.category?.startsWith("转账") == true ||
-            currentExpense?.category?.startsWith("Transfer") == true ||
-            CategoryData.getStableKey(currentExpense?.category ?: "", context).startsWith("Transfer")) {
-
-            expenses.find {
-                it.id != currentExpense!!.id &&
-                        it.date.time == currentExpense.date.time &&
-                        (it.category.startsWith("转账") || it.category.startsWith("Transfer") || CategoryData.getStableKey(it.category, context).startsWith("Transfer"))
+        if (currentExpense?.recordType == com.swiftiecx.timeledger.data.RecordType.TRANSFER) {
+            val tid = currentExpense.transferId
+            if (tid != null) {
+                expenses.find { it.id != currentExpense.id && it.recordType == com.swiftiecx.timeledger.data.RecordType.TRANSFER && it.transferId == tid }
+            } else {
+                // 旧数据兜底：同一时间戳 + recordType=TRANSFER
+                expenses.find { it.id != currentExpense!!.id && it.recordType == com.swiftiecx.timeledger.data.RecordType.TRANSFER && it.date.time == currentExpense.date.time }
             }
         } else null
     }

@@ -17,67 +17,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c17c1ccb-40de-4d86-974e-8d13a2938ae7" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_22_[Changes]1/buildOutputCleanup.lock" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_22_[Changes]1/executionHistory.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_22_[Changes]1/executionHistory.lock" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_22_[Changes]1/fileHashes.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_22_[Changes]1/fileHashes.lock" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_22_[Changes]1/resourceHashesCache.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_22_[Changes]1/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_22__Changes_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_26_[Changes]/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_12_18_16_26__Changes_.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/MainActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/DebtRecordDao.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/DebtRecordDao.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger.zip" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger.zip" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/Expense.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/Expense.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/ExpenseRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/data/ExpenseRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/Category.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/Category.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/IconMapper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/IconMapper.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/Routes.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/navigation/Routes.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountDetailScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountManagementScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AccountManagementScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddAccountScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddAccountScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddDebtScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddDebtScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddTransactionScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AddTransactionScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AssetsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/AssetsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/BudgetSettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/BudgetSettingsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CurrencySelectionScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/CurrencySelectionScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DebtManagementScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DebtManagementScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DebtPersonDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DebtPersonDetailScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DetailsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/DetailsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/EditDebtScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/EditDebtScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/MainScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/MainScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PeriodicBookkeepingScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PeriodicBookkeepingScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PrivacyComponents.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PrivacyComponents.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PrivacySettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/PrivacySettingsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SettleDebtScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/SettleDebtScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/ThemeSettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/screen/ThemeSettingsScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/viewmodel/ExpenseViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/swiftiecx/timeledger/ui/viewmodel/ExpenseViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-br/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-br/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-de/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-de/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-es/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-es/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-fr/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-fr/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-id/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-id/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-in/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-in/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-it/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-it/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-ja/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-ja/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-ko/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-ko/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-mx/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-mx/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-pl/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-pl/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-ru/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-ru/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-th/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-th/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-tr/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-tr/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-vn/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-vn/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values-zh/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values-zh/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
