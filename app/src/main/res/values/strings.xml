@@ -1,84 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- ========================================================= -->
-    <!-- App -->
-    <!-- ========================================================= -->
     <string name="app_name">TimeLedger</string>
 
-    <!-- ========================================================= -->
-    <!-- Bottom Navigation -->
-    <!-- ========================================================= -->
     <string name="nav_assets">Assets</string>
     <string name="nav_budget">Budget</string>
     <string name="nav_chart">Charts</string>
     <string name="nav_details">Details</string>
     <string name="nav_me">Me</string>
 
-    <!-- ========================================================= -->
-    <!-- Common Actions -->
-    <!-- ========================================================= -->
     <string name="add">Add</string>
-    <string name="add_again">Add again</string>
+    <string name="add_again">Add Again</string>
     <string name="back">Back</string>
-    <string name="cancel">Cancel</string>
+
     <string name="confirm">Confirm</string>
-    <string name="delete">Delete</string>
+
     <string name="edit">Edit</string>
     <string name="finish">Done</string>
     <string name="next_step">Next</string>
     <string name="reset">Reset</string>
-    <string name="save">Save</string>
+
     <string name="search">Search</string>
     <string name="unknown">Unknown</string>
 
-    <!-- ========================================================= -->
-    <!-- Type / Basic Labels -->
-    <!-- ========================================================= -->
     <string name="balance">Balance</string>
     <string name="expense_label">Expense</string>
     <string name="income_label">Income</string>
-    <string name="transfer_in_app">Internal transfer</string>
+    <string name="transfer_in_app">Internal Transfer</string>
     <string name="type_all">All</string>
     <string name="type_expense">Expense</string>
     <string name="type_income">Income</string>
     <string name="type_transfer">Transfer</string>
 
-    <!-- ========================================================= -->
-    <!-- Search / Empty State -->
-    <!-- ========================================================= -->
     <string name="no_records">No records in this period</string>
     <string name="search_hint">Search notes, categories</string>
 
-    <!-- ========================================================= -->
-    <!-- Overview / Charts (Top-level labels) -->
-    <!-- ========================================================= -->
-    <string name="category_composition">Category breakdown</string>
-    <string name="month_balance">Monthly balance</string>
+    <string name="category_composition">Category Breakdown</string>
+    <string name="month_balance">Monthly Balance</string>
     <string name="total_amount">Total</string>
     <string name="trend_chart">Trend</string>
 
-    <!-- ========================================================= -->
-    <!-- Account / Assets (Summary) -->
-    <!-- ========================================================= -->
-    <string name="account_card">Bank card</string>
+    <string name="account_card">Bank Card</string>
     <string name="account_cash">Cash</string>
-    <string name="account_credit">Credit card</string>
+    <string name="account_credit">Credit Card</string>
     <string name="account_default">Default</string>
-    <string name="account_ewallet">E-wallet</string>
+    <string name="account_ewallet">E-Wallet</string>
     <string name="account_investment">Investment</string>
-    <string name="current_balance">Current balance</string>
-    <string name="net_assets">Net assets</string>
-    <string name="total_assets">Total assets</string>
-    <string name="total_liabilities">Total liabilities</string>
-    <string name="view_profile">View profile</string>
+    <string name="current_balance">Current Balance</string>
+    <string name="net_assets">Net Assets</string>
+    <string name="total_assets">Total Assets</string>
+    <string name="total_liabilities">Total Liabilities</string>
+    <string name="view_profile">View Profile</string>
 
-    <!-- ========================================================= -->
-    <!-- Add / Edit Transaction (Fields) -->
-    <!-- ========================================================= -->
     <string name="amount_label">Amount</string>
     <string name="category_label">Category</string>
-    <string name="currency">Currency</string>
+
     <string name="date">Date</string>
     <string name="date_label">Date</string>
     <string name="exclude_from_budget">Exclude from budget</string>
@@ -86,93 +62,76 @@
     <string name="manual_mode">Manual amount (no auto conversion)</string>
     <string name="remark_hint">Tap to add a note...</string>
     <string name="remark_label">Note</string>
-    <string name="select_category">Select category</string>
-    <string name="select_icon">Select icon</string>
-    <string name="transfer_in_account">To account</string>
-    <string name="transfer_mode_in_fixed">Fixed in (extra fee)</string>
-    <string name="transfer_mode_out_fixed">Fixed out (incl. fee)</string>
-    <string name="transfer_out_account">From account</string>
+    <string name="select_category">Select Category</string>
 
-    <!-- ========================================================= -->
-    <!-- Accounts (Manage / Edit) -->
-    <!-- ========================================================= -->
-    <string name="account_name">Account name</string>
-    <string name="account_type">Type</string>
-    <string name="add_account">Add account</string>
-    <string name="manage_account">Manage accounts</string>
-    <string name="select_account">Select account</string>
+    <string name="transfer_in_account">To Account</string>
+    <string name="transfer_mode_in_fixed">Fixed In (Extra Fee)</string>
+    <string name="transfer_mode_out_fixed">Fixed Out (Incl. Fee)</string>
+    <string name="transfer_out_account">From Account</string>
 
-    <!-- ========================================================= -->
-    <!-- Settings (Main) -->
-    <!-- ========================================================= -->
-    <string name="click_to_login">Tap to sign in</string>
-    <string name="delete_account">Delete account</string>
+    <string name="add_account">Add Account</string>
+    <string name="manage_account">Manage Accounts</string>
+    <string name="select_account">Select Account</string>
+
+    <string name="click_to_login">Tap to Sign In</string>
+    <string name="delete_account">Delete Account</string>
     <string name="group_data">Data</string>
     <string name="group_general">General</string>
     <string name="group_security">Security</string>
     <string name="login_hint">Sign in to sync</string>
-    <string name="logout">Sign out</string>
+    <string name="logout">Sign Out</string>
     <string name="me_title">Me</string>
     <string name="opt_category">Categories</string>
-    <string name="opt_clear_data">Clear data</string>
-    <string name="opt_currency">Default currency</string>
+    <string name="opt_clear_data">Clear Data</string>
+    <string name="opt_currency">Default Currency</string>
     <string name="opt_language">Language</string>
     <string name="opt_periodic">Recurring</string>
-    <string name="opt_privacy">Security &amp; privacy</string>
-    <string name="opt_sync">Backup &amp; sync</string>
+    <string name="opt_privacy">App Lock</string>
+    <string name="opt_sync">Backup &amp; Sync</string>
     <string name="opt_theme">Theme</string>
     <string name="settings_title">Settings</string>
     <string name="version">Version</string>
 
-    <!-- ========================================================= -->
-    <!-- Recurring -->
-    <!-- ========================================================= -->
     <string name="count">Count</string>
     <string name="count_label_unit">times</string>
     <string name="end_by_count">End after count</string>
     <string name="end_by_date">End by date</string>
     <string name="end_never">Never</string>
-    <string name="end_rule">End rule</string>
+    <string name="end_rule">End Rule</string>
     <string name="freq_day">Daily</string>
     <string name="freq_month">Monthly</string>
     <string name="freq_week">Weekly</string>
     <string name="freq_year">Yearly</string>
     <string name="input_repeat_count">Enter repeat count</string>
     <string name="periodic_empty_hint">No recurring tasks</string>
-    <string name="periodic_title">Recurring transactions</string>
-    <string name="repeat_frequency">Repeat</string>
-    <string name="start_date">Start date</string>
-    <string name="switch_mode">Switch mode</string>
+    <string name="periodic_title">Recurring Transactions</string>
+    <string name="repeat_frequency">Frequency</string>
+    <string name="start_date">Start Date</string>
+    <string name="switch_mode">Switch Mode</string>
     <string name="warning_cross_currency_transfer_periodic">Cross-currency recurring transfers are not supported. Please select accounts with the same currency.</string>
 
-    <!-- ========================================================= -->
-    <!-- Date / Period -->
-    <!-- ========================================================= -->
-    <string name="end_date">End date</string>
-    <string name="next_month">Next month</string>
-    <string name="next_year_month">Next period</string>
-    <string name="prev_month">Previous month</string>
-    <string name="prev_year_month">Previous period</string>
-    <string name="select_date">Select date</string>
-    <string name="select_date_range">Select date range</string>
+    <string name="end_date">End Date</string>
+    <string name="next_month">Next Month</string>
+    <string name="next_year_month">Next Period</string>
+    <string name="prev_month">Previous Month</string>
+    <string name="prev_year_month">Previous Period</string>
+    <string name="select_date">Select Date</string>
+    <string name="select_date_range">Select Date Range</string>
     <string name="time_custom">Custom</string>
     <string name="time_day">Day</string>
     <string name="time_month">Month</string>
-    <string name="time_month_current">This month</string>
+    <string name="time_month_current">This Month</string>
     <string name="time_month_short">Month</string>
     <string name="time_week">Week</string>
-    <string name="time_week_current">This week</string>
+    <string name="time_week_current">This Week</string>
     <string name="time_week_short">Week</string>
     <string name="time_year">Year</string>
-    <string name="time_year_current">This year</string>
+    <string name="time_year_current">This Year</string>
     <string name="time_year_short">Year</string>
     <string name="today">Today</string>
 
-    <!-- ========================================================= -->
-    <!-- Language -->
-    <!-- ========================================================= -->
     <string name="lang_en">English</string>
-    <string name="lang_follow_system">Follow system</string>
+    <string name="lang_follow_system">Follow System</string>
     <string name="lang_hint">The app will restart after switching language</string>
     <string name="lang_ja">日本語</string>
     <string name="lang_ko">한국어</string>
@@ -192,36 +151,30 @@
     <string name="lang_th">ไทย</string>
     <string name="language_title">Language</string>
 
-    <!-- ========================================================= -->
-    <!-- Dialogs -->
-    <!-- ========================================================= -->
     <string name="confirm_clear_code">CLEAR</string>
     <string name="confirm_delete_code">DELETE</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_clear_msg">Clear all data? This cannot be undone.</string>
-    <string name="dialog_clear_title">Clear data</string>
+    <string name="dialog_clear_title">Clear Data</string>
     <string name="dialog_confirm">Confirm</string>
-    <string name="dialog_delete_account_msg1">This will permanently delete your account.</string>
+    <string name="dialog_delete_account_msg1">Please note: This will permanently delete your account.</string>
     <string name="dialog_delete_account_msg2">All cloud data will be erased and cannot be recovered.</string>
     <string name="dialog_delete_account_msg3">Local data will remain but sync will be disabled.</string>
-    <string name="dialog_delete_account_title">Delete account?</string>
+
     <string name="dialog_final_msg">Type the text below to confirm:</string>
-    <string name="dialog_final_title">Final confirmation</string>
+    <string name="dialog_final_title">Final Confirmation</string>
     <string name="error_password_mismatch">Passwords do not match</string>
     <string name="success_save">Saved</string>
 
-    <!-- ========================================================= -->
-    <!-- Categories -->
-    <!-- ========================================================= -->
-    <string name="cat_food">Food</string>
-    <string name="cat_shopping">Shop</string>
-    <string name="cat_transport">Traffic</string>
-    <string name="cat_home">Home</string>
     <string name="cat_entertainment">Leisure</string>
-    <string name="cat_medical_edu">Health</string>
     <string name="cat_financial">Finance</string>
+    <string name="cat_food">Food</string>
+    <string name="cat_home">Home</string>
     <string name="cat_income_job">Job</string>
     <string name="cat_income_other">Other</string>
+    <string name="cat_medical_edu">Health</string>
+    <string name="cat_shopping">Shop</string>
+    <string name="cat_transport">Traffic</string>
 
     <string name="sub_alcohol">Alcohol</string>
     <string name="sub_beauty">Beauty</string>
@@ -240,7 +193,7 @@
     <string name="sub_finance">Investments</string>
     <string name="sub_food">Food</string>
     <string name="sub_gift">Gifts</string>
-    <string name="sub_gift_money">Gift money</string>
+    <string name="sub_gift_money">Gift Money</string>
     <string name="sub_housing">Housing</string>
     <string name="sub_medical">Medical</string>
     <string name="sub_movie">Movies</string>
@@ -248,7 +201,7 @@
     <string name="sub_part_time">Part-time</string>
     <string name="sub_pets">Pets</string>
     <string name="sub_phone">Phone</string>
-    <string name="sub_red_packet">Red packet</string>
+    <string name="sub_red_packet">Red Packet</string>
     <string name="sub_reimbursement">Reimbursement</string>
     <string name="sub_repair">Repair</string>
     <string name="sub_salary">Salary</string>
@@ -261,11 +214,8 @@
     <string name="sub_traffic">Transit</string>
     <string name="sub_travel">Travel</string>
 
-    <!-- ========================================================= -->
-    <!-- App Lock / Privacy -->
-    <!-- ========================================================= -->
-    <string name="bio_prompt_title">Fingerprint verification</string>
-    <string name="go_login">Sign in</string>
+    <string name="bio_prompt_title">Fingerprint Verification</string>
+    <string name="go_login">Sign In</string>
     <string name="got_it">Got it</string>
     <string name="lock_biometric_not_supported">Fingerprint not available or not enrolled</string>
     <string name="lock_error_wrong_pattern">Incorrect pattern</string>
@@ -278,7 +228,7 @@
     <string name="pattern_error_mismatch">Pattern does not match</string>
     <string name="pattern_error_too_short">Connect at least 4 dots</string>
     <string name="pattern_prompt_connect_4">Connect at least 4 dots</string>
-    <string name="pattern_setup_title">Draw pattern</string>
+    <string name="pattern_setup_title">Draw Pattern</string>
     <string name="pin_confirm_title">Confirm PIN</string>
     <string name="pin_error_mismatch">PINs do not match</string>
     <string name="pin_prompt_confirm">Re-enter to confirm</string>
@@ -286,15 +236,15 @@
     <string name="pin_setup_title">Set PIN</string>
     <string name="privacy_biometric_desc">Unlock quickly with fingerprint</string>
     <string name="privacy_biometric_require_text">Set a PIN or pattern before enabling fingerprint unlock.</string>
-    <string name="privacy_biometric_require_title">"Can't enable fingerprint"</string>
-    <string name="privacy_biometric_title">Fingerprint unlock</string>
+    <string name="privacy_biometric_require_title">Can\'t Enable Fingerprint</string>
+    <string name="privacy_biometric_title">Fingerprint Unlock</string>
     <string name="privacy_enabled_success">Enabled</string>
     <string name="privacy_pattern_desc">Unlock with a pattern</string>
     <string name="privacy_pattern_title">Pattern</string>
     <string name="privacy_pin_desc">Unlock with a 4-digit PIN</string>
     <string name="privacy_pin_title">PIN</string>
-    <string name="privacy_title">Privacy passcode</string>
-    <string name="unlock_dialog_title">Security check</string>
+    <string name="privacy_title">Privacy Passcode</string>
+    <string name="unlock_dialog_title">Security Check</string>
     <string name="unlock_email_label">Email</string>
     <string name="unlock_enter_account_password">Enter email and password</string>
     <string name="unlock_enter_email_first">Enter email first</string>
@@ -303,64 +253,58 @@
     <string name="unlock_reset_lock_tip">For security, verification will reset app lock settings.</string>
     <string name="unlock_reset_sent">Email sent. Check your inbox.</string>
     <string name="unlock_send_reset">Forgot password? Send reset email</string>
-    <string name="unlock_verify_and_unlock">Verify &amp; unlock</string>
+    <string name="unlock_verify_and_unlock">Verify &amp; Unlock</string>
 
-    <!-- ========================================================= -->
-    <!-- Auth / Account (Login/Register/User) -->
-    <!-- ========================================================= -->
     <string name="action_confirm_change">Confirm</string>
-    <string name="action_confirm_delete">Confirm deletion</string>
-    <string name="action_delete_account">Delete account</string>
+    <string name="action_confirm_delete">Confirm Deletion</string>
+    <string name="action_delete_account">Delete Account</string>
     <string name="action_forgot_password">Forgot password?</string>
-    <string name="action_go_register">Sign up</string>
-    <string name="action_login">Log in</string>
-    <string name="action_logout">Log out</string>
+    <string name="action_go_register">Sign Up</string>
+    <string name="action_login">Log In</string>
+    <string name="action_logout">Log Out</string>
     <string name="action_next_step">Next</string>
-    <string name="action_register_and_login">Sign up and log in</string>
-    <string name="action_send_reset_link">Send reset link</string>
+    <string name="action_register_and_login">Sign Up &amp; Log In</string>
+    <string name="action_send_reset_link">Send Reset Link</string>
     <string name="account_delete_confirm_phrase">CONFIRM DELETE</string>
-    <string name="change_password_title">Change password</string>
-    <string name="dialog_delete_account_warning1">Please note: this will permanently delete your account.</string>
+    <string name="change_password_title">Change Password</string>
+    <string name="dialog_delete_account_warning1">Please note: This will permanently delete your account.</string>
     <string name="dialog_delete_account_warning2">All cloud data will be erased and cannot be recovered.</string>
     <string name="dialog_delete_account_warning3">Local data will remain, but cloud sync will no longer be available.</string>
     <string name="dialog_enter_text_to_confirm">Type the following text to confirm account deletion:</string>
-    <string name="dialog_final_confirm_title">Final security check</string>
+    <string name="dialog_final_confirm_title">Final Security Check</string>
     <string name="error_enter_current_password">Please enter current password</string>
     <string name="error_enter_email">Please enter email</string>
     <string name="error_new_password_mismatch">The two passwords do not match</string>
     <string name="error_new_password_same_as_old">New password cannot be the same as the old password</string>
     <string name="error_new_password_too_short">New password must be at least 6 characters</string>
     <string name="error_password_min_6">Password must be at least 6 characters</string>
-    <string name="label_confirm_new_password">Confirm new password</string>
-    <string name="label_confirm_password">Confirm password</string>
-    <string name="label_current_password">Current password</string>
+    <string name="label_confirm_new_password">Confirm New Password</string>
+    <string name="label_confirm_password">Confirm Password</string>
+    <string name="label_current_password">Current Password</string>
     <string name="label_email">Email</string>
     <string name="label_email_short">Email</string>
-    <string name="label_new_password_min_6">New password (min 6)</string>
+    <string name="label_new_password_min_6">New Password (min 6)</string>
     <string name="label_password">Password</string>
-    <string name="label_set_password">Set password</string>
+    <string name="label_set_password">Set Password</string>
     <string name="login_subtitle">Sign in to sync your ledger data</string>
-    <string name="login_title">Welcome back</string>
-    <string name="menu_change_password">Change password</string>
-    <string name="menu_forgot_password">Forgot password</string>
+    <string name="login_title">Welcome Back</string>
+    <string name="menu_change_password">Change Password</string>
+    <string name="menu_forgot_password">Forgot Password</string>
     <string name="msg_logged_out">Logged out</string>
     <string name="msg_password_changed">Password updated</string>
     <string name="msg_register_success_verification_sent">Registration successful. Verification email sent.</string>
     <string name="msg_reset_email_sent">Reset email sent. Please check your inbox.</string>
     <string name="register_subtitle">Register to enable cloud sync</string>
-    <string name="register_title">Create account</string>
-    <string name="reset_password_hint">"Enter your registered email and we'll send a password reset link."</string>
-    <string name="reset_password_title">Reset password</string>
-    <string name="status_logged_in">Logged in</string>
-    <string name="status_not_logged_in">Not logged in</string>
-    <string name="text_no_account">"Don't have an account?"</string>
+    <string name="register_title">Create Account</string>
+    <string name="reset_password_hint">Enter your registered email and we\'ll send a password reset link.</string>
+    <string name="reset_password_title">Reset Password</string>
+    <string name="status_logged_in">Logged In</string>
+    <string name="status_not_logged_in">Not Logged In</string>
+    <string name="text_no_account">Don\'t have an account?</string>
     <string name="toast_account_deleted">Account deleted</string>
     <string name="toast_reauth_required">For security, please sign in again.</string>
-    <string name="user_info_title">User info</string>
+    <string name="user_info_title">User Info</string>
 
-    <!-- ========================================================= -->
-    <!-- Currency Selection -->
-    <!-- ========================================================= -->
     <string name="select_default_currency">Select Default Currency</string>
     <string name="currency_name_aud">Australian Dollar</string>
     <string name="currency_name_bgn">Bulgarian Lev</string>
@@ -396,9 +340,6 @@
     <string name="currency_name_vnd">Vietnamese Dong</string>
     <string name="currency_name_zar">South African Rand</string>
 
-    <!-- ========================================================= -->
-    <!-- Theme Preview -->
-    <!-- ========================================================= -->
     <string name="add_transaction_mock">Log a transaction</string>
     <string name="amount_mock">¥ 1,234.56</string>
     <string name="month_expense_mock">Monthly Expense</string>
@@ -406,9 +347,6 @@
     <string name="theme_preview_title">Live Preview</string>
     <string name="theme_selection_title">Select Color Scheme</string>
 
-    <!-- ========================================================= -->
-    <!-- Sync -->
-    <!-- ========================================================= -->
     <string name="sync_cloud_time_label">Cloud backup time: %1$s</string>
     <string name="sync_conflict_msg1">Data exists both locally and in the cloud.</string>
     <string name="sync_conflict_msg2">Please select an action:</string>
@@ -424,9 +362,6 @@
     <string name="sync_title">Cloud Sync</string>
     <string name="sync_unknown_time">Unknown time</string>
 
-    <!-- ========================================================= -->
-    <!-- Category Settings -->
-    <!-- ========================================================= -->
     <string name="add_category">Add Category</string>
     <string name="category_reorder">Reorder</string>
     <string name="category_settings_title">Category Settings</string>
@@ -434,40 +369,30 @@
     <string name="subcategory_management_title">%1$s - Subcategory Management</string>
     <string name="subcategory_reorder_hint">Long press the icon on the right to reorder</string>
 
-    <!-- ========================================================= -->
-    <!-- Account Screens / Records -->
-    <!-- ========================================================= -->
-    <string name="account_detail_title">Account Details</string>
-    <string name="account_management_hint">Long press to reorder, tap star to set default</string>
+    <string name="account_detail_title">Account Detail</string>
+    <string name="account_management_hint">Long press to reorder, click star to set default</string>
     <string name="account_management_title">Account Management</string>
-    <string name="account_name_placeholder">Account Name</string>
-    <string name="account_not_found">Account information not found</string>
-    <string name="account_reorder">Reorder account</string>
-    <string name="add_account_title">New Account</string>
+
+    <string name="account_not_found">Account not found</string>
+
     <string name="balance_edit_hint">Modifying the balance will automatically generate a correctional entry.</string>
-    <string name="balance_placeholder">0.00</string>
+
     <string name="edit_account">Edit Account</string>
-    <string name="edit_account_title">Edit Account</string>
+
     <string name="no_transaction_records">No transaction records</string>
-    <string name="set_as_default">Set as default</string>
-    <string name="transaction_records_title">Transaction Records</string>
+
+    <string name="transaction_records_title">Transactions</string>
     <string name="transaction_remark_format"> · %1$s</string>
 
-    <!-- ========================================================= -->
-    <!-- Account Types (Array) -->
-    <!-- ========================================================= -->
     <string-array name="account_types">
         <item>Cash</item>
-        <item>Bank card</item>
-        <item>Credit card</item>
+        <item>Bank Card</item>
+        <item>Credit Card</item>
         <item>Investment</item>
         <item>E-wallet</item>
         <item>Default</item>
     </string-array>
 
-    <!-- ========================================================= -->
-    <!-- Budget / Calendar / Formats / Reports -->
-    <!-- ========================================================= -->
     <string name="assets_title">Assets</string>
     <string name="budget_base_currency">CNY</string>
     <string name="total_budget_category_name">Total Budget</string>
@@ -480,14 +405,14 @@
     <string name="budget_total_amount_format">Total: %1$s %2$.0f</string>
     <string name="budget_spent_amount_format">Spent %1$s</string>
     <string name="budget_total_amount_label_format">Budget %1$s</string>
-    <string name="select_month">Select month</string>
+    <string name="select_month">Select Month</string>
     <string name="calendar_nav_title">Calendar</string>
     <string name="amount_format">%.2f</string>
     <string name="daily_income_format">Inc %1$s</string>
     <string name="daily_expense_format">Exp %1$s</string>
     <string name="fee_format">Fee %1$s</string>
     <string name="original_amount_approx_format">≈ %1$s %2$s</string>
-    <string name="transaction_account_format"> · %1$s</string>
+    <string name="transaction_account_format"> · Account: %1$s</string>
     <string name="week_unit">Week</string>
     <string name="prev_period">Previous</string>
     <string name="next_period">Next</string>
@@ -514,7 +439,7 @@
     <string name="chart_composition_income">Income Composition (By Main Category)</string>
     <string name="chart_total_expense">Total Expense</string>
     <string name="chart_total_income">Total Income</string>
-    <string name="chart_no_data">No data available for this period.</string>
+    <string name="chart_no_data">No data available.</string>
     <string name="chart_trend_expense">Expense Trend</string>
     <string name="chart_trend_income">Income Trend</string>
     <string name="chart_fullscreen_title_format">Full Screen %1$s</string>
@@ -528,9 +453,9 @@
     <string name="budget_label_short">Budget</string>
     <string name="remaining_amount_format">Remaining: %1$s %2$.2f</string>
     <string name="overspent_amount_format">Overspent: %1$s %2$.2f</string>
-    <string name="tag_exclude_from_budget">ExcludeFromBudget</string>
+    <string name="tag_exclude_from_budget">Exclude from Budget</string>
 
-    <string name="calendar_month_balance">Balance this month</string>
+    <string name="calendar_month_balance">Balance This Month</string>
 
     <string name="income_short">In</string>
     <string name="expense_short">Out</string>
@@ -543,28 +468,23 @@
     <string name="weekday_tue">Tue</string>
     <string name="weekday_wed">Wed</string>
 
-    <string name="daily_budget_label">Daily budget</string>
+    <string name="daily_budget_label">Daily Budget</string>
     <string name="budget_status_normal">Normal</string>
     <string name="budget_status_over">Over</string>
 
-    <!-- ========================================================= -->
-    <!-- Misc (Note: duplicates kept as-is per your requirement) -->
-    <!-- ========================================================= -->
     <string name="ok">OK</string>
-    <string name="toggle_mode">Toggle mode</string>
+    <string name="toggle_mode">Toggle Mode</string>
     <string name="previous">Previous</string>
     <string name="next">Next</string>
 
-    <!-- Title: %1$d=year, %2$s=monthLabel -->
     <string name="year_month_title_format">%2$s %1$d</string>
 
-    <!-- Numeric month fallback (if ever used) -->
     <string name="month_number_format">M%1$d</string>
     <string name="detail_title">Details</string>
 
     <string name="record_not_found">Record not found</string>
 
-    <string name="internal_transfer">Internal transfer</string>
+    <string name="internal_transfer">Internal Transfer</string>
 
     <string name="type_label">Type</string>
 
@@ -574,13 +494,13 @@
     <string name="transfer_out">From</string>
     <string name="transfer_in">To</string>
 
-    <string name="unknown_account">Unknown account</string>
+    <string name="unknown_account">Unknown Account</string>
 
     <string name="account_balance_format">%1$s (Balance: %2$s)</string>
     <string name="converted_amount_format">≈ %1$s %2$.2f</string>
     <string name="added_at_format">(Added at %1$s)</string>
 
-    <string name="default_account_name">Default account</string>
+    <string name="default_account_name">Default Account</string>
 
     <string name="category_transfer_out">Transfer (Out)</string>
     <string name="category_transfer_in">Transfer (In)</string>
@@ -591,9 +511,9 @@
     <string name="error_not_logged_in">Not logged in</string>
     <string name="error_user_not_logged_in">User not logged in</string>
 
-    <string name="error_email_already_registered">This email is already registered</string>
+    <string name="error_email_already_registered">Email already registered</string>
     <string name="error_email_invalid">Invalid email format</string>
-    <string name="error_email_not_registered">This email is not registered</string>
+    <string name="error_email_not_registered">Email not registered</string>
     <string name="error_account_not_exist">Account does not exist</string>
     <string name="error_email_or_password_wrong">Incorrect email or password</string>
 
@@ -606,9 +526,9 @@
     <string name="error_change_password_failed">Update failed: %1$s</string>
     <string name="error_delete_account_failed">Delete account failed: %1$s</string>
 
-    <string name="error_old_password_wrong">Current password is incorrect</string>
+    <string name="error_old_password_wrong">Incorrect old password</string>
     <string name="error_recent_login_required">Session expired. Please log in again and retry.</string>
-    <string name="error_recent_login_required_delete">Session expired. Please log in again before deleting the account.</string>
+    <string name="error_recent_login_required_delete">Session expired. Please log in again before deleting account.</string>
     <string name="error_new_password_weak">New password is too weak</string>
 
     <string name="success_backup_to_cloud">Backed up to cloud</string>
@@ -654,5 +574,179 @@
     <string name="theme_color_cool_gray">Cool Gray</string>
     <string name="theme_color_coffee_brown">Coffee Brown</string>
     <string name="theme_color_midnight_blue">Midnight Blue</string>
+
+    <string name="title_debt_management">Debt Management</string>
+
+    <string name="label_total_lend">Total Lend (Receivable)</string>
+    <string name="label_total_borrow">Total Borrow (Payable)</string>
+
+    <string name="header_receivables">Receivables (Assets)</string>
+    <string name="header_payables">Payables (Liabilities)</string>
+
+    <string name="empty_debt_records">No debt records</string>
+
+    <string name="sheet_title_select_type">Select Record Type</string>
+
+    <string name="action_add_borrow">Add Borrowing</string>
+    <string name="subtitle_add_borrow">Record money you owe others</string>
+
+    <string name="action_add_lend">Add Lending</string>
+    <string name="subtitle_add_lend">Record money others owe you</string>
+
+    <string name="tag_receivable">Receivable</string>
+    <string name="tag_payable">Payable</string>
+
+    <string name="title_receivable_detail">Receivable</string>
+    <string name="title_payable_detail">Payable</string>
+    <string name="more">More</string>
+
+    <string name="action_delete_debt">Delete Debt</string>
+    <string name="dialog_delete_title">Confirm Delete?</string>
+    <string name="dialog_delete_debt_msg">This will permanently delete all debt records related to "%1$s". This action cannot be undone, and related transaction history will be affected.</string>
+    <string name="confirm_delete">Delete</string>
+
+    <string name="label_remaining_receivable">Remaining to Collect</string>
+    <string name="label_remaining_payable">Remaining to Pay</string>
+    <string name="label_collected_principal">Collected Principal</string>
+    <string name="label_repaid_principal">Repaid Principal</string>
+    <string name="label_collected_interest">Collected Interest</string>
+    <string name="label_repaid_interest">Repaid Interest</string>
+    <string name="label_next_reminder">Next Reminder</string>
+    <string name="not_set">Not Set</string>
+
+    <string name="action_append_lend">Lend More</string>
+    <string name="action_append_borrow">Borrow More</string>
+    <string name="action_collect">Collect</string>
+    <string name="action_repay">Repay</string>
+
+    <string name="header_history_detail">Transaction History</string>
+
+    <string name="type_collection">Collection</string>
+    <string name="type_repayment">Repayment</string>
+    <string name="type_borrow_in">Borrow</string>
+    <string name="type_lend_out">Lend</string>
+    <string name="no_account">No Account</string>
+    <string name="label_interest">Interest</string>
+
+
+    <string name="add_record">Add Record</string>
+    <string name="title_debt_records">Debt Records</string>
+
+
+    <string name="action_add_borrow_account">Add Borrowing (Payable)</string>
+    <string name="desc_add_borrow_account">Borrow money into this account</string>
+    <string name="action_add_lend_account">Add Lending (Receivable)</string>
+    <string name="desc_add_lend_account">Lend money from this account</string>
+
+    <string name="label_note">Note</string>
+    <string name="label_date">Date</string>
+    <string name="label_settle_date">Settled Date</string>
+    <string name="label_expect_date">Due Date</string>
+    <string name="status_unsettled">Unsettled</string>
+    <string name="label_target_account">Target Acc</string>
+    <string name="label_source_account">Source Acc</string>
+
+    <string name="label_current_arrears">Current Debt</string>
+    <string name="label_total_quota">Limit</string>
+    <string name="label_available_quota">Available</string>
+    <string name="label_bill_day">Bill Day: %1$s</string>
+    <string name="label_repay_day">Repay Day: %1$s</string>
+
+    <string name="account_mgmt_tip">Tip: Long press to reorder, click star to set default, swipe left to delete account.</string>
+    <string name="dialog_delete_account_title">Delete Account?</string>
+    <string name="dialog_delete_account_msg">Deleting account "%1$s" cannot be undone. All associated transaction records will also be permanently deleted.</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="label_arrears">Arrears: </string>
+    <string name="label_total_limit">Limit: </string>
+    <string name="set_as_default">Set as default</string>
+    <string name="account_reorder">Drag to reorder</string>
+
+    <string name="sheet_title_add_account_record">Add Record / Account</string>
+
+    <string name="type_funds_account">Asset Account</string>
+    <string name="desc_funds_account">Cash / Savings / Bank Card</string>
+
+    <string name="type_credit_account">Credit Account</string>
+    <string name="desc_credit_account">Credit Card / Loan Accounts</string>
+
+    <string name="desc_add_borrow_record">I owe others: Add a borrowing record</string>
+    <string name="desc_add_lend_record">Others owe me: Add a lending record</string>
+
+    <string name="add_account_title">Add Account</string>
+    <string name="edit_account_title">Edit Account</string>
+    <string name="save">Save</string>
+    <string name="account_name_placeholder">Account Name</string>
+    <string name="account_name">Name</string>
+    <string name="account_type">Account Type</string>
+    <string name="currency">Currency</string>
+    <string name="balance_placeholder">0.00</string>
+    <string name="select_icon">Select Icon</string>
+
+    <string name="label_account_category">Category</string>
+    <string name="label_debt_type">Debt Type</string>
+    <string name="label_credit_limit">Credit Limit</string>
+    <string name="placeholder_credit_limit">e.g. 20000</string>
+
+    <string name="preview_label_debt">Debt</string>
+    <string name="preview_label_unsettled">Unsettled</string>
+    <string name="preview_label_balance">Balance</string>
+
+    <string name="category_credit_account">Credit Account</string>
+    <string name="category_funds_account">Funds Account</string>
+    <string name="category_lend_receivable">Lend (Receivable)</string>
+    <string name="category_borrow_payable">Borrow (Payable)</string>
+
+    <string name="chip_payable">Borrow (Payable)</string>
+    <string name="chip_receivable">Lend (Receivable)</string>
+
+    <string name="title_add_borrow">New Borrowing</string>
+    <string name="title_add_lend">New Lending</string>
+    <string name="label_person_name">Name</string>
+    <string name="status_locked">Locked</string>
+
+    <string name="label_borrow_time">Borrowing Date</string>
+    <string name="label_lend_time">Lending Date</string>
+    <string name="label_expected_repay_time">Expected Repayment</string>
+    <string name="label_expected_collect_time">Expected Collection</string>
+
+    <string name="label_target_fund_account">Target Account</string>
+    <string name="label_source_fund_account">Source Account</string>
+    <string name="hint_select_account">Select Account</string>
+
+    <string name="confirm_save">Save Record</string>
+    <string name="title_select_fund_account">Select Fund Account</string>
+    <string name="empty_fund_accounts">No available fund accounts</string>
+    <string name="subtitle_debt_management_entry">View all borrowing and lending records</string>
+    <string name="title_edit_settle">Edit Settlement</string>
+    <string name="title_edit_debt">Edit Debt</string>
+    <string name="label_due_date">Due Date</string>
+    <string name="label_expected_date">Expected Date</string>
+
+    <string name="title_repay">Repay</string>
+    <string name="title_collect">Collect</string>
+
+    <string name="label_related_person">Related: %1$s</string>
+    <string name="label_pending_repay">Pending Pay: %1$s</string>
+    <string name="label_pending_collect">Pending Collect: %1$s</string>
+
+    <string name="label_repay_amount">Repayment Amount</string>
+    <string name="label_collect_amount">Collection Amount</string>
+
+    <string name="error_settle_amount_exceeds">Principal deduction (%1$s) cannot exceed pending amount (%2$s)</string>
+
+    <string name="label_interest_optional">Interest (Optional)</string>
+    <string name="label_payment_account">Payment Account</string>
+    <string name="label_deposit_account">Deposit Account</string>
+    <string name="hint_optional">Optional...</string>
+
+    <string name="label_sync_transaction">Generate Transaction</string>
+    <string name="desc_sync_transaction_repay">Create an expense record automatically</string>
+    <string name="desc_sync_transaction_collect">Create an income record automatically</string>
+
+    <string name="action_confirm_repay">Confirm Repayment</string>
+    <string name="action_confirm_collect">Confirm Collection</string>
+    <string name="empty_available_accounts">No available accounts</string>
 
 </resources>

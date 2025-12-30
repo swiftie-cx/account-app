@@ -117,4 +117,6 @@ object Routes {
     }
     const val EDIT_DEBT = "edit_debt/{recordId}"
     fun editDebtRoute(recordId: Long) = "edit_debt/$recordId"
+
+    const val transferRoute = "transfer"
 }

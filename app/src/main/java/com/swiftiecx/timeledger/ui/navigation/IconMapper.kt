@@ -1,6 +1,8 @@
 package com.swiftiecx.timeledger.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -8,47 +10,84 @@ import androidx.compose.ui.res.stringResource
 import com.swiftiecx.timeledger.R
 
 object IconMapper {
-    fun getIcon(iconName: String): ImageVector {
+    fun getIcon(iconName: String?): ImageVector {
         return when (iconName) {
+            // --- 核心账户/资产图标 ---
             "Wallet" -> Icons.Default.AccountBalanceWallet
             "Bank" -> Icons.Default.AccountBalance
             "CreditCard" -> Icons.Default.CreditCard
-            "TrendingUp" -> Icons.Default.TrendingUp
-            "Smartphone" -> Icons.Default.Smartphone
-            "AttachMoney" -> Icons.Default.AttachMoney
             "Savings" -> Icons.Default.Savings
             "Payment" -> Icons.Default.Payment
+            "AttachMoney" -> Icons.Default.AttachMoney
+            "Calculate" -> Icons.Default.Calculate
+            "TrendingUp" -> Icons.AutoMirrored.Filled.TrendingUp
+            "Smartphone" -> Icons.Default.Smartphone
             "CurrencyExchange" -> Icons.Default.CurrencyExchange
             "Euro" -> Icons.Default.Euro
             "ShowChart" -> Icons.Default.ShowChart
             "PieChart" -> Icons.Default.PieChart
 
-            // [新增] 借贷相关图标映射
-            // 兼容中文 "借出" 和英文 "Lend"
-            "Lend", "借出" -> Icons.Default.ArrowCircleUp
-            // 兼容中文 "借入" 和英文 "Borrow"
-            "Borrow", "借入" -> Icons.Default.ArrowCircleDown
+            // --- 新增：生活消费类图标 (解决图标重复问题) ---
+            "ShoppingCart" -> Icons.Default.ShoppingCart      // 购物
+            "Home" -> Icons.Default.Home                      // 住房/家庭
+            "DirectionsCar" -> Icons.Default.DirectionsCar    // 汽车/交通
+            "Flight" -> Icons.Default.Flight                  // 旅行
+            "Restaurant" -> Icons.Default.Restaurant          // 餐饮
+            "MedicalServices" -> Icons.Default.MedicalServices // 医疗
+            "School" -> Icons.Default.School                  // 教育
+            "Pets" -> Icons.Default.Pets                      // 宠物
+            "Redeem" -> Icons.Default.Redeem                  // 礼物/人情
+            "MoreHoriz" -> Icons.Default.MoreHoriz            // 其他/杂项
 
-            else -> Icons.Default.AccountBalanceWallet // Default icon
+            // --- 其他常用分类图标补充 ---
+            "Fastfood" -> Icons.Default.Fastfood
+            "DirectionsBus" -> Icons.Default.DirectionsBus
+            "ShoppingBag" -> Icons.Default.ShoppingBag
+            "Movie" -> Icons.Default.Movie
+            "LocalHospital" -> Icons.Default.LocalHospital
+            "LocalLibrary" -> Icons.Default.LocalLibrary
+            "Work" -> Icons.Default.Work
+            "FamilyRestroom" -> Icons.Default.FamilyRestroom
+            "DirectionsRun" -> Icons.AutoMirrored.Filled.DirectionsRun
+            "MoreVert" -> Icons.Default.MoreVert
+
+            // --- 借贷相关图标映射 ---
+            // 兼容中文 "借出" 和英文 "Lend"
+            "Lend", "借出" -> Icons.Default.ArrowCircleUp // 或者 Icons.Default.Upload
+            // 兼容中文 "借入" 和英文 "Borrow"
+            "Borrow", "借入" -> Icons.Default.ArrowCircleDown // 或者 Icons.Default.Download
+
+            // --- 默认兜底 ---
+            else -> Icons.Default.AccountBalanceWallet
         }
     }
 
+    // 反向映射：用于将图标对象转回字符串名称 (主要用于调试或存储)
     fun getIconName(icon: ImageVector): String {
         return when (icon) {
             Icons.Default.AccountBalanceWallet -> "Wallet"
             Icons.Default.AccountBalance -> "Bank"
             Icons.Default.CreditCard -> "CreditCard"
-            Icons.Default.TrendingUp -> "TrendingUp"
-            Icons.Default.Smartphone -> "Smartphone"
-            Icons.Default.AttachMoney -> "AttachMoney"
             Icons.Default.Savings -> "Savings"
             Icons.Default.Payment -> "Payment"
-            Icons.Default.CurrencyExchange -> "CurrencyExchange"
-            Icons.Default.Euro -> "Euro"
-            Icons.Default.ShowChart -> "ShowChart"
-            Icons.Default.PieChart -> "PieChart"
+            Icons.Default.AttachMoney -> "AttachMoney"
+            Icons.Default.Calculate -> "Calculate"
+            Icons.AutoMirrored.Filled.TrendingUp -> "TrendingUp"
+            Icons.Default.Smartphone -> "Smartphone"
 
-            // [新增] 借贷相关图标反向映射
+            // 新增生活类反向映射
+            Icons.Default.ShoppingCart -> "ShoppingCart"
+            Icons.Default.Home -> "Home"
+            Icons.Default.DirectionsCar -> "DirectionsCar"
+            Icons.Default.Flight -> "Flight"
+            Icons.Default.Restaurant -> "Restaurant"
+            Icons.Default.MedicalServices -> "MedicalServices"
+            Icons.Default.School -> "School"
+            Icons.Default.Pets -> "Pets"
+            Icons.Default.Redeem -> "Redeem"
+            Icons.Default.MoreHoriz -> "MoreHoriz"
+
+            // 借贷
             Icons.Default.ArrowCircleUp -> "Lend"
             Icons.Default.ArrowCircleDown -> "Borrow"
 
@@ -57,7 +96,7 @@ object IconMapper {
     }
 }
 
-// [新增] 账户类型管理器：统一管理 Key 到多语言的映射
+// [保持原样] 账户类型管理器：统一管理 Key 到多语言的映射
 object AccountTypeManager {
 
     // 定义 Key 到 资源ID 的映射

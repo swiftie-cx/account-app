@@ -67,7 +67,8 @@ fun BudgetSettingsScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        // ✅ 修改 1：背景改为标准的背景色 (通常为白)
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -82,7 +83,8 @@ fun BudgetSettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    // ✅ 修改 2：顶部栏背景也改为标准的背景色
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
@@ -237,6 +239,7 @@ fun TotalBudgetSettingCard(amount: Double, onClick: () -> Unit) {
 
 @Composable
 fun BudgetSettingItem(title: String, amount: Double, color: Color, icon: ImageVector, onClick: () -> Unit) {
+    // 列表项保持 Surface 颜色，在白色背景上会显示为卡片
     Card(onClick = onClick, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(0.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {

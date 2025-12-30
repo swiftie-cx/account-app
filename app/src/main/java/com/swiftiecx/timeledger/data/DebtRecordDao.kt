@@ -6,7 +6,6 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-// 显式导入 DebtRecord 以确保 IDE 能识别
 import com.swiftiecx.timeledger.data.DebtRecord
 
 @Dao
@@ -24,6 +23,11 @@ interface DebtRecordDao {
 
     @Delete
     suspend fun delete(record: DebtRecord)
+
+    // ✅ [新增] 根据ID删除单条记录
+    // 配合 ExpenseRepository 中的逻辑，当删除关联的流水时，通过此方法删除对应的债务
+    @Query("DELETE FROM debt_records WHERE id = :id")
+    suspend fun deleteById(id: Long)
 
     @Query("SELECT * FROM debt_records ORDER BY borrowTime DESC")
     fun getAllDebtRecords(): Flow<List<DebtRecord>>

@@ -10,17 +10,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.R
 
 data class Currency(val code: String, val name: String, val symbol: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrencySelectionScreen(navController: NavController, onCurrencySelected: (String) -> Unit) {
+    // 浅灰色背景常量
+    val backgroundColor = Color(0xFFF5F5F5)
+
     // 手动排序：主流货币置顶，其他按字母/区域排序
     val currencies = listOf(
         // --- 主流常用 ---
@@ -66,7 +70,8 @@ fun CurrencySelectionScreen(navController: NavController, onCurrencySelected: (S
     )
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        // [修改 1] 设置页面整体背景为浅灰
+        containerColor = backgroundColor,
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.select_default_currency), fontWeight = FontWeight.Bold) },
@@ -76,7 +81,8 @@ fun CurrencySelectionScreen(navController: NavController, onCurrencySelected: (S
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    // [修改 2] TopBar 背景也设为浅灰，与页面融为一体
+                    containerColor = backgroundColor
                 )
             )
         }
@@ -102,9 +108,13 @@ fun CurrencySelectionScreen(navController: NavController, onCurrencySelected: (S
 private fun CurrencyItemCard(currency: Currency, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(0.dp)
+        shape = RoundedCornerShape(20.dp), // 圆角稍微大一点，更有现代感
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White // 卡片本身纯白
+        ),
+        // [修改 3] 移除边框，改用 elevation (阴影) 制造悬浮感
+        // border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
             modifier = Modifier

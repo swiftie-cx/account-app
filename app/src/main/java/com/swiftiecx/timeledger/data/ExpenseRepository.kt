@@ -351,7 +351,15 @@ class ExpenseRepository(
 
     suspend fun insert(expense: Expense) = expenseDao.insertExpense(expense)
     suspend fun createTransfer(expenseOut: Expense, expenseIn: Expense) = expenseDao.insertTransfer(expenseOut, expenseIn)
-    suspend fun deleteExpense(expense: Expense) = expenseDao.deleteExpense(expense)
+
+    // ✅ [修改] 删除收支时，级联删除关联的债务 (如果存在)
+    suspend fun deleteExpense(expense: Expense) {
+        expenseDao.deleteExpense(expense)
+        if (expense.debtId != null) {
+            debtRecordDao.deleteById(expense.debtId)
+        }
+    }
+
     suspend fun updateExpense(expense: Expense) = expenseDao.updateExpense(expense)
 
     // --- Budget methods ---
@@ -926,6 +934,13 @@ class ExpenseRepository(
 
     fun getDebtRecords(accountId: Long): Flow<List<com.swiftiecx.timeledger.data.DebtRecord>> {
         return debtRecordDao.observeByAccount(accountId)
+    }
+
+    // ✅ [新增] 组合方法：先插入债务，再插入带关联ID的收支
+    suspend fun saveDebtWithTransaction(debt: com.swiftiecx.timeledger.data.DebtRecord, expense: Expense) {
+        val debtId = debtRecordDao.insert(debt)
+        val linkedExpense = expense.copy(debtId = debtId)
+        expenseDao.insertExpense(linkedExpense)
     }
 
     suspend fun insertDebtRecord(record: com.swiftiecx.timeledger.data.DebtRecord) = debtRecordDao.insert(record)

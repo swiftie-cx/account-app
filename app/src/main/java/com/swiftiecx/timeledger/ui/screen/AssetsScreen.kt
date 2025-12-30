@@ -1,5 +1,6 @@
 package com.swiftiecx.timeledger.ui.screen
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,8 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.ArrowCircleDown
-import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
@@ -21,11 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource // [新增]
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R
+import com.swiftiecx.timeledger.R // [新增]
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -39,10 +38,8 @@ import kotlin.math.max
 fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, defaultCurrency: String) {
     val accounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
-    // ✅ 核心修改：获取全局不抵消的借入、借出总额
     val globalDebt by viewModel.getGlobalDebtSummary().collectAsState(initial = 0.0 to 0.0)
 
-    // 控制添加账户/记录的选择弹窗
     var showAddAccountSheet by remember { mutableStateOf(false) }
 
     // --- 余额计算逻辑 ---
@@ -51,14 +48,9 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
             .mapValues { (_, transactions) -> transactions.sumOf { it.amount } }
     }
 
-    // 算出每个账户的实时当前余额
     val accountsWithBalance = remember(accounts, expenseSumsByAccount) {
         accounts.map { account ->
             val txSum = expenseSumsByAccount[account.id] ?: 0.0
-
-            // [修复] 信贷账户特殊处理：
-            // 如果是 CREDIT 账户，且 initialBalance > 0，通常代表初始欠款，需要转为负数计算。
-            // 这样 2000 的初始欠款就会变成 -2000，加上支出的 -1000，总余额就是 -3000 (欠款3000)。
             val initialBalance = if (account.category == "CREDIT" && account.initialBalance > 0) {
                 -account.initialBalance
             } else {
@@ -70,26 +62,21 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
         }
     }
 
-    // --- [修正] 资产/负债汇总统计逻辑 ---
-
-    // 1. 总资产 = 资金账户的正余额 + 别人的欠款(应收总额)
+    // --- 资产/负债汇总统计逻辑 ---
     val assets = remember(accountsWithBalance, globalDebt, defaultCurrency) {
         val accountAssetsSum = accountsWithBalance.sumOf { (account, balance) ->
             val converted = ExchangeRates.convert(balance, account.currency, defaultCurrency)
-            // 仅统计 FUNDS 账户中的正资产
             if (account.category == "FUNDS" && converted > 0) converted else 0.0
         }
-        accountAssetsSum + globalDebt.first // 加上总借出
+        accountAssetsSum + globalDebt.first
     }
 
-    // 2. 总负债 = 信贷账户的使用额度(绝对值) + 资金账户的欠款 + 我欠别人的钱(总借入)
     val liabilities = remember(accountsWithBalance, globalDebt, defaultCurrency) {
         val accountLiabilitiesSum = accountsWithBalance.sumOf { (account, balance) ->
             val converted = ExchangeRates.convert(balance, account.currency, defaultCurrency)
-            // 统计信贷账户的欠款或资金账户的透支
             if (account.category == "CREDIT" || converted < 0) abs(converted) else 0.0
         }
-        accountLiabilitiesSum + globalDebt.second // 加上总借入，不再抵消借出
+        accountLiabilitiesSum + globalDebt.second
     }
 
     val netAssets = assets - liabilities
@@ -120,89 +107,116 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // 资产汇总卡片
-            AssetHeaderSection(
-                netAssets = netAssets,
-                assets = assets,
-                liabilities = liabilities,
-                currency = defaultCurrency
-            )
-
-            // [新增] 债务管理入口卡片
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clickable { navController.navigate(Routes.DEBT_MANAGEMENT) },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                )
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // 资产汇总卡片
+                AssetHeaderSection(
+                    netAssets = netAssets,
+                    assets = assets,
+                    liabilities = liabilities,
+                    currency = defaultCurrency
+                )
+
+                // 债务管理入口卡片
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clickable { navController.navigate(Routes.DEBT_MANAGEMENT) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(0.5.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.SwapHoriz,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "债务管理",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                        Text(
-                            text = "查看所有借入与借出记录",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.title_debt_management),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = stringResource(R.string.subtitle_debt_management_entry), // [新增资源]
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // 右侧概览
+                        Column(
+                            horizontalAlignment = Alignment.Start,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = "${stringResource(R.string.tag_payable)}: ${String.format("%.2f", globalDebt.second)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Red,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${stringResource(R.string.tag_receivable)}: ${String.format("%.2f", globalDebt.first)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF4CAF50),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline
                         )
                     }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outline
-                    )
+                }
+
+                // 账户列表
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 88.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(accountsWithBalance, key = { it.first.id }) { (account, currentBalance) ->
+                        AssetAccountItem(
+                            account = account,
+                            currentBalance = currentBalance,
+                            onClick = { navController.navigate(Routes.accountDetailRoute(account.id)) }
+                        )
+                    }
                 }
             }
 
-            // 账户列表
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(accountsWithBalance, key = { it.first.id }) { (account, currentBalance) ->
-                    AssetAccountItem(
-                        account = account,
-                        currentBalance = currentBalance,
-                        onClick = { navController.navigate(Routes.accountDetailRoute(account.id)) }
-                    )
-                }
-            }
-
-            // 底部操作按钮
+            // 底部悬浮按钮组
             Row(
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
                     onClick = { showAddAccountSheet = true },
                     modifier = Modifier
                         .weight(1f)
-                        .height(56.dp),
+                        .height(56.dp)
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -216,7 +230,8 @@ fun AssetsScreen(viewModel: ExpenseViewModel, navController: NavHostController, 
                     onClick = { navController.navigate(Routes.ACCOUNT_MANAGEMENT) },
                     modifier = Modifier
                         .weight(1f)
-                        .height(56.dp),
+                        .height(56.dp)
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -240,13 +255,14 @@ private fun AssetHeaderSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 0.dp, bottom = 4.dp)
     ) {
         Text(
             text = stringResource(R.string.assets_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 16.dp),
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
             color = MaterialTheme.colorScheme.onBackground
         )
 
@@ -256,7 +272,7 @@ private fun AssetHeaderSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
-                    8.dp,
+                    4.dp,
                     RoundedCornerShape(24.dp),
                     ambientColor = themeColor.copy(alpha = 0.3f),
                     spotColor = themeColor.copy(alpha = 0.3f)
@@ -267,8 +283,8 @@ private fun AssetHeaderSection(
             Column(
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f))
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(vertical = 16.dp, horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
                     text = stringResource(R.string.net_assets),
@@ -278,7 +294,7 @@ private fun AssetHeaderSection(
 
                 Text(
                     text = stringResource(R.string.currency_amount_format, currency, netAssets),
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -295,7 +311,7 @@ private fun AssetHeaderSection(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = stringResource(R.string.currency_amount_format, currency, assets),
                             style = MaterialTheme.typography.titleMedium,
@@ -313,13 +329,12 @@ private fun AssetHeaderSection(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(4.dp))
-                        // 修改：负债显示为红色强调
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = stringResource(R.string.currency_amount_format, currency, liabilities),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (liabilities > 0) Color.Red else MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -337,7 +352,6 @@ fun AssetAccountItem(
     val isCredit = account.category == "CREDIT"
     val creditLimit = (account.creditLimit ?: 0.0)
 
-    // 修改：如果余额是负数，则绝对值是已用额度
     val debt = if (isCredit) abs(currentBalance.coerceAtMost(0.0)) else 0.0
     val available = if (isCredit) max(creditLimit - debt, 0.0) else 0.0
 
@@ -345,6 +359,8 @@ fun AssetAccountItem(
         if (!isCredit || creditLimit <= 0.0) 0f
         else (available / creditLimit).toFloat().coerceIn(0f, 1f)
     }
+
+    val animatedProgress by animateFloatAsState(targetValue = progress, label = "Progress")
 
     Card(
         modifier = Modifier
@@ -407,27 +423,35 @@ fun AssetAccountItem(
 
             if (isCredit && creditLimit > 0.0) {
                 Spacer(Modifier.height(10.dp))
-                LinearProgressIndicator(
-                    progress = { progress },
+
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(10.dp)
-                        .clip(RoundedCornerShape(999.dp)),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                )
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animatedProgress)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+
                 Spacer(Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "可用：${String.format("%.0f", available)}",
+                        text = "${stringResource(R.string.label_available_quota)}：${String.format("%.0f", available)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "额度：${String.format("%.0f", creditLimit)}",
+                        text = "${stringResource(R.string.label_total_quota)}：${String.format("%.0f", creditLimit)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -468,7 +492,7 @@ private fun AddAccountTypeBottomSheet(
             )
 
             Text(
-                text = "添加记录 / 账户",
+                text = stringResource(R.string.sheet_title_add_account_record),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 12.dp)
@@ -476,32 +500,32 @@ private fun AddAccountTypeBottomSheet(
 
             AddAccountSheetItem(
                 icon = Icons.Default.AccountBalance,
-                title = "资产账户",
-                subtitle = "现金 / 储蓄 / 银行卡",
+                title = stringResource(R.string.type_funds_account),
+                subtitle = stringResource(R.string.desc_funds_account),
                 onClick = onSelectFunds
             )
             Spacer(Modifier.height(10.dp))
 
             AddAccountSheetItem(
                 icon = Icons.Default.CreditCard,
-                title = "信贷账户",
-                subtitle = "信用卡 / 花呗等额度账户",
+                title = stringResource(R.string.type_credit_account),
+                subtitle = stringResource(R.string.desc_credit_account),
                 onClick = onSelectCredit
             )
             Spacer(Modifier.height(10.dp))
 
             AddAccountSheetItem(
-                icon = Icons.Default.ArrowCircleDown, // 统一使用借入图标
-                title = "新增借入",
-                subtitle = "我欠别人的：录入一笔借入记录",
+                icon = Icons.Default.SwapHoriz,
+                title = stringResource(R.string.action_add_borrow),
+                subtitle = stringResource(R.string.desc_add_borrow_record),
                 onClick = onSelectBorrow
             )
             Spacer(Modifier.height(10.dp))
 
             AddAccountSheetItem(
-                icon = Icons.Default.ArrowCircleUp, // 统一使用借出图标
-                title = "新增借出",
-                subtitle = "别人欠我的：录入一笔外借记录",
+                icon = Icons.Default.SwapHoriz,
+                title = stringResource(R.string.action_add_lend),
+                subtitle = stringResource(R.string.desc_add_lend_record),
                 onClick = onSelectLend
             )
 
@@ -512,7 +536,7 @@ private fun AddAccountTypeBottomSheet(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Text("取消")
+                Text(stringResource(R.string.cancel))
             }
         }
     }

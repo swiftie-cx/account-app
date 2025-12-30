@@ -495,17 +495,27 @@ fun NavigationGraph(
             DebtPersonDetailScreen(expenseViewModel, navController, personName)
         }
 
-        // 3. 收款/还款结算页 (修复闪退的关键)
+        // 3. 收款/还款结算页 (核心修复：使用纯字符串定义，避免参数重复)
         composable(
-            route = Routes.SETTLE_DEBT,
+            route = "settle_debt/{personName}/{isBorrow}/{maxAmount}", // ✅ 这里改成了固定字符串
             arguments = listOf(
                 navArgument("personName") { type = NavType.StringType },
-                navArgument("isBorrow") { type = NavType.BoolType }
+                navArgument("isBorrow") { type = NavType.BoolType },
+                navArgument("maxAmount") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val personName = backStackEntry.arguments?.getString("personName") ?: ""
             val isBorrow = backStackEntry.arguments?.getBoolean("isBorrow") ?: false
-            SettleDebtScreen(expenseViewModel, navController, personName, isBorrow)
+            val maxAmountStr = backStackEntry.arguments?.getString("maxAmount") ?: "0.0"
+            val maxAmount = maxAmountStr.toDoubleOrNull() ?: 0.0
+
+            SettleDebtScreen(
+                viewModel = expenseViewModel,
+                navController = navController,
+                personName = personName,
+                isBorrow = isBorrow,
+                maxAmount = maxAmount
+            )
         }
 
         // 4. 借入页面 (支持可选姓名参数)

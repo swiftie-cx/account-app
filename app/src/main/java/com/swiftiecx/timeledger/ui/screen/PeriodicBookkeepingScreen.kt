@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.PeriodicTransaction
-import com.swiftiecx.timeledger.ui.navigation.CategoryData // [关键]
+import com.swiftiecx.timeledger.ui.navigation.CategoryData
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -53,6 +53,8 @@ fun PeriodicBookkeepingScreen(
     var showTypeSheet by remember { mutableStateOf(false) }
 
     Scaffold(
+        // ✅ [修改 1] 强制背景色为纯白，彻底去除默认紫色
+        containerColor = Color.White,
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.periodic_title)) },
@@ -60,7 +62,11 @@ fun PeriodicBookkeepingScreen(
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
-                }
+                },
+                // ✅ [修改 2] 顶部栏背景也强制为纯白
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White
+                )
             )
         },
         floatingActionButton = {
@@ -104,12 +110,13 @@ fun PeriodicBookkeepingScreen(
         if (showTypeSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showTypeSheet = false },
-                containerColor = MaterialTheme.colorScheme.surface,
+                // ✅ [修改 3] 底部弹窗背景强制为纯白
+                containerColor = Color.White,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
                 Column(modifier = Modifier.padding(bottom = 32.dp)) {
                     Text(
-                        stringResource(R.string.add), // 或者 "Select Type"
+                        stringResource(R.string.add),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally)
                     )

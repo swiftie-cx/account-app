@@ -18,12 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.res.stringResource // [新增] 引入资源引用
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R // [新增] 引入 R 类
+import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.ui.viewmodel.ThemeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,16 +36,16 @@ fun ThemeSettingsScreen(
     val themeOptions = themeViewModel.themeOptions
 
     // 创建一个临时的 ColorScheme 用于预览
-    // 这里只简单模拟了 Primary 和相关的 OnPrimary，其他保持默认
-    // 实际效果可能会因为您 App 的具体 Theme 设置而略有不同，但足够预览主色调了
     val previewColorScheme = MaterialTheme.colorScheme.copy(
         primary = currentThemeColor,
-        onPrimary = Color.White, // 假设主色上文字为白色
-        primaryContainer = currentThemeColor.copy(alpha = 0.2f), // 浅色容器
-        onPrimaryContainer = currentThemeColor // 容器上文字颜色
+        onPrimary = Color.White,
+        primaryContainer = currentThemeColor.copy(alpha = 0.2f),
+        onPrimaryContainer = currentThemeColor
     )
 
     Scaffold(
+        // [修改 1] 页面背景设为纯白
+        containerColor = Color.White,
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.opt_theme)) },
@@ -53,7 +53,10 @@ fun ThemeSettingsScreen(
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White
+                )
             )
         }
     ) { padding ->
@@ -62,21 +65,27 @@ fun ThemeSettingsScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // --- 【关键修改】全新的即时预览区域 ---
+            // --- 即时预览区域 ---
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    // [修改 2] 将背景改为浅灰色，去除原本的紫色 (surfaceContainerLow)
+                    containerColor = Color(0xFFF5F5F5)
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(stringResource(R.string.theme_preview_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 12.dp))
+                    Text(
+                        stringResource(R.string.theme_preview_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
 
                     // 使用自定义的配色方案包裹预览组件
                     MaterialTheme(colorScheme = previewColorScheme) {
@@ -111,16 +120,17 @@ fun ThemeSettingsScreen(
     }
 }
 
-// --- 【新增】模拟 UI 组件，用于展示主题效果 ---
+// --- 模拟 UI 组件 ---
 @Composable
 fun PreviewMockUI() {
     Column(
         modifier = Modifier
             .width(240.dp) // 限制宽度，模拟手机屏幕
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.background) // 使用背景色
+            // 模拟屏幕背景为白色 (或默认背景色)，这样能在浅灰卡片上凸显出来
+            .background(Color.White)
     ) {
-        // 1. 模拟顶部标题栏 (使用 Primary 色)
+        // 1. 模拟顶部标题栏
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -129,8 +139,8 @@ fun PreviewMockUI() {
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
-                text = stringResource(R.string.app_name), // [i18n]
-                color = MaterialTheme.colorScheme.onPrimary, // 主色上的文字颜色
+                text = stringResource(R.string.app_name),
+                color = MaterialTheme.colorScheme.onPrimary,
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -138,20 +148,21 @@ fun PreviewMockUI() {
 
         // 2. 模拟内容区域
         Column(modifier = Modifier.padding(16.dp)) {
-            // 模拟一个卡片 (Surface 色)
+            // 模拟一个卡片
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                // 这里的 Surface 会默认是白色（在浅色模式下），和 MockUI 背景一致，靠 Elevation 区分
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = stringResource(R.string.month_expense_mock), // [i18n]
+                        text = stringResource(R.string.month_expense_mock),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = stringResource(R.string.amount_mock), // [i18n]
+                        text = stringResource(R.string.amount_mock),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary // 使用主色强调
@@ -161,13 +172,13 @@ fun PreviewMockUI() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 模拟一个按钮 (Primary 色)
+            // 模拟一个按钮
             Button(
                 onClick = {},
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text(stringResource(R.string.add_transaction_mock), color = MaterialTheme.colorScheme.onPrimary) // [i18n]
+                Text(stringResource(R.string.add_transaction_mock), color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
@@ -194,7 +205,7 @@ fun ThemeOptionItem(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = stringResource(R.string.selected_label), // [i18n]
+                    contentDescription = stringResource(R.string.selected_label),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp)
                 )

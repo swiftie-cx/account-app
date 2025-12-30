@@ -1,5 +1,6 @@
 package com.swiftiecx.timeledger.ui.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,10 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource // [新增]
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.swiftiecx.timeledger.R // [新增]
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 
@@ -33,44 +36,37 @@ fun DebtManagementScreen(
     viewModel: ExpenseViewModel,
     navController: NavHostController
 ) {
-    // 监听全局借贷记录和货币设置
     val allRecords by viewModel.getAllDebtRecords().collectAsState(initial = emptyList())
     val currency by viewModel.defaultCurrency.collectAsState()
-
-    // 控制新增债务选择弹窗的状态
     var showAddSheet by remember { mutableStateOf(false) }
 
-    // --- 数据逻辑处理：按姓名归类并计算净额 ---
     val personSummaries = remember(allRecords) {
         allRecords.groupBy { it.personName }.map { (name, records) ->
             val lendSum = records.filter { it.outAccountId != null }.sumOf { it.amount }
             val borrowSum = records.filter { it.inAccountId != null }.sumOf { it.amount }
             PersonDebtSummary(
                 name = name,
-                netBalance = lendSum - borrowSum // 正数为应收，负数为欠款
+                netBalance = lendSum - borrowSum
             )
         }
     }
 
     val receivablePeople = personSummaries.filter { it.netBalance > 0 }
     val payablePeople = personSummaries.filter { it.netBalance < 0 }
-
-    // 总计数据
     val totalLend = personSummaries.filter { it.netBalance > 0 }.sumOf { it.netBalance }
     val totalBorrow = personSummaries.filter { it.netBalance < 0 }.sumOf { kotlin.math.abs(it.netBalance) }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("债务管理", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.title_debt_management), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
         },
-        // --- 浮动操作按钮 ---
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddSheet = true },
@@ -78,7 +74,7 @@ fun DebtManagementScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape
             ) {
-                Icon(Icons.Default.Add, contentDescription = "新增")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add))
             }
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -89,21 +85,20 @@ fun DebtManagementScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // 1. 顶部汇总卡片 (保持红绿色以区分状态)
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         DebtSummaryCard(
-                            label = "总借出 (应收)",
+                            label = stringResource(R.string.label_total_lend),
                             amount = totalLend,
                             currency = currency,
                             color = Color(0xFF4CAF50),
                             modifier = Modifier.weight(1f)
                         )
                         DebtSummaryCard(
-                            label = "总借入 (欠款)",
+                            label = stringResource(R.string.label_total_borrow),
                             amount = totalBorrow,
                             currency = currency,
                             color = Color(0xFFE53935),
@@ -112,47 +107,40 @@ fun DebtManagementScreen(
                     }
                 }
 
-                // 2. 应收明细框体
                 if (receivablePeople.isNotEmpty()) {
                     item {
                         DebtGroupContainer(
-                            title = "应收明细 (资产)",
+                            title = stringResource(R.string.header_receivables),
                             people = receivablePeople,
                             currency = currency,
                             isReceivable = true,
-                            onPersonClick = { name ->
-                                navController.navigate(Routes.debtPersonDetailRoute(name))
-                            }
+                            onPersonClick = { name -> navController.navigate(Routes.debtPersonDetailRoute(name)) }
                         )
                     }
                 }
 
-                // 3. 欠款明细框体
                 if (payablePeople.isNotEmpty()) {
                     item {
                         DebtGroupContainer(
-                            title = "欠款明细 (负债)",
+                            title = stringResource(R.string.header_payables),
                             people = payablePeople,
                             currency = currency,
                             isReceivable = false,
-                            onPersonClick = { name ->
-                                navController.navigate(Routes.debtPersonDetailRoute(name))
-                            }
+                            onPersonClick = { name -> navController.navigate(Routes.debtPersonDetailRoute(name)) }
                         )
                     }
                 }
 
-                // 兜底提示
                 if (personSummaries.isEmpty()) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(top = 100.dp), contentAlignment = Alignment.Center) {
-                            Text("暂无借贷记录", color = MaterialTheme.colorScheme.outline)
+                            Text(stringResource(R.string.empty_debt_records), color = MaterialTheme.colorScheme.outline)
                         }
                     }
                 }
             }
 
-            // --- 底部弹窗：选择借入或借出 ---
+            // --- 底部弹窗 ---
             if (showAddSheet) {
                 ModalBottomSheet(
                     onDismissRequest = { showAddSheet = false },
@@ -162,36 +150,47 @@ fun DebtManagementScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
+                            .padding(horizontal = 20.dp)
                             .padding(bottom = 32.dp)
                     ) {
-                        Text(
-                            text = "选择债务类型",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 20.dp)
+                        // 顶部小把手
+                        Box(
+                            modifier = Modifier
+                                .padding(vertical = 10.dp)
+                                .width(40.dp)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                .align(Alignment.CenterHorizontally)
                         )
 
-                        // 借入选项 - [修改] 颜色统一为 Primary
+                        Text(
+                            text = stringResource(R.string.sheet_title_select_type),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        )
+
+                        // 借入选项 (红色系)
                         AddOptionItem(
-                            title = "新增借入",
-                            subtitle = "记录您欠别人的款项",
+                            title = stringResource(R.string.action_add_borrow),
+                            subtitle = stringResource(R.string.subtitle_add_borrow),
                             icon = Icons.Default.ArrowCircleDown,
-                            iconColor = MaterialTheme.colorScheme.primary, // 改为主题色
+                            baseColor = Color(0xFFE53935), // 红色基调
                             onClick = {
                                 showAddSheet = false
                                 navController.navigate(Routes.addBorrowRoute(-1L))
                             }
                         )
 
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(16.dp))
 
-                        // 借出选项 - [修改] 颜色统一为 Primary
+                        // 借出选项 (绿色系)
                         AddOptionItem(
-                            title = "新增借出",
-                            subtitle = "记录别人欠您的款项",
+                            title = stringResource(R.string.action_add_lend),
+                            subtitle = stringResource(R.string.subtitle_add_lend),
                             icon = Icons.Default.ArrowCircleUp,
-                            iconColor = MaterialTheme.colorScheme.primary, // 改为主题色
+                            baseColor = Color(0xFF4CAF50), // 绿色基调
                             onClick = {
                                 showAddSheet = false
                                 navController.navigate(Routes.addLendRoute(-1L))
@@ -205,22 +204,28 @@ fun DebtManagementScreen(
 }
 
 /**
- * 弹窗中的可点击条目
+ * [修改] 美化后的弹窗选项卡片
+ * 使用基调颜色 (baseColor) 生成淡色背景和深色文字，提升视觉区分度
  */
 @Composable
 fun AddOptionItem(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    iconColor: Color,
+    baseColor: Color,
     onClick: () -> Unit
 ) {
+    val containerColor = baseColor.copy(alpha = 0.08f)
+    val iconBoxColor = baseColor.copy(alpha = 0.15f)
+    val shape = RoundedCornerShape(20.dp) // 定义统一的形状
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        shape = shape,
+        color = containerColor,
+        border = BorderStroke(1.dp, baseColor.copy(alpha = 0.2f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -228,25 +233,44 @@ fun AddOptionItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
-                    .background(iconColor.copy(alpha = 0.15f)), // 背景色会自动跟随 iconColor 变为主题色的浅色
+                    .background(iconBoxColor),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = iconColor)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = baseColor,
+                    modifier = Modifier.size(24.dp)
+                )
             }
+
             Spacer(Modifier.width(16.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                )
             }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = baseColor.copy(alpha = 0.5f)
+            )
         }
     }
 }
 
-/**
- * 顶部统计小卡片
- */
 @Composable
 fun DebtSummaryCard(label: String, amount: Double, currency: String, color: Color, modifier: Modifier) {
     Card(
@@ -268,9 +292,6 @@ fun DebtSummaryCard(label: String, amount: Double, currency: String, color: Colo
     }
 }
 
-/**
- * 分组框体容器
- */
 @Composable
 fun DebtGroupContainer(
     title: String,
@@ -314,9 +335,6 @@ fun DebtGroupContainer(
     }
 }
 
-/**
- * 单个人员统计条目
- */
 @Composable
 fun DebtPersonRow(
     person: PersonDebtSummary,
@@ -357,7 +375,8 @@ fun DebtPersonRow(
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = if (isReceivable) "应收" else "欠款",
+                // [修改] 使用 stringResource
+                text = if (isReceivable) stringResource(R.string.tag_receivable) else stringResource(R.string.tag_payable),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline
             )
@@ -380,9 +399,6 @@ fun DebtPersonRow(
     }
 }
 
-/**
- * 数据辅助类
- */
 data class PersonDebtSummary(
     val name: String,
     val netBalance: Double

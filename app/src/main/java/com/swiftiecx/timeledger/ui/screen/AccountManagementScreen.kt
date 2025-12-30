@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
@@ -20,11 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource // [新增]
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R
+import com.swiftiecx.timeledger.R // [新增]
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.ui.navigation.AccountTypeManager
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -100,8 +101,7 @@ fun AccountManagementScreen(
                 modifier = Modifier.padding(16.dp).fillMaxWidth()
             ) {
                 Text(
-                    // ✅ 修复提示语：增加左滑删除指引
-                    text = "提示：长按拖拽排序，点击星标设为默认，向左滑动可删除账户。",
+                    text = stringResource(R.string.account_mgmt_tip), // [修改] 使用资源
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(12.dp)
@@ -138,7 +138,7 @@ fun AccountManagementScreen(
                                 }, label = "bgColor"
                             )
                             Box(Modifier.fillMaxSize().background(color, RoundedCornerShape(20.dp)).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterEnd) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = Color.White)
                             }
                         }
                     ) {
@@ -172,15 +172,15 @@ fun AccountManagementScreen(
     if (accountToDelete != null) {
         AlertDialog(
             onDismissRequest = { accountToDelete = null },
-            title = { Text("确认删除账户？") },
-            text = { Text("删除账户“${accountToDelete?.name}”将无法恢复，与其关联的所有账单记录也会被永久删除。") },
+            title = { Text(stringResource(R.string.dialog_delete_account_title)) },
+            text = { Text(stringResource(R.string.dialog_delete_account_msg, accountToDelete?.name ?: "")) },
             confirmButton = {
                 TextButton(
                     onClick = { accountToDelete?.let { viewModel.deleteAccount(it) }; accountToDelete = null },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("删除", fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(R.string.delete), fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { accountToDelete = null }) { Text("取消") } }
+            dismissButton = { TextButton(onClick = { accountToDelete = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
@@ -221,17 +221,16 @@ fun AccountItemCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // ✅ 调整数据项容器布局：使用 Alignment.Top 压缩空白
                 Row(
                     modifier = Modifier.padding(top = 2.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    // ✅ 修复标签颜色：使用更和谐的淡品牌色
                     Surface(
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                         shape = RoundedCornerShape(6.dp),
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
+                        // 注意：AccountTypeManager 如果有硬编码字符串，也需要修改该类，目前暂保持原样调用
                         Text(
                             text = AccountTypeManager.getDisplayName(account.type),
                             style = MaterialTheme.typography.labelSmall,
@@ -242,18 +241,23 @@ fun AccountItemCard(
 
                     Spacer(Modifier.width(8.dp))
 
-                    // ✅ 数据对齐：通过 Column(Alignment.Start) 确保欠款与额度完美对齐
                     Column(horizontalAlignment = Alignment.Start) {
+                        // [修改] 欠款文本
+                        val balanceText = if (isCredit) {
+                            "${stringResource(R.string.label_arrears)} ${account.currency} ${String.format(Locale.US, "%.2f", abs(currentBalance.coerceAtMost(0.0)))}"
+                        } else {
+                            "${account.currency} ${String.format(Locale.US, "%.2f", currentBalance)}"
+                        }
+
                         Text(
-                            text = if (isCredit) "欠款: ${account.currency} ${String.format(Locale.US, "%.2f", abs(currentBalance.coerceAtMost(0.0)))}"
-                            else "${account.currency} ${String.format(Locale.US, "%.2f", currentBalance)}",
+                            text = balanceText,
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isCredit && currentBalance < 0) Color(0xFFE53935) else MaterialTheme.colorScheme.outline
                         )
 
                         if (isCredit) {
                             Text(
-                                text = "总额度: ${account.currency} ${String.format(Locale.US, "%.0f", account.creditLimit ?: 0.0)}",
+                                text = "${stringResource(R.string.label_total_limit)} ${account.currency} ${String.format(Locale.US, "%.0f", account.creditLimit ?: 0.0)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
                             )
@@ -292,16 +296,17 @@ private fun AddAccountTypeBottomSheet(
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Box(Modifier.padding(top = 8.dp, bottom = 10.dp).align(Alignment.CenterHorizontally).width(42.dp).height(5.dp).clip(RoundedCornerShape(999.dp)).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)))
-            Text(text = "添加记录 / 账户", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
-            AddAccountSheetItem(Icons.Default.AccountBalance, "资产账户", "现金 / 储蓄 / 银行卡", onSelectFunds)
+            Text(text = stringResource(R.string.sheet_title_add_account_record), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+
+            AddAccountSheetItem(Icons.Default.AccountBalance, stringResource(R.string.type_funds_account), stringResource(R.string.desc_funds_account), onSelectFunds)
             Spacer(Modifier.height(10.dp))
-            AddAccountSheetItem(Icons.Default.CreditCard, "信贷账户", "信用卡 / 花呗等额度账户", onSelectCredit)
+            AddAccountSheetItem(Icons.Default.CreditCard, stringResource(R.string.type_credit_account), stringResource(R.string.desc_credit_account), onSelectCredit)
             Spacer(Modifier.height(10.dp))
-            AddAccountSheetItem(Icons.Default.SwapHoriz, "新增借入", "我欠别人的：录入一笔借入记录", onSelectBorrow)
+            AddAccountSheetItem(Icons.Default.SwapHoriz, stringResource(R.string.action_add_borrow), stringResource(R.string.desc_add_borrow_record), onSelectBorrow)
             Spacer(Modifier.height(10.dp))
-            AddAccountSheetItem(Icons.Default.SwapHoriz, "新增借出", "别人欠我的：录入一笔外借记录", onSelectLend)
+            AddAccountSheetItem(Icons.Default.SwapHoriz, stringResource(R.string.action_add_lend), stringResource(R.string.desc_add_lend_record), onSelectLend)
             Spacer(Modifier.height(14.dp))
-            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) { Text("取消") }
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) { Text(stringResource(R.string.cancel)) }
         }
     }
 }
@@ -317,7 +322,7 @@ private fun AddAccountSheetItem(icon: androidx.compose.ui.graphics.vector.ImageV
                 Spacer(Modifier.height(2.dp))
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
         }
     }
 }

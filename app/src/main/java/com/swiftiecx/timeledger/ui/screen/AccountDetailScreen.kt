@@ -1,5 +1,6 @@
 package com.swiftiecx.timeledger.ui.screen
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,7 +49,7 @@ fun AccountDetailScreen(
     defaultCurrency: String
 ) {
     val context = LocalContext.current
-    var showAddMenu by remember { mutableStateOf(false) } // 控制操作菜单弹窗
+    var showAddMenu by remember { mutableStateOf(false) }
 
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
@@ -56,14 +58,12 @@ fun AccountDetailScreen(
         allAccounts.find { it.id == accountId }
     }
 
-    // 针对普通/信贷账户的流水记录
     val accountTransactions = remember(allExpenses, accountId) {
         allExpenses
             .filter { it.accountId == accountId }
             .sortedByDescending { it.date.time }
     }
 
-    // 针对债务账户的记录 (借贷列表)
     val debtRecords = if (account?.category == "DEBT") {
         viewModel.getDebtRecords(accountId).collectAsState(initial = emptyList()).value
     } else {
@@ -104,7 +104,6 @@ fun AccountDetailScreen(
                 }
             )
         },
-        // [入口对接]：如果是债务账户，显示悬浮按钮以新增记录
         floatingActionButton = {
             if (account?.category == "DEBT") {
                 FloatingActionButton(
@@ -112,7 +111,7 @@ fun AccountDetailScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "新增记录")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_record))
                 }
             }
         }
@@ -134,17 +133,28 @@ fun AccountDetailScreen(
             ) {
                 AccountHeaderCard(
                     account = account,
-                    currentBalance = currentBalance
+                    currentBalance = currentBalance,
+                    onRepayClick = {
+                        // [新增] 点击还款，跳转到转账页面，预填充转入账户为当前信贷账户
+                        // 假设 Routes.transferRoute 可以带参数，或者通过 ViewModel 共享状态
+                        // 这里我们假设可以通过 URL 参数传递 targetAccountId，或者您需要在 NavGraph 中处理
+                        // 如果暂不支持 URL 参数，您可能需要修改 Routes 和 NavGraph
+                        // 简单方案：使用 ViewModel 临时存储 targetAccount，或者直接跳转让用户选
+
+                        // 这里使用 Routes.transferRoute()，通常是 "transfer"
+                        // 如果您还没实现带参数的转账路由，建议让用户自己选，或者稍后我们完善路由
+                        // 暂时跳转到通用转账页
+                        navController.navigate(Routes.transferRoute)
+                    }
                 )
 
                 Text(
-                    text = if (account.category == "DEBT") "借贷记录" else stringResource(R.string.transaction_records_title),
+                    text = if (account.category == "DEBT") stringResource(R.string.title_debt_records) else stringResource(R.string.transaction_records_title),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp)
                 )
 
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    // === 分支逻辑：如果是债务账户，显示 DebtRecord 列表 ===
                     if (account.category == "DEBT") {
                         items(debtRecords) { record ->
                             DebtRecordItem(
@@ -152,22 +162,47 @@ fun AccountDetailScreen(
                                 allAccounts = allAccounts,
                                 currency = account.currency,
                                 onClick = {
-                                    // 未来可在此处添加查看/编辑借贷记录详情的导航
+                                    // 未来详情入口
                                 }
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
                         }
                     }
-                    // === 否则显示普通账户流水列表 ===
                     else {
                         items(accountTransactions) { expense ->
-                            val displayName = CategoryData.getDisplayName(expense.category, context)
-                            val icon = CategoryData.getIcon(expense.category, context)
-                            val color = CategoryData.getColor(
-                                expense.category,
-                                if (expense.amount < 0) 0 else 1,
-                                context
-                            )
+                            val isDebtRelated = expense.category in setOf("借出", "Lend", "债务还款", "借入", "Borrow", "债务收款")
+
+                            val icon = if (isDebtRelated) {
+                                if (expense.category in setOf("借出", "Lend", "债务还款")) {
+                                    IconMapper.getIcon("Lend")
+                                } else {
+                                    IconMapper.getIcon("Borrow")
+                                }
+                            } else {
+                                CategoryData.getIcon(expense.category, context)
+                            }
+
+                            val displayName = if (isDebtRelated) {
+                                when (expense.category) {
+                                    "借出", "Lend" -> stringResource(R.string.type_lend_out)
+                                    "借入", "Borrow" -> stringResource(R.string.type_borrow_in)
+                                    "债务还款" -> stringResource(R.string.type_repayment)
+                                    "债务收款" -> stringResource(R.string.type_collection)
+                                    else -> expense.category
+                                }
+                            } else {
+                                CategoryData.getDisplayName(expense.category, context)
+                            }
+
+                            val color = if (isDebtRelated) {
+                                if (expense.amount >= 0) Color(0xFF4CAF50) else Color(0xFFE53935)
+                            } else {
+                                CategoryData.getColor(
+                                    expense.category,
+                                    if (expense.amount < 0) 0 else 1,
+                                    context
+                                )
+                            }
 
                             AccountTransactionItem(
                                 displayName = displayName,
@@ -186,7 +221,6 @@ fun AccountDetailScreen(
             }
         }
 
-        // [入口对接]：选择操作类型的底部滑块
         if (showAddMenu) {
             ModalBottomSheet(
                 onDismissRequest = { showAddMenu = false },
@@ -198,15 +232,14 @@ fun AccountDetailScreen(
                         .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
                 ) {
                     Text(
-                        text = "选择记录类型",
+                        text = stringResource(R.string.sheet_title_select_type),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    // 新增借入
                     ListItem(
-                        headlineContent = { Text("新增借入 (欠款)") },
-                        supportingContent = { Text("借入资金并增加到选定账户") },
+                        headlineContent = { Text(stringResource(R.string.action_add_borrow_account)) },
+                        supportingContent = { Text(stringResource(R.string.desc_add_borrow_account)) },
                         leadingContent = {
                             Icon(Icons.Default.CallReceived, null, tint = Color(0xFFE53935))
                         },
@@ -216,10 +249,9 @@ fun AccountDetailScreen(
                         }
                     )
 
-                    // 新增借出
                     ListItem(
-                        headlineContent = { Text("新增借出 (应收)") },
-                        supportingContent = { Text("从选定账户转出资金外借") },
+                        headlineContent = { Text(stringResource(R.string.action_add_lend_account)) },
+                        supportingContent = { Text(stringResource(R.string.desc_add_lend_account)) },
                         leadingContent = {
                             Icon(Icons.Default.CallMade, null, tint = Color(0xFF4CAF50))
                         },
@@ -234,9 +266,6 @@ fun AccountDetailScreen(
     }
 }
 
-// ==========================================
-//  借贷记录列表项组件 (DebtRecordItem)
-// ==========================================
 @Composable
 fun DebtRecordItem(
     record: DebtRecord,
@@ -246,7 +275,6 @@ fun DebtRecordItem(
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
-    // 获取关联账户名称（用于显示资金从哪来/到哪去）
     val inAccountName = remember(record.inAccountId, allAccounts) {
         allAccounts.find { it.id == record.inAccountId }?.name
     }
@@ -260,7 +288,6 @@ fun DebtRecordItem(
             .clickable(onClick = onClick)
             .padding(16.dp)
     ) {
-        // 第一行：姓名 + 金额
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -288,11 +315,10 @@ fun DebtRecordItem(
             )
         }
 
-        // 第二行：备注 (如果有)
         if (!record.note.isNullOrEmpty()) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "备注: ${record.note}",
+                text = "${stringResource(R.string.label_note)}: ${record.note}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -300,11 +326,10 @@ fun DebtRecordItem(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 第三行：时间详情 (发生时间 + 结算状态)
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "发生时间",
+                    text = stringResource(R.string.label_date),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -316,26 +341,25 @@ fun DebtRecordItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if(record.settleTime != null) "结算时间" else "预计还款/收款",
+                    text = if(record.settleTime != null) stringResource(R.string.label_settle_date) else stringResource(R.string.label_expect_date),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline
                 )
                 Text(
-                    text = if (record.settleTime != null) dateFormat.format(record.settleTime) else "未结算",
+                    text = if (record.settleTime != null) dateFormat.format(record.settleTime) else stringResource(R.string.status_unsettled),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (record.settleTime != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
                 )
             }
         }
 
-        // 第四行：资金账户关联详情
         if (inAccountName != null || outAccountName != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
                 if (inAccountName != null) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "到账账户",
+                            text = stringResource(R.string.label_target_account),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -351,7 +375,7 @@ fun DebtRecordItem(
                 if (outAccountName != null) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "支出账户",
+                            text = stringResource(R.string.label_source_account),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline
                         )
@@ -371,7 +395,8 @@ fun DebtRecordItem(
 @Composable
 fun AccountHeaderCard(
     account: Account,
-    currentBalance: Double
+    currentBalance: Double,
+    onRepayClick: () -> Unit = {} // [新增] 回调
 ) {
     val isCredit = account.category == "CREDIT"
     val creditLimit = account.creditLimit ?: 0.0
@@ -429,7 +454,7 @@ fun AccountHeaderCard(
                 )
             } else {
                 Text(
-                    text = "当前欠款",
+                    text = stringResource(R.string.label_current_arrears),
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.Black.copy(alpha = 0.7f)
                 )
@@ -446,14 +471,23 @@ fun AccountHeaderCard(
                     (available / creditLimit).toFloat().coerceIn(0f, 1f)
                 } else 0f
 
-                LinearProgressIndicator(
-                    progress = { progress },
+                val animatedProgress by animateFloatAsState(targetValue = progress, label = "Progress")
+
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(10.dp)
-                        .clip(RoundedCornerShape(999.dp)),
-                    trackColor = Color.Black.copy(alpha = 0.08f)
-                )
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(Color.White.copy(alpha = 0.3f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animatedProgress)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(Color.White)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -462,7 +496,7 @@ fun AccountHeaderCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("总额度", style = MaterialTheme.typography.labelSmall, color = Color.Black.copy(alpha = 0.7f))
+                        Text(stringResource(R.string.label_total_quota), style = MaterialTheme.typography.labelSmall, color = Color.Black.copy(alpha = 0.7f))
                         Text(
                             text = stringResource(R.string.currency_amount_format, account.currency, creditLimit),
                             style = MaterialTheme.typography.titleMedium,
@@ -471,7 +505,7 @@ fun AccountHeaderCard(
                         )
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("可用额度", style = MaterialTheme.typography.labelSmall, color = Color.Black.copy(alpha = 0.7f))
+                        Text(stringResource(R.string.label_available_quota), style = MaterialTheme.typography.labelSmall, color = Color.Black.copy(alpha = 0.7f))
                         Text(
                             text = stringResource(R.string.currency_amount_format, account.currency, available),
                             style = MaterialTheme.typography.titleMedium,
@@ -487,17 +521,41 @@ fun AccountHeaderCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val billingText = account.billingDay?.takeIf { it > 0 }?.toString() ?: "未设置"
-                    val repayText = account.repaymentDay?.takeIf { it > 0 }?.toString() ?: "未设置"
+                    val billingText = account.billingDay?.takeIf { it > 0 }?.toString() ?: stringResource(R.string.not_set)
+                    val repayText = account.repaymentDay?.takeIf { it > 0 }?.toString() ?: stringResource(R.string.not_set)
                     Text(
-                        text = "出账日：$billingText",
+                        text = stringResource(R.string.label_bill_day, billingText),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Black.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = "还款日：$repayText",
+                        text = stringResource(R.string.label_repay_day, repayText),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Black.copy(alpha = 0.7f)
+                    )
+                }
+
+                // [新增] 还款按钮 (仅信贷账户显示)
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onRepayClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().height(45.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Payment,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.action_repay),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

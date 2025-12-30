@@ -21,14 +21,14 @@
     <string name="add">添加</string>
     <string name="add_again">再记</string>
     <string name="back">返回</string>
-    <string name="cancel">取消</string>
+
     <string name="confirm">确定</string>
-    <string name="delete">删除</string>
+
     <string name="edit">编辑</string>
     <string name="finish">完成</string>
     <string name="next_step">下一步</string>
     <string name="reset">重置</string>
-    <string name="save">保存</string>
+
     <string name="search">搜索</string>
     <string name="unknown">未知</string>
 
@@ -78,7 +78,7 @@
     <!-- ========================================================= -->
     <string name="amount_label">金额</string>
     <string name="category_label">分类</string>
-    <string name="currency">货币</string>
+
     <string name="date">日期</string>
     <string name="date_label">日期</string>
     <string name="exclude_from_budget">不计入预算</string>
@@ -87,7 +87,7 @@
     <string name="remark_hint">点击写备注...</string>
     <string name="remark_label">备注</string>
     <string name="select_category">选择分类</string>
-    <string name="select_icon">选择图标</string>
+
     <string name="transfer_in_account">转入账户</string>
     <string name="transfer_mode_in_fixed">转入固定(额外手续费)</string>
     <string name="transfer_mode_out_fixed">转出固定(含手续费)</string>
@@ -96,8 +96,7 @@
     <!-- ========================================================= -->
     <!-- 账户管理 -->
     <!-- ========================================================= -->
-    <string name="account_name">账户名称</string>
-    <string name="account_type">类型</string>
+
     <string name="add_account">添加账户</string>
     <string name="manage_account">管理账户</string>
     <string name="select_account">选择账户</string>
@@ -118,7 +117,7 @@
     <string name="opt_currency">默认货币</string>
     <string name="opt_language">语言设置</string>
     <string name="opt_periodic">周期记账</string>
-    <string name="opt_privacy">安全与隐私</string>
+    <string name="opt_privacy">应用锁</string>
     <string name="opt_sync">数据备份与同步</string>
     <string name="opt_theme">主题风格</string>
     <string name="settings_title">设置</string>
@@ -204,7 +203,7 @@
     <string name="dialog_delete_account_msg1">请注意：此操作将永久删除您的账号。</string>
     <string name="dialog_delete_account_msg2">我们会清除云端所有数据，无法找回。</string>
     <string name="dialog_delete_account_msg3">本地数据将保留，但无法再进行云端同步。</string>
-    <string name="dialog_delete_account_title">确认注销账号?</string>
+
     <string name="dialog_final_msg">请输入下方文字以确认操作：</string>
     <string name="dialog_final_title">最终确认</string>
     <string name="error_password_mismatch">两次密码不一致</string>
@@ -440,16 +439,16 @@
     <string name="account_detail_title">账户详情</string>
     <string name="account_management_hint">长按拖拽排序，点击星标设为默认</string>
     <string name="account_management_title">账户管理</string>
-    <string name="account_name_placeholder">账户名称</string>
+
     <string name="account_not_found">未找到账户信息</string>
-    <string name="account_reorder">账户排序</string>
-    <string name="add_account_title">新建账户</string>
+
+
     <string name="balance_edit_hint">修改余额将自动生成一笔修正流水</string>
-    <string name="balance_placeholder">0.00</string>
+
     <string name="edit_account">编辑账户</string>
-    <string name="edit_account_title">编辑账户</string>
+
     <string name="no_transaction_records">暂无交易记录</string>
-    <string name="set_as_default">设为默认</string>
+
     <string name="transaction_records_title">交易记录</string>
     <string name="transaction_remark_format"> · %1$s</string>
 
@@ -658,5 +657,179 @@
     <string name="theme_color_cool_gray">冷岩灰</string>
     <string name="theme_color_coffee_brown">咖啡色</string>
     <string name="theme_color_midnight_blue">夜幕蓝</string>
+
+    <string name="title_debt_management">债务管理</string>
+
+    <string name="label_total_lend">总借出 (应收)</string>
+    <string name="label_total_borrow">总借入 (欠款)</string>
+
+    <string name="header_receivables">应收明细 (资产)</string>
+    <string name="header_payables">欠款明细 (负债)</string>
+
+    <string name="empty_debt_records">暂无借贷记录</string>
+
+    <string name="sheet_title_select_type">选择记录类型</string>
+
+    <string name="action_add_borrow">新增借入</string>
+    <string name="subtitle_add_borrow">记录您欠别人的款项</string>
+
+    <string name="action_add_lend">新增借出</string>
+    <string name="subtitle_add_lend">记录别人欠您的款项</string>
+
+    <string name="tag_receivable">应收</string>
+    <string name="tag_payable">欠款</string>
+
+    <string name="title_receivable_detail">应收款</string>
+    <string name="title_payable_detail">应付款</string>
+    <string name="more">更多</string>
+
+    <string name="action_delete_debt">删除债务</string>
+    <string name="dialog_delete_title">确认删除？</string>
+    <string name="dialog_delete_debt_msg">这将永久删除与“%1$s”相关的所有借贷记录，且无法撤销。对应的账单流水也会受到影响。</string>
+    <string name="confirm_delete">确认删除</string>
+
+    <string name="label_remaining_receivable">剩余待收</string>
+    <string name="label_remaining_payable">剩余待还</string>
+    <string name="label_collected_principal">已收本金</string>
+    <string name="label_repaid_principal">已还本金</string>
+    <string name="label_collected_interest">已收利息</string>
+    <string name="label_repaid_interest">已还利息</string>
+    <string name="label_next_reminder">下次提醒</string>
+    <string name="not_set">未设置</string>
+
+    <string name="action_append_lend">追加借出</string>
+    <string name="action_append_borrow">追加借入</string>
+    <string name="action_collect">收款</string>
+    <string name="action_repay">还款</string>
+
+    <string name="header_history_detail">往来明细</string>
+
+    <string name="type_collection">收款</string>
+    <string name="type_repayment">还款</string>
+    <string name="type_borrow_in">借入</string>
+    <string name="type_lend_out">借出</string>
+    <string name="no_account">无账户</string>
+    <string name="label_interest">利息</string>
+
+
+    <string name="add_record">新增记录</string>
+    <string name="title_debt_records">借贷记录</string>
+
+
+    <string name="action_add_borrow_account">新增借入 (欠款)</string>
+    <string name="desc_add_borrow_account">借入资金并增加到选定账户</string>
+    <string name="action_add_lend_account">新增借出 (应收)</string>
+    <string name="desc_add_lend_account">从选定账户转出资金外借</string>
+
+    <string name="label_note">备注</string>
+    <string name="label_date">发生时间</string>
+    <string name="label_settle_date">结算时间</string>
+    <string name="label_expect_date">预计还款/收款</string>
+    <string name="status_unsettled">未结算</string>
+    <string name="label_target_account">到账账户</string>
+    <string name="label_source_account">支出账户</string>
+
+    <string name="label_current_arrears">当前欠款</string>
+    <string name="label_total_quota">总额度</string>
+    <string name="label_available_quota">可用额度</string>
+    <string name="label_bill_day">出账日：%1$s</string>
+    <string name="label_repay_day">还款日：%1$s</string>
+
+    <string name="account_mgmt_tip">提示：长按拖拽排序，点击星标设为默认，向左滑动可删除账户。</string>
+    <string name="dialog_delete_account_title">确认删除账户？</string>
+    <string name="dialog_delete_account_msg">删除账户“%1$s”将无法恢复，与其关联的所有账单记录也会被永久删除。</string>
+    <string name="delete">删除</string>
+    <string name="cancel">取消</string>
+
+    <string name="label_arrears">欠款: </string>
+    <string name="label_total_limit">总额度: </string>
+    <string name="set_as_default">设为默认</string>
+    <string name="account_reorder">拖拽排序</string>
+
+    <string name="sheet_title_add_account_record">添加记录 / 账户</string>
+
+    <string name="type_funds_account">资产账户</string>
+    <string name="desc_funds_account">现金 / 储蓄 / 银行卡</string>
+
+    <string name="type_credit_account">信贷账户</string>
+    <string name="desc_credit_account">信用卡 / 花呗等额度账户</string>
+
+    <string name="desc_add_borrow_record">我欠别人的：录入一笔借入记录</string>
+    <string name="desc_add_lend_record">别人欠我的：录入一笔外借记录</string>
+
+    <string name="add_account_title">添加账户</string>
+    <string name="edit_account_title">编辑账户</string>
+    <string name="save">保存</string>
+    <string name="account_name_placeholder">账户名称</string>
+    <string name="account_name">名称</string>
+    <string name="account_type">账户类型</string>
+    <string name="currency">币种</string>
+    <string name="balance_placeholder">0.00</string>
+    <string name="select_icon">选择图标</string>
+
+    <string name="label_account_category">账户类别</string>
+    <string name="label_debt_type">债务类型</string>
+    <string name="label_credit_limit">额度</string>
+    <string name="placeholder_credit_limit">例如：20000</string>
+
+    <string name="preview_label_debt">欠款</string>
+    <string name="preview_label_unsettled">未结清金额</string>
+    <string name="preview_label_balance">余额</string>
+
+    <string name="category_credit_account">信贷账户</string>
+    <string name="category_funds_account">资金账户</string>
+    <string name="category_lend_receivable">借出（应收）</string>
+    <string name="category_borrow_payable">借入（应付）</string>
+
+    <string name="chip_payable">借入（应付）</string>
+    <string name="chip_receivable">借出（应收）</string>
+
+    <string name="title_add_borrow">新增借入</string>
+    <string name="title_add_lend">新增借出</string>
+    <string name="label_person_name">姓名</string>
+    <string name="status_locked">已锁定</string>
+
+    <string name="label_borrow_time">借入时间</string>
+    <string name="label_lend_time">借出时间</string>
+    <string name="label_expected_repay_time">约定还款时间</string>
+    <string name="label_expected_collect_time">约定收款时间</string>
+
+    <string name="label_target_fund_account">资金到账账户</string>
+    <string name="label_source_fund_account">资金支出账户</string>
+    <string name="hint_select_account">点击选择账户</string>
+
+    <string name="confirm_save">确认保存</string>
+    <string name="title_select_fund_account">选择资金账户</string>
+    <string name="empty_fund_accounts">暂无可用资金账户</string>
+    <string name="subtitle_debt_management_entry">查看所有借入与借出记录</string>
+    <string name="title_edit_settle">编辑收款/还款</string>
+    <string name="title_edit_debt">编辑借出/借入</string>
+    <string name="label_due_date">到期日期</string>
+    <string name="label_expected_date">约定还款/收款日</string>
+
+    <string name="title_repay">还款</string>
+    <string name="title_collect">收款</string>
+
+    <string name="label_related_person">关联对象: %1$s</string>
+    <string name="label_pending_repay">待还: %1$s</string>
+    <string name="label_pending_collect">待收: %1$s</string>
+
+    <string name="label_repay_amount">本次还款金额</string>
+    <string name="label_collect_amount">本次收款金额</string>
+
+    <string name="error_settle_amount_exceeds">抵扣本金(%1$s) 不能超过待结清金额(%2$s)</string>
+
+    <string name="label_interest_optional">利息 (选填)</string>
+    <string name="label_payment_account">支出账户</string>
+    <string name="label_deposit_account">存入账户</string>
+    <string name="hint_optional">选填...</string>
+
+    <string name="label_sync_transaction">同步生成收支明细</string>
+    <string name="desc_sync_transaction_repay">开启后将在账单页生成一条支出记录</string>
+    <string name="desc_sync_transaction_collect">开启后将在账单页生成一条收入记录</string>
+
+    <string name="action_confirm_repay">确认还款</string>
+    <string name="action_confirm_collect">确认收款</string>
+    <string name="empty_available_accounts">暂无可用账户</string>
 
 </resources>

@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -62,7 +63,8 @@ fun InteractivePinPad(
                             modifier = Modifier
                                 .size(72.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                // [修改] 这里改为浅灰色，去除紫色
+                                .background(Color(0xFFF5F5F5))
                                 .clickable { onNumberClick(char) },
                             contentAlignment = Alignment.Center
                         ) {
@@ -79,7 +81,7 @@ fun InteractivePinPad(
     }
 }
 
-// 手势锁组件
+// 手势锁组件 (无需修改，绘制背景透明)
 @Composable
 fun InteractivePatternLock(
     onPatternComplete: (List<Int>) -> Unit

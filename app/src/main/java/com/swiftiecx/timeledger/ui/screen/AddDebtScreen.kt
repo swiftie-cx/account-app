@@ -22,13 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource // [新增]
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R
+import com.swiftiecx.timeledger.R // [新增]
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.DebtRecord
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -41,26 +40,21 @@ import java.util.*
 fun AddDebtScreen(
     viewModel: ExpenseViewModel,
     navController: NavHostController,
-    accountId: Long, // 债务账户ID
+    accountId: Long,
     isBorrow: Boolean, // true: 新增借入, false: 新增借出
-    presetName: String? = null // 接收来自详情页的预设姓名
+    presetName: String? = null
 ) {
     // --- 状态与逻辑初始化 ---
-
-    // 判断是否为“追加模式” (姓名是否固定)
     val isAppendMode = !presetName.isNullOrEmpty()
 
-    // 姓名：如果有预设值则初始化为预设值
     var personName by remember { mutableStateOf(presetName ?: "") }
     var amount by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var borrowTime by remember { mutableStateOf(Date()) }
     var settleTime by remember { mutableStateOf<Date?>(null) }
 
-    // 选中的资金/支出账户ID
     var selectedFundsAccountId by remember { mutableStateOf<Long?>(null) }
 
-    // 数据监听
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
     val filteredAccounts = remember(allAccounts) {
         allAccounts.filter { it.category == "FUNDS" || it.category == "CREDIT" }
@@ -68,25 +62,29 @@ fun AddDebtScreen(
 
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
-    // 弹窗控制
     var showBorrowDatePicker by remember { mutableStateOf(false) }
     var showSettleDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
 
+    // [修改] 动态标题文本
+    val screenTitle = if (isBorrow) stringResource(R.string.title_add_borrow) else stringResource(R.string.title_add_lend)
+
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = if (isBorrow) "新增借入" else "新增借出",
+                        text = screenTitle,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
     ) { padding ->
@@ -98,32 +96,32 @@ fun AddDebtScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- 姓名输入框 (核心逻辑：追加模式下锁定) ---
+            // 姓名输入框
             OutlinedTextField(
                 value = personName,
                 onValueChange = {
-                    // 仅在非追加模式下允许修改
                     if (!isAppendMode) personName = it
                 },
-                label = { Text("姓名") },
+                label = { Text(stringResource(R.string.label_person_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                readOnly = isAppendMode, // 设置为只读
+                readOnly = isAppendMode,
                 trailingIcon = {
                     if (isAppendMode) {
                         Icon(
                             imageVector = Icons.Default.Lock,
-                            contentDescription = "已锁定",
+                            contentDescription = stringResource(R.string.status_locked),
                             tint = MaterialTheme.colorScheme.outline
                         )
                     }
                 },
                 colors = if (isAppendMode) {
-                    // 追加模式下稍微变灰
                     OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                        focusedContainerColor = Color(0xFFF5F5F5),
+                        unfocusedContainerColor = Color(0xFFF5F5F5),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent
                     )
                 } else {
                     OutlinedTextFieldDefaults.colors()
@@ -134,7 +132,7 @@ fun AddDebtScreen(
             OutlinedTextField(
                 value = amount,
                 onValueChange = { amount = it },
-                label = { Text("金额") },
+                label = { Text(stringResource(R.string.amount_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
@@ -142,41 +140,45 @@ fun AddDebtScreen(
             )
 
             // 发生时间
+            val borrowDateLabel = if (isBorrow) stringResource(R.string.label_borrow_time) else stringResource(R.string.label_lend_time)
             OutlinedTextField(
                 value = dateFormat.format(borrowTime),
                 onValueChange = {},
-                label = { Text(if (isBorrow) "借入时间" else "借出时间") },
+                label = { Text(borrowDateLabel) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 shape = RoundedCornerShape(12.dp),
                 trailingIcon = {
                     IconButton(onClick = { showBorrowDatePicker = true }) {
-                        Icon(Icons.Default.DateRange, "选择日期")
+                        Icon(Icons.Default.DateRange, stringResource(R.string.select_date))
                     }
                 }
             )
 
             // 到期时间 (选填)
+            val settleDateLabel = if (isBorrow) stringResource(R.string.label_expected_repay_time) else stringResource(R.string.label_expected_collect_time)
             OutlinedTextField(
-                value = settleTime?.let { dateFormat.format(it) } ?: "未设置",
+                value = settleTime?.let { dateFormat.format(it) } ?: stringResource(R.string.not_set),
                 onValueChange = {},
-                label = { Text(if (isBorrow) "约定还款时间" else "约定收款时间") },
+                label = { Text(settleDateLabel) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 shape = RoundedCornerShape(12.dp),
                 trailingIcon = {
                     IconButton(onClick = { showSettleDatePicker = true }) {
-                        Icon(Icons.Default.DateRange, "选择日期")
+                        Icon(Icons.Default.DateRange, stringResource(R.string.select_date))
                     }
                 }
             )
 
             // 资金账户选择
             val selectedAccount = filteredAccounts.find { it.id == selectedFundsAccountId }
+            val accountLabel = if (isBorrow) stringResource(R.string.label_target_fund_account) else stringResource(R.string.label_source_fund_account)
+
             OutlinedTextField(
-                value = selectedAccount?.name ?: "点击选择账户",
+                value = selectedAccount?.name ?: stringResource(R.string.hint_select_account),
                 onValueChange = {},
-                label = { Text(if (isBorrow) "资金到账账户" else "资金支出账户") },
+                label = { Text(accountLabel) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showAccountPicker = true },
@@ -187,7 +189,8 @@ fun AddDebtScreen(
                     disabledTextColor = MaterialTheme.colorScheme.onSurface,
                     disabledBorderColor = MaterialTheme.colorScheme.outline,
                     disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledContainerColor = Color.Transparent
                 ),
                 trailingIcon = {
                     Icon(Icons.Default.KeyboardArrowDown, null)
@@ -198,7 +201,7 @@ fun AddDebtScreen(
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it },
-                label = { Text("备注") },
+                label = { Text(stringResource(R.string.label_note)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 shape = RoundedCornerShape(12.dp)
@@ -223,11 +226,13 @@ fun AddDebtScreen(
                     viewModel.insertDebtRecord(record)
                     navController.popBackStack()
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 enabled = personName.isNotBlank() && amount.isNotBlank() && selectedFundsAccountId != null
             ) {
-                Text("确认保存", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.confirm_save), style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -271,7 +276,9 @@ fun AccountSelectionBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        containerColor = Color.White,
+        tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
@@ -280,22 +287,25 @@ fun AccountSelectionBottomSheet(
                 .padding(bottom = 32.dp)
         ) {
             Text(
-                text = "选择资金账户",
+                text = stringResource(R.string.title_select_fund_account),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier = Modifier
+                    .padding(vertical = 16.dp)
+                    .align(Alignment.CenterHorizontally)
             )
 
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(accounts) { account ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { onSelect(account) },
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    Card(
+                        onClick = { onSelect(account) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                        elevation = CardDefaults.cardElevation(0.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
@@ -305,29 +315,33 @@ fun AccountSelectionBottomSheet(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary),
+                                    .background(Color(0xFFF5F5F5)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = IconMapper.getIcon(account.iconName),
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                                Text(
+                                    text = account.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 Text(
                                     text = "${account.currency} ${String.format("%.2f", account.initialBalance)}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = Color.Gray
                                 )
                             }
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline
+                                tint = Color.Gray
                             )
                         }
                     }
@@ -336,10 +350,12 @@ fun AccountSelectionBottomSheet(
 
             if (accounts.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("暂无可用资金账户", color = MaterialTheme.colorScheme.outline)
+                    Text(stringResource(R.string.empty_fund_accounts), color = Color.Gray)
                 }
             }
         }
@@ -359,12 +375,28 @@ fun DebtDatePicker(
         confirmButton = {
             TextButton(onClick = {
                 datePickerState.selectedDateMillis?.let { onDateSelected(Date(it)) }
-            }) { Text("确定") }
+            }) { Text(stringResource(R.string.confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
-        }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 0.dp,
+        colors = DatePickerDefaults.colors(
+            containerColor = Color.White
+        )
     ) {
-        DatePicker(state = datePickerState)
+        DatePicker(
+            state = datePickerState,
+            title = {
+                Text(
+                    text = stringResource(R.string.select_date),
+                    modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp)
+                )
+            },
+            colors = DatePickerDefaults.colors(
+                containerColor = Color.White
+            )
+        )
     }
 }

@@ -27,12 +27,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource // [新增]
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.swiftiecx.timeledger.R
+import com.swiftiecx.timeledger.R // [新增]
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.ui.navigation.AccountTypeManager
 import com.swiftiecx.timeledger.ui.navigation.IconMapper
@@ -63,10 +63,10 @@ fun AddAccountScreen(
     // CREDIT 专用：额度
     var creditLimitInput by remember { mutableStateOf("") }
 
-    // ✅ 类别 / 债务方向：新建时用路由 preset；编辑时会被数据库覆盖
+    // 类别 / 债务方向：新建时用路由 preset；编辑时会被数据库覆盖
     var category by remember { mutableStateOf(presetCategory) }
 
-    // ✅ 如果是 DEBT 且没传 debtType，默认 PAYABLE（借入/应付）
+    // 如果是 DEBT 且没传 debtType，默认 PAYABLE（借入/应付）
     var debtType by remember {
         mutableStateOf(
             when (presetCategory) {
@@ -87,16 +87,22 @@ fun AddAccountScreen(
 
     val icons = remember {
         listOf(
-            "Wallet", "Bank", "CreditCard", "TrendingUp",
-            "Smartphone", "AttachMoney", "Savings", "Payment",
-            "CurrencyExchange", "Euro", "ShowChart", "PieChart"
+            "Wallet", "Bank", "CreditCard", "Savings",
+            "Calculate", "AttachMoney", "ShoppingCart", "Home",
+            "DirectionsCar", "Flight", "Restaurant", "MedicalServices",
+            "School", "Pets", "Redeem", "MoreHoriz"
         ).map { it to IconMapper.getIcon(it) }
     }
-    var selectedIcon by remember { mutableStateOf(icons.first().first) }
+
+    var selectedIcon by remember {
+        mutableStateOf(
+            if (icons.any { it.first == "Wallet" }) "Wallet" else icons.first().first
+        )
+    }
 
     var isDataLoaded by remember { mutableStateOf(false) }
 
-    // --- 编辑回填：以数据库为准（忽略 preset） ---
+    // --- 编辑回填 ---
     LaunchedEffect(accountId, allAccounts) {
         if (accountId != null && !isDataLoaded && allAccounts.isNotEmpty()) {
             val acc = allAccounts.find { it.id == accountId } ?: return@LaunchedEffect
@@ -111,25 +117,19 @@ fun AddAccountScreen(
                 else -> acc.debtType
             }
 
-            // FUNDS/CREDIT：保留原 type 的兼容映射
             selectedTypeKey = AccountTypeManager.getStableKey(acc.type)
 
             when (acc.category) {
                 "CREDIT" -> {
-                    // 欠款（正数显示）
                     val debt = max(acc.initialBalance, 0.0)
                     amountInput = formatNumberForInput(debt)
-
-                    // 额度
                     val limit = max((acc.creditLimit ?: 0.0), 0.0)
                     creditLimitInput = formatNumberForInput(limit)
                 }
                 "DEBT" -> {
-                    // 未结清金额：永远用正数显示
                     amountInput = formatNumberForInput(max(acc.initialBalance, 0.0))
                 }
                 else -> {
-                    // FUNDS：余额
                     amountInput = formatNumberForInput(acc.initialBalance)
                 }
             }
@@ -141,13 +141,13 @@ fun AddAccountScreen(
     // --- UI 颜色 ---
     val primaryColor = MaterialTheme.colorScheme.primary
     val surfaceColor = MaterialTheme.colorScheme.surface
-    val bgColor = MaterialTheme.colorScheme.surfaceContainerLow
+    val bgColor = Color.White
 
-    // 预览用显示
+    // [修改] 预览标签多语言化
     val previewLabel = when (category) {
-        "CREDIT" -> "欠款"
-        "DEBT" -> "未结清金额"
-        else -> "余额"
+        "CREDIT" -> stringResource(R.string.preview_label_debt)
+        "DEBT" -> stringResource(R.string.preview_label_unsettled)
+        else -> stringResource(R.string.preview_label_balance)
     }
 
     Scaffold(
@@ -174,7 +174,6 @@ fun AddAccountScreen(
                             val amountVal = amountInput.toDoubleOrNull() ?: 0.0
                             val limitVal = creditLimitInput.toDoubleOrNull() ?: 0.0
 
-                            // 旧字段兼容：只有 CREDIT 认为是 liability
                             val isLiability = category == "CREDIT"
 
                             val finalType = when (category) {
@@ -183,11 +182,8 @@ fun AddAccountScreen(
                             }
 
                             val finalInitialBalance = when (category) {
-                                // CREDIT：initialBalance 存欠款（正数）
                                 "CREDIT" -> max(amountVal, 0.0)
-                                // DEBT：initialBalance 存未结清金额（正数）
                                 "DEBT" -> max(amountVal, 0.0)
-                                // FUNDS：按输入
                                 else -> amountVal
                             }
 
@@ -245,7 +241,7 @@ fun AddAccountScreen(
                 iconName = selectedIcon,
                 typeKey = selectedTypeKey,
                 primaryColor = primaryColor,
-                overrideTypeText = categoryBadgeText(category, debtType),
+                overrideTypeText = CategoryBadgeText(category, debtType), // [修改] 使用 Composable 获取文本
                 overrideBalanceLabel = previewLabel
             )
 
@@ -269,12 +265,10 @@ fun AddAccountScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // ✅ 类别（只显示，不允许在这里切换；入口由 AssetsScreen 的弹窗决定）
                     CategoryRow(category = category, debtType = debtType)
 
                     Spacer(Modifier.height(12.dp))
 
-                    // FUNDS/CREDIT：显示账户类型；DEBT：显示债务方向（允许微调）
                     if (category != "DEBT") {
                         AccountTypeDropdown(
                             label = stringResource(R.string.account_type),
@@ -291,7 +285,6 @@ fun AddAccountScreen(
                         Spacer(Modifier.height(16.dp))
                     }
 
-                    // 币种
                     DropdownInput(
                         label = stringResource(R.string.currency),
                         options = currencies,
@@ -301,19 +294,17 @@ fun AddAccountScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // 金额输入：FUNDS=余额，CREDIT=欠款，DEBT=未结清
+                    // [修改] 金额输入框标签动态化
+                    val amountLabel = when (category) {
+                        "CREDIT" -> stringResource(R.string.preview_label_debt)
+                        "DEBT" -> stringResource(R.string.preview_label_unsettled)
+                        else -> stringResource(R.string.current_balance)
+                    }
+
                     OutlinedTextField(
                         value = amountInput,
                         onValueChange = { amountInput = it },
-                        label = {
-                            Text(
-                                when (category) {
-                                    "CREDIT" -> "欠款"
-                                    "DEBT" -> "未结清金额"
-                                    else -> stringResource(R.string.current_balance)
-                                }
-                            )
-                        },
+                        label = { Text(amountLabel) },
                         placeholder = { Text(stringResource(R.string.balance_placeholder)) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -321,14 +312,13 @@ fun AddAccountScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
 
-                    // CREDIT：额度
                     if (category == "CREDIT") {
                         Spacer(Modifier.height(16.dp))
                         OutlinedTextField(
                             value = creditLimitInput,
                             onValueChange = { creditLimitInput = it },
-                            label = { Text("额度") },
-                            placeholder = { Text("例如：20000") },
+                            label = { Text(stringResource(R.string.label_credit_limit)) },
+                            placeholder = { Text(stringResource(R.string.placeholder_credit_limit)) },
                             modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
@@ -357,7 +347,7 @@ fun AddAccountScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.heightIn(max = 300.dp)
+                        modifier = Modifier.heightIn(max = 350.dp)
                     ) {
                         items(icons) { (name, icon) ->
                             IconSelectionItem(
@@ -379,12 +369,12 @@ fun AddAccountScreen(
 // ===== 小组件：类别显示 =====
 @Composable
 private fun CategoryRow(category: String, debtType: String?) {
-    val text = categoryBadgeText(category, debtType)
+    val text = CategoryBadgeText(category, debtType)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("账户类别", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.label_account_category), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(12.dp))
         AssistChip(
             onClick = { /* 不可切换 */ },
@@ -393,11 +383,13 @@ private fun CategoryRow(category: String, debtType: String?) {
     }
 }
 
-private fun categoryBadgeText(category: String, debtType: String?): String {
+// [修改] 改为 Composable 以支持 stringResource
+@Composable
+private fun CategoryBadgeText(category: String, debtType: String?): String {
     return when (category) {
-        "CREDIT" -> "信贷账户"
-        "DEBT" -> if ((debtType ?: "PAYABLE") == "RECEIVABLE") "借出（应收）" else "借入（应付）"
-        else -> "资金账户"
+        "CREDIT" -> stringResource(R.string.category_credit_account)
+        "DEBT" -> if ((debtType ?: "PAYABLE") == "RECEIVABLE") stringResource(R.string.category_lend_receivable) else stringResource(R.string.category_borrow_payable)
+        else -> stringResource(R.string.category_funds_account)
     }
 }
 
@@ -408,18 +400,18 @@ private fun DebtTypeSelector(
 ) {
     val current = debtType ?: "PAYABLE"
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text("债务类型", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.label_debt_type), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             FilterChip(
                 selected = current == "PAYABLE",
                 onClick = { onChange("PAYABLE") },
-                label = { Text("借入（应付）") }
+                label = { Text(stringResource(R.string.chip_payable)) }
             )
             FilterChip(
                 selected = current == "RECEIVABLE",
                 onClick = { onChange("RECEIVABLE") },
-                label = { Text("借出（应收）") }
+                label = { Text(stringResource(R.string.chip_receivable)) }
             )
         }
     }
@@ -438,7 +430,11 @@ fun AccountPreviewCard(
     overrideBalanceLabel: String? = null
 ) {
     val displayBalance = if (balance.isBlank()) "0.00" else balance
-    val typeName = overrideTypeText ?: AccountTypeManager.getDisplayName(typeKey)
+    // 如果有 override 则用 override，否则去 AccountTypeManager 找翻译
+    val typeName = overrideTypeText ?: run {
+        val resId = AccountTypeManager.getTypeResId(typeKey)
+        if (resId != null) stringResource(resId) else typeKey
+    }
 
     val brush = Brush.verticalGradient(
         colors = listOf(primaryColor.copy(alpha = 0.8f), primaryColor)
