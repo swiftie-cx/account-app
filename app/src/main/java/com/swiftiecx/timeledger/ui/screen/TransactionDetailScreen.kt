@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -90,15 +91,31 @@ fun TransactionDetailScreen(
         } else 0.0
     }
 
+    val isRepaymentTransfer = remember(transferOut, transferIn, accountMap) {
+        if (transferOut != null && transferIn != null) {
+            val outAcc = accountMap[transferOut.accountId]
+            val inAcc = accountMap[transferIn.accountId]
+            outAcc?.category == "FUNDS" && inAcc?.category == "CREDIT"
+        } else {
+            false
+        }
+    }
+
     // [关键修改] 使用 CategoryData 获取图标和颜色 (不再手动构建 Map)
     var displayIcon: ImageVector = Icons.Default.HelpOutline
     var displayColor: Color = MaterialTheme.colorScheme.primary
     var displayTitle: String = ""
 
-    if (transferOut != null) {
-        displayIcon = Icons.AutoMirrored.Filled.CompareArrows
+    if (transferOut != null && transferIn != null) {
+        val outAcc = accountMap[transferOut.accountId]
+        val inAcc = accountMap[transferIn.accountId]
+
+        displayIcon = if (isRepaymentTransfer) Icons.Default.Payment else Icons.AutoMirrored.Filled.CompareArrows
         displayColor = MaterialTheme.colorScheme.primary
-        displayTitle = stringResource(R.string.internal_transfer)
+        displayTitle = if (isRepaymentTransfer && outAcc != null && inAcc != null)
+            stringResource(R.string.repayment_title, outAcc.name, inAcc.name)
+        else
+            stringResource(R.string.internal_transfer)
     } else if (currentExpense != null) {
         // 使用 stable key 获取样式
         val stableKey = CategoryData.getStableKey(currentExpense.category, context)
@@ -216,7 +233,10 @@ fun TransactionDetailScreen(
                         val accountOut = accountMap[transferOut.accountId]
                         val accountIn = accountMap[transferIn.accountId]
 
-                        DetailRow(label = stringResource(R.string.type_label), value = stringResource(R.string.type_transfer))
+                        DetailRow(
+                            label = stringResource(R.string.type_label),
+                            value = if (isRepaymentTransfer) stringResource(R.string.action_repay) else stringResource(R.string.type_transfer)
+                        )
 
                         // 转出
                         DetailRow(

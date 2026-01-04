@@ -831,5 +831,8 @@
     <string name="action_confirm_repay">确认还款</string>
     <string name="action_confirm_collect">确认收款</string>
     <string name="empty_available_accounts">暂无可用账户</string>
+    <string name="repayment_title">还款 %1$s→%2$s</string>
+    <string name="repayment_from">从“%1$s”还款</string>
+    <string name="repayment_to">还款到“%1$s”</string>
 
 </resources>

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallReceived
@@ -53,6 +54,8 @@ fun AccountDetailScreen(
 
     val allExpenses by viewModel.allExpenses.collectAsState(initial = emptyList())
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
+
+    val accountMap = remember(allAccounts) { allAccounts.associateBy { it.id } }
 
     val account = remember(allAccounts, accountId) {
         allAccounts.find { it.id == accountId }
@@ -164,34 +167,59 @@ fun AccountDetailScreen(
                     }
                     else {
                         items(accountTransactions) { expense ->
+                            val isTransfer = expense.recordType == com.swiftiecx.timeledger.data.RecordType.TRANSFER
+                            val otherAccount = expense.relatedAccountId?.let { accountMap[it] }
+
                             val isDebtRelated = expense.category in setOf("借出", "Lend", "债务还款", "借入", "Borrow", "债务收款")
 
-                            val icon = if (isDebtRelated) {
-                                if (expense.category in setOf("借出", "Lend", "债务还款")) {
-                                    IconMapper.getIcon("Lend")
-                                } else {
-                                    IconMapper.getIcon("Borrow")
+                            val isRepayment = isTransfer && otherAccount != null && (
+                                    (account?.category == "FUNDS" && otherAccount.category == "CREDIT") ||
+                                            (account?.category == "CREDIT" && otherAccount.category == "FUNDS")
+                                    )
+
+                            val transferColor = MaterialTheme.colorScheme.primary
+
+                            val icon = when {
+                                isTransfer && isRepayment -> Icons.Default.Payment
+                                isTransfer -> Icons.AutoMirrored.Filled.CompareArrows
+                                isDebtRelated -> {
+                                    if (expense.category in setOf("借出", "Lend", "债务还款")) {
+                                        IconMapper.getIcon("Lend")
+                                    } else {
+                                        IconMapper.getIcon("Borrow")
+                                    }
                                 }
-                            } else {
-                                CategoryData.getIcon(expense.category, context)
+                                else -> CategoryData.getIcon(expense.category, context)
                             }
 
-                            val displayName = if (isDebtRelated) {
-                                when (expense.category) {
-                                    "借出", "Lend" -> stringResource(R.string.type_lend_out)
-                                    "借入", "Borrow" -> stringResource(R.string.type_borrow_in)
-                                    "债务还款" -> stringResource(R.string.type_repayment)
-                                    "债务收款" -> stringResource(R.string.type_collection)
-                                    else -> expense.category
+                            val displayName = when {
+                                isTransfer && isRepayment && otherAccount != null && account?.category == "CREDIT" ->
+                                    stringResource(R.string.repayment_from, otherAccount.name)
+
+                                isTransfer && isRepayment && otherAccount != null && account?.category == "FUNDS" ->
+                                    stringResource(R.string.repayment_to, otherAccount.name)
+
+                                isTransfer ->
+                                    stringResource(R.string.transfer_in_app)
+
+                                isDebtRelated -> {
+                                    when (expense.category) {
+                                        "借出", "Lend" -> stringResource(R.string.type_lend_out)
+                                        "借入", "Borrow" -> stringResource(R.string.type_borrow_in)
+                                        "债务还款" -> stringResource(R.string.type_repayment)
+                                        "债务收款" -> stringResource(R.string.type_collection)
+                                        else -> expense.category
+                                    }
                                 }
-                            } else {
-                                CategoryData.getDisplayName(expense.category, context)
+
+                                else ->
+                                    CategoryData.getDisplayName(expense.category, context)
                             }
 
-                            val color = if (isDebtRelated) {
-                                if (expense.amount >= 0) Color(0xFF4CAF50) else Color(0xFFE53935)
-                            } else {
-                                CategoryData.getColor(
+                            val color = when {
+                                isTransfer -> transferColor
+                                isDebtRelated -> if (expense.amount >= 0) Color(0xFF4CAF50) else Color(0xFFE53935)
+                                else -> CategoryData.getColor(
                                     expense.category,
                                     if (expense.amount < 0) 0 else 1,
                                     context

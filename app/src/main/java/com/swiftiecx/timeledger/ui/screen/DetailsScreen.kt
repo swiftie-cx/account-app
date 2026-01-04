@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -443,6 +444,7 @@ private fun TransferItem(item: DisplayTransferItem, defaultCurrency: String, onC
     val transferColor = MaterialTheme.colorScheme.primary
     val feeAmount = abs(item.fee)
     val convertedFee = ExchangeRates.convert(feeAmount, item.fromAccount.currency, defaultCurrency)
+    val isRepayment = item.fromAccount.category == "FUNDS" && item.toAccount.category == "CREDIT"
 
     Row(
         modifier = Modifier
@@ -459,8 +461,8 @@ private fun TransferItem(item: DisplayTransferItem, defaultCurrency: String, onC
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.CompareArrows,
-                contentDescription = stringResource(R.string.type_transfer),
+                imageVector = if (isRepayment) Icons.Default.Payment else Icons.AutoMirrored.Filled.CompareArrows,
+                contentDescription = if (isRepayment) stringResource(R.string.action_repay) else stringResource(R.string.type_transfer),
                 modifier = Modifier.size(22.dp),
                 tint = transferColor
             )
@@ -471,7 +473,10 @@ private fun TransferItem(item: DisplayTransferItem, defaultCurrency: String, onC
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(R.string.transfer_in_app),
+                    text = if (isRepayment)
+                        stringResource(R.string.repayment_title, item.fromAccount.name, item.toAccount.name)
+                    else
+                        stringResource(R.string.transfer_in_app),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
