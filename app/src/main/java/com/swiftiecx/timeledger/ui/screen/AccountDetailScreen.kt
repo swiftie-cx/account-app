@@ -179,9 +179,11 @@ fun AccountDetailScreen(
 
                             val transferColor = MaterialTheme.colorScheme.primary
 
+                            // ✅ 最小改动：调整 when 顺序，债务优先于普通转账；还款仍最高优先
                             val icon = when {
                                 isTransfer && isRepayment -> Icons.Default.Payment
-                                isTransfer -> Icons.AutoMirrored.Filled.CompareArrows
+
+                                // ✅ 借入/借出（含不计入收支）优先于 isTransfer
                                 isDebtRelated -> {
                                     if (expense.category in setOf("借出", "Lend", "债务还款")) {
                                         IconMapper.getIcon("Lend")
@@ -189,9 +191,12 @@ fun AccountDetailScreen(
                                         IconMapper.getIcon("Borrow")
                                     }
                                 }
+
+                                isTransfer -> Icons.AutoMirrored.Filled.CompareArrows
                                 else -> CategoryData.getIcon(expense.category, context)
                             }
 
+                            // ✅ 最小改动：调整 when 顺序，债务优先于普通转账；还款仍最高优先
                             val displayName = when {
                                 isTransfer && isRepayment && otherAccount != null && account?.category == "CREDIT" ->
                                     stringResource(R.string.repayment_from, otherAccount.name)
@@ -199,9 +204,7 @@ fun AccountDetailScreen(
                                 isTransfer && isRepayment && otherAccount != null && account?.category == "FUNDS" ->
                                     stringResource(R.string.repayment_to, otherAccount.name)
 
-                                isTransfer ->
-                                    stringResource(R.string.transfer_in_app)
-
+                                // ✅ 借入/借出（含不计入收支）优先于 isTransfer
                                 isDebtRelated -> {
                                     when (expense.category) {
                                         "借出", "Lend" -> stringResource(R.string.type_lend_out)
@@ -212,13 +215,19 @@ fun AccountDetailScreen(
                                     }
                                 }
 
+                                isTransfer ->
+                                    stringResource(R.string.transfer_in_app)
+
                                 else ->
                                     CategoryData.getDisplayName(expense.category, context)
                             }
 
+                            // ✅ 最小改动：调整 when 顺序，债务优先于普通转账
                             val color = when {
-                                isTransfer -> transferColor
+                                // ✅ 借入/借出优先于 isTransfer（否则会被标成转账色）
                                 isDebtRelated -> if (expense.amount >= 0) Color(0xFF4CAF50) else Color(0xFFE53935)
+
+                                isTransfer -> transferColor
                                 else -> CategoryData.getColor(
                                     expense.category,
                                     if (expense.amount < 0) 0 else 1,
