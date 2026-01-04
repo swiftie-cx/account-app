@@ -646,5 +646,6 @@
     <string name="repayment_title">Погашение</string>
     <string name="repayment_from">Погашение с 「%1$s」</string>
     <string name="repayment_to">Погашение на 「%1$s」</string>
+    <string name="exclude_from_income_expense">Не учитывать в доходах/расходах</string>
 
 </resources>

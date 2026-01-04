@@ -646,5 +646,6 @@
     <string name="repayment_title">Rückzahlung</string>
     <string name="repayment_from">Rückzahlung von 「%1$s」</string>
     <string name="repayment_to">Rückzahlung an 「%1$s」</string>
+    <string name="exclude_from_income_expense">Von Einnahmen/Ausgaben ausschließen</string>
 
 </resources>

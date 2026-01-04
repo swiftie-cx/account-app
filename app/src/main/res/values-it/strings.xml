@@ -646,5 +646,6 @@
     <string name="repayment_title">Rimborso</string>
     <string name="repayment_from">Rimborso da 「%1$s」</string>
     <string name="repayment_to">Rimborso a 「%1$s」</string>
+    <string name="exclude_from_income_expense">Escludi da entrate/uscite</string>
 
 </resources>

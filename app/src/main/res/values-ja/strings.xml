@@ -646,5 +646,6 @@
     <string name="repayment_title">返済</string>
     <string name="repayment_from">「%1$s」から返済</string>
     <string name="repayment_to">「%1$s」へ返済</string>
+    <string name="exclude_from_income_expense">수입/지출에 포함하지 않기</string>
 
 </resources>

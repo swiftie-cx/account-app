@@ -646,5 +646,6 @@
     <string name="repayment_title">भुगतान</string>
     <string name="repayment_from">「%1$s」 से भुगतान</string>
     <string name="repayment_to">「%1$s」 को भुगतान</string>
+    <string name="exclude_from_income_expense">आय/व्यय में शामिल न करें</string>
 
 </resources>

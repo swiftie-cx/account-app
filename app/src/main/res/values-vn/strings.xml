@@ -646,5 +646,6 @@
     <string name="repayment_title">Trả nợ</string>
     <string name="repayment_from">Trả nợ từ 「%1$s」</string>
     <string name="repayment_to">Trả nợ đến 「%1$s」</string>
+    <string name="exclude_from_income_expense">Không tính vào thu/chi</string>
 
 </resources>

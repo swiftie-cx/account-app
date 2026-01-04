@@ -985,7 +985,7 @@ class ExpenseRepository(
     // ✅ [新增] 组合方法：先插入债务，再插入带关联ID的收支
     suspend fun saveDebtWithTransaction(debt: com.swiftiecx.timeledger.data.DebtRecord, expense: Expense) {
         val debtId = debtRecordDao.insert(debt)
-        val linkedExpense = expense.copy(debtId = debtId, recordType = RecordType.INCOME_EXPENSE)
+        val linkedExpense = expense.copy(debtId = debtId)
         expenseDao.insertExpense(linkedExpense)
     }
 

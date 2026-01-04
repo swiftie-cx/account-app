@@ -687,7 +687,7 @@ class ExpenseViewModel(
     /**
      * [最小化修改] 插入债务记录 + 多语言备注
      */
-    fun insertDebtRecord(record: DebtRecord) {
+    fun insertDebtRecord(record: DebtRecord, countInStats: Boolean = true) {
         viewModelScope.launch(Dispatchers.IO) {
             val fundAccountId = record.inAccountId ?: record.outAccountId
 
@@ -711,7 +711,7 @@ class ExpenseViewModel(
                     category = if (isLending) "借出" else "借入",
                     remark = finalRemark,
                     date = record.borrowTime,
-                    recordType = RecordType.INCOME_EXPENSE // 债务相关流水目前视为收支
+                    recordType = if (countInStats) RecordType.INCOME_EXPENSE else RecordType.TRANSFER // 可选：不计入收支时按转账处理
                 )
                 repository.saveDebtWithTransaction(record, expense)
 

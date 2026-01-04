@@ -646,5 +646,6 @@
     <string name="repayment_title">Spłata</string>
     <string name="repayment_from">Spłata z 「%1$s」</string>
     <string name="repayment_to">Spłata do 「%1$s」</string>
+    <string name="exclude_from_income_expense">Wyklucz z przychodów/wydatków</string>
 
 </resources>

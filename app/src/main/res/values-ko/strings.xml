@@ -646,5 +646,6 @@
     <string name="repayment_title">상환</string>
     <string name="repayment_from">「%1$s」에서 상환</string>
     <string name="repayment_to">「%1$s」로 상환</string>
+    <string name="exclude_from_income_expense">수입/지출에 포함하지 않기</string>
 
 </resources>

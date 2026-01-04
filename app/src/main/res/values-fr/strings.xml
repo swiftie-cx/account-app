@@ -646,5 +646,6 @@
     <string name="repayment_title">Remboursement</string>
     <string name="repayment_from">Remboursement depuis 「%1$s」</string>
     <string name="repayment_to">Remboursement vers 「%1$s」</string>
+    <string name="exclude_from_income_expense">Exclure des revenus/dépenses</string>
 
 </resources>

@@ -646,5 +646,6 @@
     <string name="repayment_title">Geri ödeme</string>
     <string name="repayment_from">「%1$s」 üzerinden geri ödeme</string>
     <string name="repayment_to">「%1$s」 hesabına geri ödeme</string>
+    <string name="exclude_from_income_expense">Gelir/giderlere dahil etme</string>
 
 </resources>

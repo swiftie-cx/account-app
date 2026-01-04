@@ -751,6 +751,7 @@
     <string name="repayment_title">Repayment</string>
     <string name="repayment_from">Repay from 「%1$s」</string>
     <string name="repayment_to">Repay to 「%1$s」</string>
+    <string name="exclude_from_income_expense">Exclude from income/expense</string>
 
 
 </resources>

@@ -50,6 +50,7 @@ fun AddDebtScreen(
     var personName by remember { mutableStateOf(presetName ?: "") }
     var amount by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+    var excludeFromStats by remember { mutableStateOf(false) } // 不计入收支
     var borrowTime by remember { mutableStateOf(Date()) }
     var settleTime by remember { mutableStateOf<Date?>(null) }
 
@@ -71,6 +72,7 @@ fun AddDebtScreen(
 
     Scaffold(
         containerColor = Color.White,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -207,7 +209,26 @@ fun AddDebtScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.exclude_from_income_expense),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Switch(
+                    checked = excludeFromStats,
+                    onCheckedChange = { excludeFromStats = it }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // 保存按钮
             Button(
@@ -223,7 +244,7 @@ fun AddDebtScreen(
                         inAccountId = if (isBorrow) selectedFundsAccountId else null,
                         outAccountId = if (!isBorrow) selectedFundsAccountId else null
                     )
-                    viewModel.insertDebtRecord(record)
+                    viewModel.insertDebtRecord(record, countInStats = !excludeFromStats)
                     navController.popBackStack()
                 },
                 modifier = Modifier

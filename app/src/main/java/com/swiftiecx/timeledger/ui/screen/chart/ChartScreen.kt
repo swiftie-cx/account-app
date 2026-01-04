@@ -30,7 +30,7 @@ import com.swiftiecx.timeledger.ui.screen.CustomDateRangePicker
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.util.Calendar
 import kotlin.math.abs
-
+import com.swiftiecx.timeledger.data.RecordType
 @Composable
 fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
     val context = LocalContext.current // [新增] 获取 Context
@@ -89,6 +89,7 @@ fun ChartScreen(viewModel: ExpenseViewModel, navController: NavHostController) {
 
     // [关键修改] 使用 Stable Key 判断转账
     fun isTransfer(expense: Expense): Boolean {
+        if (expense.recordType == RecordType.TRANSFER) return true
         val key = CategoryData.getStableKey(expense.category, context)
         return key.startsWith("Transfer")
     }

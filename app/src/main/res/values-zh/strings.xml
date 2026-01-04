@@ -834,5 +834,6 @@
     <string name="repayment_title">还款</string>
     <string name="repayment_from">从「%1$s」还款</string>
     <string name="repayment_to">还款到「%1$s」</string>
+    <string name="exclude_from_income_expense">不计入收支</string>
 
 </resources>

@@ -646,5 +646,6 @@
     <string name="repayment_title">Pagamento</string>
     <string name="repayment_from">Pagamento de 「%1$s」</string>
     <string name="repayment_to">Pagamento para 「%1$s」</string>
+    <string name="exclude_from_income_expense">Excluir de receitas/despesas</string>
 
 </resources>
