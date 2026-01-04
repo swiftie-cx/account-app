@@ -74,11 +74,10 @@ fun BudgetScreen(
     val budgets by viewModel.getBudgetsForMonth(year, month).collectAsState(initial = emptyList())
     val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
 
-    val budgetBaseCurrency = stringResource(R.string.budget_base_currency)
+    val budgetBaseCurrency = defaultCurrency
     val transferTypeString = stringResource(R.string.type_transfer)
-    val totalBudgetKey = stringResource(R.string.category_key_total_budget)
-
-    // [修正] 获取 Key
+    val totalBudgetKey = "总预算"
+// [修正] 获取 Key
     val expenseCategoryKeys = remember(context) {
         CategoryData.getExpenseCategories(context).flatMap { it.subCategories }.map { it.key }
     }

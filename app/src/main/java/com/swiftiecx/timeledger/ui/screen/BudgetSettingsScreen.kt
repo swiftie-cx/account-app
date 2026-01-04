@@ -47,8 +47,7 @@ fun BudgetSettingsScreen(
         CategoryData.getExpenseCategories(context).flatMap { it.subCategories }.map { it.key }
     }
 
-    val totalBudgetKey = stringResource(R.string.category_key_total_budget)
-
+    val totalBudgetKey = "总预算"
     val budgets by viewModel.getBudgetsForMonth(year, month).collectAsState(initial = emptyList())
 
     val budgetMap = remember(budgets, totalBudgetKey, expenseCategoryKeys) {
