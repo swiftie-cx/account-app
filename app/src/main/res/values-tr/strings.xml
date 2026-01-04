@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">Onayla</string>
     <string name="action_confirm_collect">Onayla</string>
     <string name="empty_available_accounts">Hesap yok</string>
+    <string name="repayment_title">Geri ödeme</string>
+    <string name="repayment_from">「%1$s」 üzerinden geri ödeme</string>
+    <string name="repayment_to">「%1$s」 hesabına geri ödeme</string>
+
 </resources>

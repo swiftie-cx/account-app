@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">Rückzahlung bestätigen</string>
     <string name="action_confirm_collect">Erhalt bestätigen</string>
     <string name="empty_available_accounts">Keine Konten verfügbar</string>
+    <string name="repayment_title">Rückzahlung</string>
+    <string name="repayment_from">Rückzahlung von 「%1$s」</string>
+    <string name="repayment_to">Rückzahlung an 「%1$s」</string>
+
 </resources>

@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">Confirmer</string>
     <string name="action_confirm_collect">Confirmer</string>
     <string name="empty_available_accounts">Aucun compte</string>
+    <string name="repayment_title">Remboursement</string>
+    <string name="repayment_from">Remboursement depuis 「%1$s」</string>
+    <string name="repayment_to">Remboursement vers 「%1$s」</string>
+
 </resources>

@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">返済を確定</string>
     <string name="action_confirm_collect">回収を確定</string>
     <string name="empty_available_accounts">利用可能な口座がありません</string>
+    <string name="repayment_title">返済</string>
+    <string name="repayment_from">「%1$s」から返済</string>
+    <string name="repayment_to">「%1$s」へ返済</string>
+
 </resources>

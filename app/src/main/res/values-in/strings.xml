@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">पुष्टि करें</string>
     <string name="action_confirm_collect">पुष्टि करें</string>
     <string name="empty_available_accounts">कोई खाता नहीं</string>
+    <string name="repayment_title">भुगतान</string>
+    <string name="repayment_from">「%1$s」 से भुगतान</string>
+    <string name="repayment_to">「%1$s」 को भुगतान</string>
+
 </resources>

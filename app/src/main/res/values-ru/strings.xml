@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">Подтвердить</string>
     <string name="action_confirm_collect">Подтвердить</string>
     <string name="empty_available_accounts">Нет счетов</string>
+    <string name="repayment_title">Погашение</string>
+    <string name="repayment_from">Погашение с 「%1$s」</string>
+    <string name="repayment_to">Погашение на 「%1$s」</string>
+
 </resources>

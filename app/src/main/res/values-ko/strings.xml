@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">상환 확인</string>
     <string name="action_confirm_collect">회수 확인</string>
     <string name="empty_available_accounts">사용 가능한 계좌 없음</string>
+    <string name="repayment_title">상환</string>
+    <string name="repayment_from">「%1$s」에서 상환</string>
+    <string name="repayment_to">「%1$s」로 상환</string>
+
 </resources>

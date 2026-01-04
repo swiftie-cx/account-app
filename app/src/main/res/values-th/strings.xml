@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">ยืนยัน</string>
     <string name="action_confirm_collect">ยืนยัน</string>
     <string name="empty_available_accounts">ไม่มีบัญชี</string>
+    <string name="repayment_title">ชำระคืน</string>
+    <string name="repayment_from">ชำระคืนจาก 「%1$s」</string>
+    <string name="repayment_to">ชำระคืนไปยัง 「%1$s」</string>
+
 </resources>

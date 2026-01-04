@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">Xác nhận</string>
     <string name="action_confirm_collect">Xác nhận</string>
     <string name="empty_available_accounts">Không có tài khoản</string>
+    <string name="repayment_title">Trả nợ</string>
+    <string name="repayment_from">Trả nợ từ 「%1$s」</string>
+    <string name="repayment_to">Trả nợ đến 「%1$s」</string>
+
 </resources>

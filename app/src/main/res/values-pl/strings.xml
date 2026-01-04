@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">Potwierdź</string>
     <string name="action_confirm_collect">Potwierdź</string>
     <string name="empty_available_accounts">Brak kont</string>
+    <string name="repayment_title">Spłata</string>
+    <string name="repayment_from">Spłata z 「%1$s」</string>
+    <string name="repayment_to">Spłata do 「%1$s」</string>
+
 </resources>

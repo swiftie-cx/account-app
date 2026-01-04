@@ -643,4 +643,8 @@
     <string name="action_confirm_repay">Konfirmasi</string>
     <string name="action_confirm_collect">Konfirmasi</string>
     <string name="empty_available_accounts">Tidak ada akun</string>
+    <string name="repayment_title">Pembayaran</string>
+    <string name="repayment_from">Pembayaran dari 「%1$s」</string>
+    <string name="repayment_to">Pembayaran ke 「%1$s」</string>
+
 </resources>
