@@ -15,6 +15,7 @@ import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
@@ -22,11 +23,10 @@ import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
@@ -68,8 +68,22 @@ class ExpenseRepository(
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
+    // --- Auth State ---
+    private val _firebaseUser = MutableStateFlow<FirebaseUser?>(firebaseAuth.currentUser)
+    val firebaseUser: StateFlow<FirebaseUser?> = _firebaseUser.asStateFlow()
+
+    private val _emailVerified = MutableStateFlow(firebaseAuth.currentUser?.isEmailVerified == true)
+    val emailVerified: StateFlow<Boolean> = _emailVerified.asStateFlow()
+
     init {
         firebaseAuth.useAppLanguage()
+
+        // 统一管理登录状态：只有邮箱已验证才视为“已登录”
+        firebaseAuth.addAuthStateListener { auth ->
+            val user = auth.currentUser
+            _firebaseUser.value = user
+            _emailVerified.value = user?.isEmailVerified == true
+        }
     }
 
     // ===========================
@@ -227,28 +241,21 @@ class ExpenseRepository(
     //  Firebase Auth
     // ===========================
 
-    val isLoggedIn: Flow<Boolean> = callbackFlow {
-        val authStateListener = FirebaseAuth.AuthStateListener { auth ->
-            trySend(auth.currentUser != null)
-        }
-        firebaseAuth.addAuthStateListener(authStateListener)
-        trySend(firebaseAuth.currentUser != null)
-        awaitClose { firebaseAuth.removeAuthStateListener(authStateListener) }
+    // 只有“已登录 + 邮箱已验证”才算真正登录成功（用于设置页展示/跳转）
+    val isLoggedIn: Flow<Boolean> = combine(firebaseUser, emailVerified) { user, verified ->
+        user != null && verified
     }
 
-    val userEmail: Flow<String> = callbackFlow {
-        val authStateListener = FirebaseAuth.AuthStateListener { auth ->
-            trySend(auth.currentUser?.email ?: "")
-        }
-        firebaseAuth.addAuthStateListener(authStateListener)
-        trySend(firebaseAuth.currentUser?.email ?: "")
-        awaitClose { firebaseAuth.removeAuthStateListener(authStateListener) }
-    }
+    val userEmail: Flow<String> = firebaseUser
+        .combine(emailVerified) { user, _ -> user?.email ?: "" }
 
     suspend fun register(email: String, password: String): Result<Boolean> {
         return try {
             firebaseAuth.createUserWithEmailAndPassword(email, password).await()
             firebaseAuth.currentUser?.sendEmailVerification()?.await()
+            // 注册成功后仍保持登录态，但未验证前 isLoggedIn 依旧为 false
+            _firebaseUser.value = firebaseAuth.currentUser
+            _emailVerified.value = false
             Result.success(true)
         } catch (e: Exception) {
             val msg = when (e) {
@@ -264,7 +271,17 @@ class ExpenseRepository(
     suspend fun login(email: String, password: String): Result<Boolean> {
         return try {
             firebaseAuth.signInWithEmailAndPassword(email, password).await()
-            Result.success(true)
+            // 登录后强制刷新一次邮箱验证状态，避免已验证账号被误判为未验证
+            val verified = refreshEmailVerification()
+            if (!verified) {
+                // 未验证：按“邮箱或密码错误”处理（保持在登录页，不进入已登录状态）
+                firebaseAuth.signOut()
+                _firebaseUser.value = null
+                _emailVerified.value = false
+                Result.failure(Exception(s(R.string.error_email_or_password_wrong)))
+            } else {
+                Result.success(true)
+            }
         } catch (e: Exception) {
             val msg = when (e) {
                 is FirebaseAuthInvalidUserException -> s(R.string.error_account_not_exist)
@@ -273,6 +290,30 @@ class ExpenseRepository(
                 else -> s(R.string.error_login_failed, e.message ?: "")
             }
             Result.failure(Exception(msg))
+        }
+    }
+
+    /**
+     * 刷新当前登录用户的邮箱验证状态。
+     * @return true if verified, false otherwise
+     */
+    suspend fun refreshEmailVerification(): Boolean {
+        val user = firebaseAuth.currentUser
+        if (user == null) {
+            _firebaseUser.value = null
+            _emailVerified.value = false
+            return false
+        }
+
+        return try {
+            user.reload().await()
+            val refreshed = firebaseAuth.currentUser
+            _firebaseUser.value = refreshed
+            _emailVerified.value = refreshed?.isEmailVerified == true
+            _emailVerified.value
+        } catch (_: Exception) {
+            // reload 失败时，不改变现有状态
+            _emailVerified.value
         }
     }
 

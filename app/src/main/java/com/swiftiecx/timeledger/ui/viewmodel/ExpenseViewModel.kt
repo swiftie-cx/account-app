@@ -189,10 +189,16 @@ class ExpenseViewModel(
     fun login(email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = repository.login(email, password)
-            if (result.isSuccess) onSuccess() else onError(
-                result.exceptionOrNull()?.message ?: "登录失败"
-            )
+            if (result.isSuccess) {
+                onSuccess()
+            } else {
+                onError(result.exceptionOrNull()?.message ?: "登录失败")
+            }
         }
+    }
+
+    suspend fun refreshEmailVerification(): Boolean {
+        return repository.refreshEmailVerification()
     }
 
     fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {

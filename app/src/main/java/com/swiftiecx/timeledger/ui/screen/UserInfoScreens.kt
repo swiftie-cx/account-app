@@ -288,6 +288,7 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var waitingForVerification by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -338,6 +339,21 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
         Spacer(Modifier.height(8.dp))
 
+        // 注册后：停留在当前页面，等待用户点击邮件链接完成激活。
+        LaunchedEffect(waitingForVerification) {
+            if (!waitingForVerification) return@LaunchedEffect
+            while (waitingForVerification) {
+                val verified = viewModel.refreshEmailVerification()
+                if (verified) {
+                    waitingForVerification = false
+                    // 回到设置页（注册页是从设置页进入）
+                    navController.popBackStack()
+                    break
+                }
+                delay(1500)
+            }
+        }
+
         Button(
             onClick = {
                 if (password.length < 6) {
@@ -353,8 +369,8 @@ fun RegisterScreen(navController: NavHostController, viewModel: ExpenseViewModel
                             isLoading = false
                             scope.launch {
                                 snackbarHostState.showSnackbar(context.getString(R.string.msg_register_success_verification_sent))
-                                delay(1000)
-                                navController.popBackStack(Routes.LOGIN, inclusive = true)
+                                // 开始轮询邮箱验证状态
+                                waitingForVerification = true
                             }
                         },
                         onError = { msg ->
@@ -470,30 +486,33 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Button(
-                onClick = {
-                    viewModel.logout()
-                    scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.msg_logged_out)) }
-                    navController.popBackStack()
-                },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Text(stringResource(R.string.action_logout))
-            }
+            // 仅已登录时才显示「登出 / 注销账号」
+            if (email.isNotBlank()) {
+                Button(
+                    onClick = {
+                        viewModel.logout()
+                        scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.msg_logged_out)) }
+                        navController.popBackStack()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(stringResource(R.string.action_logout))
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // 注销账号按钮
-            TextButton(
-                onClick = { showDeleteAccountDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.action_delete_account), color = MaterialTheme.colorScheme.error)
+                // 注销账号按钮
+                TextButton(
+                    onClick = { showDeleteAccountDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.action_delete_account), color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
@@ -570,7 +589,9 @@ fun UserInfoScreen(navController: NavHostController, viewModel: ExpenseViewModel
                         viewModel.deleteUserAccount(
                             onSuccess = {
                                 Toast.makeText(context, context.getString(R.string.toast_account_deleted), Toast.LENGTH_SHORT).show()
-                                navController.navigate(Routes.WELCOME) { popUpTo(0) }
+                                // 注销后按「登出」同样的体验：回到设置页，避免跳转到 Welcome 造成重复建账
+                                viewModel.logout()
+                                navController.popBackStack()
                             },
                             onError = { msg ->
                                 if (msg.contains("安全验证过期") || msg.contains("recent login")) {

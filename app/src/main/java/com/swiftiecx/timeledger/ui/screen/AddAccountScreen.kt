@@ -51,6 +51,9 @@ fun AddAccountScreen(
 ) {
     val allAccounts by viewModel.allAccounts.collectAsState(initial = emptyList())
 
+    // ✅ 新建账户时：默认货币跟随「设置-默认货币」
+    val defaultCurrency by viewModel.defaultCurrency.collectAsState(initial = "CNY")
+
     // 类型列表 (Key, ResId)
     val accountTypes = remember { AccountTypeManager.getAllTypes() }
 
@@ -83,7 +86,11 @@ fun AddAccountScreen(
         "CNY", "USD", "EUR", "JPY", "HKD", "GBP", "AUD", "CAD",
         "SGD", "TWD", "KRW"
     )
-    var selectedCurrency by remember { mutableStateOf(currencies.first()) }
+    var selectedCurrency by remember(defaultCurrency) {
+        mutableStateOf(
+            if (currencies.contains(defaultCurrency)) defaultCurrency else currencies.first()
+        )
+    }
 
     val icons = remember {
         listOf(
