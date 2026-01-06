@@ -21,7 +21,7 @@ android {
 
         // [关键修复] 显式声明 App 支持的语言
         // 这能强制构建系统打包日语(ja)和韩语(ko)资源，防止资源丢失
-        resourceConfigurations.addAll(listOf("en", "zh", "ja", "ko","br","de","es","fr","id","in","it","mx","pl","ru","th","tr","vn"))
+        resourceConfigurations.addAll(listOf("en", "zh", "ja", "ko","br","de","es","fr","id","in","it","es-rMX","pl","ru","th","tr","vi"))
     }
 
     buildTypes {

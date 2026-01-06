@@ -11,7 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import com.swiftiecx.timeledger.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
+import android.util.Log
 // 定义主题颜色选项的数据结构
 data class ThemeColorOption(
     val nameResId: Int,   // ✅ 多语言：名称走 strings.xml
@@ -49,6 +49,10 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         AppCompatDelegate.setApplicationLocales(localeList)
+
+        Log.d("TimeLedgerLang", "setLanguage code=$code")
+        Log.d("TimeLedgerLang", "after set locales=" + AppCompatDelegate.getApplicationLocales().toLanguageTags())
+
     }
 
 

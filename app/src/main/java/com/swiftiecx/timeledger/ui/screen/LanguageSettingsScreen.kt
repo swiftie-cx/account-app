@@ -52,12 +52,12 @@ fun LanguageSettingsScreen(
         LanguageOption(stringResource(R.string.lang_id), "id"),
         LanguageOption(stringResource(R.string.lang_in), "in"),    // 对应印地语
         LanguageOption(stringResource(R.string.lang_it), "it"),
-        LanguageOption(stringResource(R.string.lang_es_mx), "mx"), // 对应西班牙语（墨西哥）
+        LanguageOption(stringResource(R.string.lang_es_mx), "es-MX"), // 对应西班牙语（墨西哥）
         LanguageOption(stringResource(R.string.lang_pl), "pl"),
         LanguageOption(stringResource(R.string.lang_ru), "ru"),
         LanguageOption(stringResource(R.string.lang_th), "th"),
         LanguageOption(stringResource(R.string.lang_tr), "tr"),
-        LanguageOption(stringResource(R.string.lang_vi), "vn")     // 对应越南语，Key设为vn以匹配你的列表
+        LanguageOption(stringResource(R.string.lang_vi), "vi")     // 对应越南语
     )
     Scaffold(
         topBar = {
@@ -100,9 +100,11 @@ fun LanguageSettingsScreen(
                 ) {
                     Column {
                         languages.forEachIndexed { index, option ->
-                            val isSelected = if (option.code.isEmpty()) currentCode.isEmpty()
-                            else currentCode.startsWith(option.code.split("-")[0])
-
+                            val isSelected = when {
+                                option.code.isEmpty() -> currentCode.isEmpty()                 // Follow system
+                                option.code.contains("-") -> currentCode.equals(option.code, ignoreCase = true) // 精确匹配 es-MX
+                                else -> currentCode.equals(option.code, ignoreCase = true)      // 精确匹配 es / vi / ja ...
+                            }
                             LanguageItem(
                                 name = option.name,
                                 isSelected = isSelected,
