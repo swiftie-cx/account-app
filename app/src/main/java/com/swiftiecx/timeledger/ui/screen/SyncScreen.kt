@@ -19,12 +19,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
-import com.swiftiecx.timeledger.ui.viewmodel.SyncStrategy
 import com.swiftiecx.timeledger.ui.viewmodel.model.SyncUiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
+import com.swiftiecx.timeledger.data.SyncStrategy
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncScreen(
@@ -35,7 +34,7 @@ fun SyncScreen(
     val unknownTimeText = stringResource(R.string.sync_unknown_time)
 
     // ✅ TODO_RENAME_1：把 syncUiState 改成你 ViewModel 里真实存在的 StateFlow 名字
-    val syncState by viewModel.syncUiState.collectAsState() // TODO_RENAME_1
+    val syncState by viewModel.syncState.collectAsState() // TODO_RENAME_1
     val userEmail by viewModel.userEmail.collectAsState()
 
     var showConflictDialog by remember { mutableStateOf(false) }
