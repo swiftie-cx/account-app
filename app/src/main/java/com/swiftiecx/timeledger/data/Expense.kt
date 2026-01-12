@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.Ignore
-import com.swiftiecx.timeledger.ui.viewmodel.CategoryType
+import com.swiftiecx.timeledger.data.model.CategoryType
 import java.util.Date
 
 // ✅ [新增] 记录类型常量

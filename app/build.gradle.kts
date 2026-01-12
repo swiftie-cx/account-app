@@ -1,7 +1,10 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("org.jetbrains.kotlin.kapt")
+
+    // ✅ 用 KSP 替代 KAPT（保持 Kotlin 2.0）
+    alias(libs.plugins.ksp)
+
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
 }
@@ -21,7 +24,14 @@ android {
 
         // [关键修复] 显式声明 App 支持的语言
         // 这能强制构建系统打包日语(ja)和韩语(ko)资源，防止资源丢失
-        resourceConfigurations.addAll(listOf("en", "zh", "ja", "ko","br","de","es","fr","id","in","it","es-rMX","pl","ru","th","tr","vi"))
+        resourceConfigurations.addAll(
+            listOf(
+                "en", "zh", "ja", "ko",
+                "br", "de", "es", "fr",
+                "id", "in", "it", "es-rMX",
+                "pl", "ru", "th", "tr", "vi"
+            )
+        )
     }
 
     buildTypes {
@@ -33,6 +43,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -77,7 +88,8 @@ dependencies {
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    // ✅ 原 kapt(...) 改为 ksp(...)
+    ksp("androidx.room:room-compiler:2.6.1")
 
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")

@@ -575,7 +575,9 @@ fun AccountHeaderCard(
                         contentColor = MaterialTheme.colorScheme.primary
                     ),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(45.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(45.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Payment,
@@ -654,4 +656,8 @@ fun AccountTransactionItem(
             fontWeight = FontWeight.Bold
         )
     }
+}
+fun main () {
+    val string ="string"
+    println(string[0])
 }
