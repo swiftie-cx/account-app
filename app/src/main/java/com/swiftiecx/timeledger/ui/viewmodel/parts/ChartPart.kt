@@ -1,7 +1,7 @@
 package com.swiftiecx.timeledger.ui.viewmodel.parts
 
-import com.swiftiecx.timeledger.ui.screen.chart.ChartMode
-import com.swiftiecx.timeledger.ui.screen.chart.TransactionType
+import com.swiftiecx.timeledger.ui.feature.chart.util.ChartMode
+import com.swiftiecx.timeledger.ui.feature.chart.util.TransactionType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

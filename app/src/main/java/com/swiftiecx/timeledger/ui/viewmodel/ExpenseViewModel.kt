@@ -14,8 +14,8 @@ import com.swiftiecx.timeledger.data.SyncStrategy
 import com.swiftiecx.timeledger.data.DebtRecord
 import com.swiftiecx.timeledger.ui.navigation.Category
 import com.swiftiecx.timeledger.ui.navigation.MainCategory
-import com.swiftiecx.timeledger.ui.screen.chart.ChartMode
-import com.swiftiecx.timeledger.ui.screen.chart.TransactionType
+import com.swiftiecx.timeledger.ui.feature.chart.util.ChartMode
+import com.swiftiecx.timeledger.ui.feature.chart.util.TransactionType
 import com.swiftiecx.timeledger.ui.viewmodel.model.CategoryType
 import com.swiftiecx.timeledger.ui.viewmodel.model.ExpenseTypeFilter
 import com.swiftiecx.timeledger.ui.viewmodel.model.PersonDebtSummaryInfo

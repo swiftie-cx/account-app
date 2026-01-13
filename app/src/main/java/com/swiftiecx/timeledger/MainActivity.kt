@@ -20,7 +20,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.swiftiecx.timeledger.data.AppDatabase
 import com.swiftiecx.timeledger.data.ExpenseRepository
-import com.swiftiecx.timeledger.ui.screen.MainScreen
+import com.swiftiecx.timeledger.ui.feature.main.MainScreen
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import com.swiftiecx.timeledger.ui.viewmodel.ThemeViewModel
 import com.swiftiecx.timeledger.worker.PeriodicWorker
