@@ -34,8 +34,8 @@ import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.PeriodicTransaction
-import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.CategoryData // 动态分类数据源
+import com.swiftiecx.timeledger.ui.common.Category
+import com.swiftiecx.timeledger.ui.common.CategoryData // 动态分类数据源
 import com.swiftiecx.timeledger.ui.feature.transaction.component.AccountPickerDialog
 import com.swiftiecx.timeledger.ui.feature.transaction.component.ModeSelectionButton
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel

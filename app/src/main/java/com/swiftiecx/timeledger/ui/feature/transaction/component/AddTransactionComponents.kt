@@ -31,11 +31,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
-import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.IconMapper
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
+import com.swiftiecx.timeledger.ui.common.Category
+import com.swiftiecx.timeledger.ui.common.IconMapper
+import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes
-import com.swiftiecx.timeledger.ui.navigation.SubCategory
+import com.swiftiecx.timeledger.ui.common.SubCategory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

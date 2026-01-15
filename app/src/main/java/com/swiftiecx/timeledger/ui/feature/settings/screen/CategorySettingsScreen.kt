@@ -27,9 +27,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.swiftiecx.timeledger.R // [新增] 引入 R 类
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
+import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes
-import com.swiftiecx.timeledger.ui.viewmodel.CategoryType
+import com.swiftiecx.timeledger.data.model.CategoryType
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorder

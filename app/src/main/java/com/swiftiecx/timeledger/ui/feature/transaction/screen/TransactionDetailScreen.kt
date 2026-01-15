@@ -25,7 +25,7 @@ import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.RecordType
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
+import com.swiftiecx.timeledger.ui.common.CategoryData
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale

@@ -6,9 +6,9 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.swiftiecx.timeledger.data.*
-import com.swiftiecx.timeledger.ui.navigation.IconMapper
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
-import com.swiftiecx.timeledger.ui.viewmodel.CategoryType
+import com.swiftiecx.timeledger.ui.common.IconMapper
+import com.swiftiecx.timeledger.ui.common.MainCategory
+import com.swiftiecx.timeledger.data.model.CategoryType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.util.Date

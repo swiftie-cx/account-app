@@ -43,7 +43,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
 
 private data class CategoryUi(
     val title: String,

@@ -37,7 +37,7 @@ import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.Expense
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
+import com.swiftiecx.timeledger.ui.common.CategoryData
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.common.CategorySelectionScreen
 import com.swiftiecx.timeledger.ui.common.CustomDateRangePicker

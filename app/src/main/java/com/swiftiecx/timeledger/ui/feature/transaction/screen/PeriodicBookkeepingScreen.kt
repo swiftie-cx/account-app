@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.PeriodicTransaction
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
+import com.swiftiecx.timeledger.ui.common.buildCategoryIconMap
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -43,17 +43,12 @@ fun PeriodicBookkeepingScreen(
     val periodicList by viewModel.allPeriodicTransactions.collectAsState()
     val context = LocalContext.current
 
-    // [Fix] 动态构建图标映射表
-    val categoryIconMap = remember(context) {
-        val expenses = CategoryData.getExpenseCategories(context).flatMap { it.subCategories }
-        val incomes = CategoryData.getIncomeCategories(context).flatMap { it.subCategories }
-        (expenses + incomes).associate { it.title to it.icon }
-    }
+    // ✅ 抽走：分类图标映射的构建逻辑，Screen 只负责使用结果
+    val categoryIconMap = remember(context) { buildCategoryIconMap(context) }
 
     var showTypeSheet by remember { mutableStateOf(false) }
 
     Scaffold(
-        // ✅ [修改 1] 强制背景色为纯白，彻底去除默认紫色
         containerColor = Color.White,
         topBar = {
             CenterAlignedTopAppBar(
@@ -63,7 +58,6 @@ fun PeriodicBookkeepingScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
-                // ✅ [修改 2] 顶部栏背景也强制为纯白
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.White
                 )
@@ -81,11 +75,22 @@ fun PeriodicBookkeepingScreen(
         }
     ) { padding ->
         if (periodicList.isEmpty()) {
-            Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.padding(padding).fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Repeat, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outlineVariant)
+                    Icon(
+                        Icons.Default.Repeat,
+                        null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.outlineVariant
+                    )
                     Spacer(Modifier.height(16.dp))
-                    Text(stringResource(R.string.periodic_empty_hint), color = MaterialTheme.colorScheme.outline)
+                    Text(
+                        stringResource(R.string.periodic_empty_hint),
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
             }
         } else {
@@ -110,7 +115,6 @@ fun PeriodicBookkeepingScreen(
         if (showTypeSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showTypeSheet = false },
-                // ✅ [修改 3] 底部弹窗背景强制为纯白
                 containerColor = Color.White,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
@@ -120,30 +124,40 @@ fun PeriodicBookkeepingScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(16.dp).align(Alignment.CenterHorizontally)
                     )
-                    // 周期支出
+
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.type_expense)) },
-                        leadingContent = { Icon(Icons.Outlined.CreditCard, null, tint = Color(0xFFE53935)) },
+                        leadingContent = {
+                            Icon(Icons.Outlined.CreditCard, null, tint = Color(0xFFE53935))
+                        },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable {
                             showTypeSheet = false
                             navController.navigate("add_periodic_transaction?id=-1&type=0")
                         }
                     )
-                    // 周期收入
+
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.type_income)) },
-                        leadingContent = { Icon(Icons.Outlined.Paid, null, tint = Color(0xFF4CAF50)) },
+                        leadingContent = {
+                            Icon(Icons.Outlined.Paid, null, tint = Color(0xFF4CAF50))
+                        },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable {
                             showTypeSheet = false
                             navController.navigate("add_periodic_transaction?id=-1&type=1")
                         }
                     )
-                    // 周期转账
+
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.type_transfer)) },
-                        leadingContent = { Icon(Icons.AutoMirrored.Filled.CompareArrows, null, tint = MaterialTheme.colorScheme.primary) },
+                        leadingContent = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.CompareArrows,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.clickable {
                             showTypeSheet = false
@@ -163,8 +177,7 @@ fun PeriodicItem(
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
-    // [i18n] 动态获取频率文本
-    val frequencyStr = when(item.frequency) {
+    val frequencyStr = when (item.frequency) {
         0 -> stringResource(R.string.freq_day)
         1 -> stringResource(R.string.freq_week)
         2 -> stringResource(R.string.freq_month)
@@ -172,21 +185,20 @@ fun PeriodicItem(
         else -> ""
     }
 
-    val typeStr = when(item.type) {
+    val typeStr = when (item.type) {
         0 -> stringResource(R.string.type_expense)
         1 -> stringResource(R.string.type_income)
         2 -> stringResource(R.string.type_transfer)
         else -> ""
     }
 
-    // 结束规则描述 (简单处理日期格式)
-    val endStr = when(item.endMode) {
+    val endStr = when (item.endMode) {
         1 -> " · " + SimpleDateFormat("MM-dd", Locale.getDefault()).format(item.endDate!!)
         2 -> " · ${item.endCount}x"
         else -> ""
     }
 
-    val color = when(item.type) {
+    val color = when (item.type) {
         0 -> Color(0xFFE53935)
         1 -> Color(0xFF4CAF50)
         else -> MaterialTheme.colorScheme.primary
@@ -216,7 +228,11 @@ fun PeriodicItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.category, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                Text("$frequencyStr · $typeStr$endStr", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "$frequencyStr · $typeStr$endStr",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Column(horizontalAlignment = Alignment.End) {

@@ -2,9 +2,9 @@ package com.swiftiecx.timeledger.ui.viewmodel.parts
 
 import android.content.Context
 import com.swiftiecx.timeledger.data.ExpenseRepository
-import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
-import com.swiftiecx.timeledger.ui.viewmodel.model.CategoryType
+import com.swiftiecx.timeledger.ui.common.Category
+import com.swiftiecx.timeledger.ui.common.MainCategory
+import com.swiftiecx.timeledger.data.model.CategoryType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -79,11 +79,11 @@ class CategoriesPart(
         if (type == CategoryType.EXPENSE) {
             val newList = updateAction(_expenseMainCategories.value)
             _expenseMainCategories.value = newList
-            repository.saveMainCategories(newList, com.swiftiecx.timeledger.ui.viewmodel.model.CategoryType.EXPENSE)
+            repository.saveMainCategories(newList, CategoryType.EXPENSE)
         } else {
             val newList = updateAction(_incomeMainCategories.value)
             _incomeMainCategories.value = newList
-            repository.saveMainCategories(newList, com.swiftiecx.timeledger.ui.viewmodel.model.CategoryType.INCOME)
+            repository.saveMainCategories(newList, CategoryType.INCOME)
         }
     }
 }

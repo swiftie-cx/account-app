@@ -27,10 +27,10 @@ import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
 import com.swiftiecx.timeledger.data.RecordType // ✅ [新增] 引入记录类型
-import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
-import com.swiftiecx.timeledger.ui.navigation.IconMapper
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
+import com.swiftiecx.timeledger.ui.common.Category
+import com.swiftiecx.timeledger.ui.common.CategoryData
+import com.swiftiecx.timeledger.ui.common.IconMapper
+import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.ui.feature.transaction.component.AccountPickerDialog
 import com.swiftiecx.timeledger.ui.common.CustomDateRangePicker
 import com.swiftiecx.timeledger.ui.feature.transaction.component.FeeInputCard

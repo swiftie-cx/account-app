@@ -19,8 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.ExchangeRates
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
+import com.swiftiecx.timeledger.ui.common.CategoryData
+import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.feature.chart.component.CategoryRankItem
 import com.swiftiecx.timeledger.ui.feature.chart.util.ChartMode

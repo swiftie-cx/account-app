@@ -17,7 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.ui.navigation.CategoryData // [新增]
+import com.swiftiecx.timeledger.ui.common.CategoryData // [新增]
 import com.swiftiecx.timeledger.ui.feature.chart.visual.LineChart
 import com.swiftiecx.timeledger.ui.feature.chart.util.TransactionType
 import com.swiftiecx.timeledger.ui.feature.chart.util.prepareCustomLineChartData

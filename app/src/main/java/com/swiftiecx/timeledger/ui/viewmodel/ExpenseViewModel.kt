@@ -10,13 +10,13 @@ import com.swiftiecx.timeledger.data.Budget
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
 import com.swiftiecx.timeledger.data.PeriodicTransaction
-import com.swiftiecx.timeledger.data.SyncStrategy
+import com.swiftiecx.timeledger.data.repository.SyncStrategy
 import com.swiftiecx.timeledger.data.DebtRecord
-import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
+import com.swiftiecx.timeledger.ui.common.Category
+import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.ui.feature.chart.util.ChartMode
 import com.swiftiecx.timeledger.ui.feature.chart.util.TransactionType
-import com.swiftiecx.timeledger.ui.viewmodel.model.CategoryType
+import com.swiftiecx.timeledger.data.model.CategoryType
 import com.swiftiecx.timeledger.ui.viewmodel.model.ExpenseTypeFilter
 import com.swiftiecx.timeledger.ui.viewmodel.model.PersonDebtSummaryInfo
 import com.swiftiecx.timeledger.ui.viewmodel.model.SyncUiState

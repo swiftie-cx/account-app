@@ -24,7 +24,7 @@ import com.swiftiecx.timeledger.ui.viewmodel.model.SyncUiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.swiftiecx.timeledger.data.SyncStrategy
+import com.swiftiecx.timeledger.data.repository.SyncStrategy
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncScreen(

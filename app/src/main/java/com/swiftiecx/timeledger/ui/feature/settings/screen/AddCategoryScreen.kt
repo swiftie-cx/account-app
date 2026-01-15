@@ -27,10 +27,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
-import com.swiftiecx.timeledger.ui.viewmodel.CategoryType
+import com.swiftiecx.timeledger.ui.common.Category
+import com.swiftiecx.timeledger.ui.common.CategoryData
+import com.swiftiecx.timeledger.ui.common.MainCategory
+import com.swiftiecx.timeledger.data.model.CategoryType
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

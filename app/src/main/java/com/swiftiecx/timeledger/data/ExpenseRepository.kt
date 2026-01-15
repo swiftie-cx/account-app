@@ -10,11 +10,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.swiftiecx.timeledger.data.repository.*
-import com.swiftiecx.timeledger.ui.navigation.Category
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
-import com.swiftiecx.timeledger.ui.navigation.IconMapper
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
-import com.swiftiecx.timeledger.ui.viewmodel.CategoryType
+import com.swiftiecx.timeledger.ui.common.Category
+import com.swiftiecx.timeledger.ui.common.CategoryData
+import com.swiftiecx.timeledger.ui.common.IconMapper
+import com.swiftiecx.timeledger.ui.common.MainCategory
+import com.swiftiecx.timeledger.data.model.CategoryType
 import kotlinx.coroutines.flow.*
 import kotlin.jvm.JvmName
 /**

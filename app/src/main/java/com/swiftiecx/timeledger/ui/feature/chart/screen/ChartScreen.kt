@@ -23,8 +23,8 @@ import com.swiftiecx.timeledger.R
 import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.Expense
-import com.swiftiecx.timeledger.ui.navigation.CategoryData // [新增]
-import com.swiftiecx.timeledger.ui.navigation.MainCategory
+import com.swiftiecx.timeledger.ui.common.CategoryData // [新增]
+import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.common.CustomDateRangePicker
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel

@@ -1,7 +1,7 @@
 package com.swiftiecx.timeledger.ui.viewmodel.parts
 
 import com.swiftiecx.timeledger.data.ExpenseRepository
-import com.swiftiecx.timeledger.data.SyncStrategy
+import com.swiftiecx.timeledger.data.repository.SyncStrategy
 import com.swiftiecx.timeledger.ui.viewmodel.model.SyncUiState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay

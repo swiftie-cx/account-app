@@ -35,8 +35,8 @@ import com.swiftiecx.timeledger.data.Account
 import com.swiftiecx.timeledger.data.ExchangeRates
 import com.swiftiecx.timeledger.data.RecordType
 import com.swiftiecx.timeledger.data.Expense
-import com.swiftiecx.timeledger.ui.navigation.CategoryData
-import com.swiftiecx.timeledger.ui.navigation.IconMapper
+import com.swiftiecx.timeledger.ui.common.CategoryData
+import com.swiftiecx.timeledger.ui.common.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.feature.transaction.model.DisplayTransferItem
 import com.swiftiecx.timeledger.ui.common.YearMonthPicker

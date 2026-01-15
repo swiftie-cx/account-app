@@ -1,4 +1,4 @@
-package com.swiftiecx.timeledger.ui.navigation
+package com.swiftiecx.timeledger.ui.common
 
 import android.content.Context
 import androidx.compose.material.icons.Icons
@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.swiftiecx.timeledger.R
+import com.swiftiecx.timeledger.ui.common.IconMapper
 
 data class Category(
     val title: String,
@@ -38,11 +39,11 @@ object CategoryData {
         "sub_donate" to "Donate", "sub_other" to "Other",
         "sub_salary" to "Salary", "sub_bonus" to "Bonus", "sub_reimbursement" to "Reimbursement",
         "sub_part_time" to "PartTime", "sub_finance" to "Finance", "sub_gift_money" to "GiftMoney",
-        "sub_red_packet" to "RedPacket", "sub_second_hand" to "SecondHand", "sub_other" to "OtherIncome"
+        "sub_red_packet" to "RedPacket", "sub_second_hand" to "SecondHand", "sub_other_income" to "OtherIncome"
     )
 
     // --- 核心修改：使用 when 替代 Map，避免类加载阻塞 ---
-
+    // NOTE: context 参数仅为兼容旧调用，目前 icon 只由分类 key 决定
     fun getIcon(nameOrKey: String, context: Context? = null): ImageVector {
         val key = legacyKeyMap[nameOrKey] ?: nameOrKey
         return when (key) {
@@ -164,7 +165,7 @@ object CategoryData {
             else -> Color(0xFF90A4AE)
         }
     }
-
+    // NOTE: typeInt/context 仅保留兼容，当前颜色只由分类 key 决定
     fun getColor(nameOrKey: String, typeInt: Int, context: Context): Color {
         // [修复] 颜色翻转：
         // 借入/收款 = 钱进来 = 绿色 (Income)
