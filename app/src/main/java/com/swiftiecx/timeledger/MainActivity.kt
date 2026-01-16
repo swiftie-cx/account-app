@@ -21,6 +21,7 @@ import androidx.work.WorkManager
 import com.swiftiecx.timeledger.data.AppDatabase
 import com.swiftiecx.timeledger.data.ExpenseRepository
 import com.swiftiecx.timeledger.ui.feature.main.MainScreen
+import com.swiftiecx.timeledger.ui.localization.LocalizedApp
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import com.swiftiecx.timeledger.ui.viewmodel.ThemeViewModel
 import com.swiftiecx.timeledger.worker.PeriodicWorker
@@ -102,6 +103,7 @@ class MainActivity : AppCompatActivity() {
 
             setContent {
                 val themeColor by themeViewModel.themeColor.collectAsState()
+                val languageTag by themeViewModel.language.collectAsState()
                 val isDarkTheme = isSystemInDarkTheme()
 
                 val colorScheme = if (isDarkTheme) {
@@ -144,8 +146,10 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
 
-                MaterialTheme(colorScheme = colorScheme) {
-                    MainScreen(expenseViewModel, themeViewModel)
+                LocalizedApp(languageTag = languageTag) {
+                    MaterialTheme(colorScheme = colorScheme) {
+                        MainScreen(expenseViewModel, themeViewModel)
+                    }
                 }
             }
         } catch (e: Exception) {

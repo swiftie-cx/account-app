@@ -2,11 +2,9 @@ package com.swiftiecx.timeledger.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.AndroidViewModel
 import com.swiftiecx.timeledger.R
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,32 +25,42 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
     // 1. 语言设置 (多语言化)
     // ===========================
 
-    private val _language = MutableStateFlow(getCurrentLanguageCode())
+    private val KEY_LANGUAGE_TAG = "language_tag" // "" means follow system
+
+    private val _language = MutableStateFlow(loadLanguageTag())
     val language = _language.asStateFlow()
 
-    fun getCurrentLanguageCode(): String {
-        val locales = AppCompatDelegate.getApplicationLocales()
-        return if (!locales.isEmpty) {
-            locales.get(0)?.toLanguageTag() ?: ""
-        } else {
-            "" // 跟随系统
-        }
+    /**
+     * Persist languageTag only. UI will recompose via [LocalizedApp] without recreating Activity.
+     * Use BCP-47 tags: "ja", "es-MX", "pt-BR", "hi", ...
+     * Empty string means follow system.
+     */
+    fun setLanguage(code: String) {
+        val normalized = normalizeLanguageTag(code)
+        _language.value = normalized
+        prefs.edit().putString(KEY_LANGUAGE_TAG, normalized).apply()
+
+        Log.d("TimeLedgerLang", "setLanguage tag=$normalized")
     }
 
-    fun setLanguage(code: String) {
-        _language.value = code
+    /** For UI screens that still call it. */
+    fun getCurrentLanguageCode(): String = _language.value
 
-        val localeList = if (code.isBlank() || code == "system") {
-            LocaleListCompat.getEmptyLocaleList()
-        } else {
-            LocaleListCompat.forLanguageTags(code)
+    private fun loadLanguageTag(): String {
+        val raw = prefs.getString(KEY_LANGUAGE_TAG, "") ?: ""
+        return normalizeLanguageTag(raw)
+    }
+
+    // Migration / normalization for historical wrong values.
+    private fun normalizeLanguageTag(tag: String): String {
+        val t = tag.trim()
+        if (t.isEmpty() || t == "system") return ""
+        return when (t.lowercase()) {
+            // historical mistakes
+            "in" -> "hi"      // Hindi
+            "br" -> "pt-BR"   // Portuguese (Brazil)
+            else -> t
         }
-
-        AppCompatDelegate.setApplicationLocales(localeList)
-
-        Log.d("TimeLedgerLang", "setLanguage code=$code")
-        Log.d("TimeLedgerLang", "after set locales=" + AppCompatDelegate.getApplicationLocales().toLanguageTags())
-
     }
 
 

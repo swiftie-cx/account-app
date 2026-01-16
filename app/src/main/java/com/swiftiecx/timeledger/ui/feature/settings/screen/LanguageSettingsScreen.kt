@@ -1,9 +1,5 @@
 package com.swiftiecx.timeledger.ui.feature.settings.screen
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,11 +17,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.swiftiecx.timeledger.R
+import com.swiftiecx.timeledger.ui.localization.createLocalizedContext
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import com.swiftiecx.timeledger.ui.viewmodel.ThemeViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +30,8 @@ fun LanguageSettingsScreen(
     expenseViewModel: ExpenseViewModel
 ) {
     val context = LocalContext.current
-    var isRestarting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    var currentCode by remember { mutableStateOf(themeViewModel.getCurrentLanguageCode()) }
+    val currentCode by themeViewModel.language.collectAsState()
 
     val languages = listOf(
         LanguageOption(stringResource(R.string.lang_follow_system), ""),
@@ -45,12 +39,12 @@ fun LanguageSettingsScreen(
         LanguageOption(stringResource(R.string.lang_zh), "zh"),
         LanguageOption(stringResource(R.string.lang_ja), "ja"),
         LanguageOption(stringResource(R.string.lang_ko), "ko"),
-        LanguageOption(stringResource(R.string.lang_pt_br), "br"), // 对应葡萄牙语（巴西）
+        LanguageOption(stringResource(R.string.lang_pt_br), "pt-BR"), // 葡萄牙语（巴西）
         LanguageOption(stringResource(R.string.lang_de), "de"),
         LanguageOption(stringResource(R.string.lang_es), "es"),
         LanguageOption(stringResource(R.string.lang_fr), "fr"),
         LanguageOption(stringResource(R.string.lang_id), "id"),
-        LanguageOption(stringResource(R.string.lang_in), "in"),    // 对应印地语
+        LanguageOption(stringResource(R.string.lang_in), "hi"),    // 印地语
         LanguageOption(stringResource(R.string.lang_it), "it"),
         LanguageOption(stringResource(R.string.lang_es_mx), "es-MX"), // 对应西班牙语（墨西哥）
         LanguageOption(stringResource(R.string.lang_pl), "pl"),
@@ -71,89 +65,61 @@ fun LanguageSettingsScreen(
             )
         }
     ) { innerPadding ->
-        if (isRestarting) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-                contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.language_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.language_title),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Column {
+                    languages.forEachIndexed { index, option ->
+                        val isSelected = when {
+                            option.code.isEmpty() -> currentCode.isEmpty()                 // Follow system
+                            option.code.contains("-") -> currentCode.equals(option.code, ignoreCase = true) // 精确匹配 es-MX
+                            else -> currentCode.equals(option.code, ignoreCase = true)      // 精确匹配 es / vi / ja ...
+                        }
+                        LanguageItem(
+                            name = option.name,
+                            isSelected = isSelected,
+                            onClick = {
+                                if (!isSelected) {
+                                    scope.launch {
+                                        // 1) 更新语言 Tag（不重建 Activity，避免闪屏）
+                                        themeViewModel.setLanguage(option.code)
 
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column {
-                        languages.forEachIndexed { index, option ->
-                            val isSelected = when {
-                                option.code.isEmpty() -> currentCode.isEmpty()                 // Follow system
-                                option.code.contains("-") -> currentCode.equals(option.code, ignoreCase = true) // 精确匹配 es-MX
-                                else -> currentCode.equals(option.code, ignoreCase = true)      // 精确匹配 es / vi / ja ...
-                            }
-                            LanguageItem(
-                                name = option.name,
-                                isSelected = isSelected,
-                                onClick = {
-                                    if (!isSelected && !isRestarting) {
-                                        isRestarting = true
-                                        currentCode = option.code
-
-                                        scope.launch {
-                                            // 1. 设置全局语言配置
-                                            themeViewModel.setLanguage(option.code)
-
-                                            // 2. [核心修复] 手动创建一个对应新语言的 Context
-                                            val newLocale = if (option.code.isEmpty()) {
-                                                Locale.getDefault() // 跟随系统
-                                            } else {
-                                                Locale.forLanguageTag(option.code)
-                                            }
-
-                                            // 创建一个新的配置对象
-                                            val config = Configuration(context.resources.configuration)
-                                            config.setLocale(newLocale)
-                                            // 生成持有新语言资源的 Context
-                                            val localizedContext = context.createConfigurationContext(config)
-
-                                            // 3. 传入这个新 Context 去刷新数据
-                                            // 这样拿到的就是"未来"的语言字符串，而不是"现在"的
-                                            expenseViewModel.refreshCategories(localizedContext)
-
-                                            delay(500) // 稍微多给一点时间让数据库写入完成
-                                            restartApp(context)
-                                        }
+                                        // 2) 如果你的分类名称存进了数据库，这里用“新语言”的 context 重新写入
+                                        val localizedContext = createLocalizedContext(context, option.code)
+                                        expenseViewModel.refreshCategories(localizedContext)
                                     }
                                 }
-                            )
-                            if (index < languages.size - 1) {
-                                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 16.dp))
                             }
+                        )
+                        if (index < languages.size - 1) {
+                            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.lang_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.lang_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
         }
     }
 }
@@ -176,18 +142,3 @@ fun LanguageItem(name: String, isSelected: Boolean, onClick: () -> Unit) {
 }
 
 data class LanguageOption(val name: String, val code: String)
-
-fun restartApp(context: Context) {
-    val packageManager = context.packageManager
-    val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-    if (intent != null) {
-        val componentName = intent.component
-        val mainIntent = Intent.makeRestartActivityTask(componentName)
-        mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        context.startActivity(mainIntent)
-        if (context is Activity) {
-            context.finish()
-        }
-        Runtime.getRuntime().exit(0)
-    }
-}
