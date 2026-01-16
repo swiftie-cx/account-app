@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.PeriodicTransaction
+import com.swiftiecx.timeledger.data.local.entity.PeriodicTransaction
 import com.swiftiecx.timeledger.ui.common.buildCategoryIconMap
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat

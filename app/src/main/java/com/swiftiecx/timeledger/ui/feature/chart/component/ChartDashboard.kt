@@ -22,8 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.Account
-import com.swiftiecx.timeledger.data.Expense
+import com.swiftiecx.timeledger.data.local.entity.Account
+import com.swiftiecx.timeledger.data.local.entity.Expense
 import com.swiftiecx.timeledger.ui.feature.chart.util.ChartMode
 import com.swiftiecx.timeledger.ui.feature.chart.util.TransactionType
 import com.swiftiecx.timeledger.ui.feature.chart.util.generateBalanceReportItems

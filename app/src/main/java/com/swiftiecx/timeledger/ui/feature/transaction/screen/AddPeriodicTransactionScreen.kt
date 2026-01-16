@@ -32,8 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.Account
-import com.swiftiecx.timeledger.data.PeriodicTransaction
+import com.swiftiecx.timeledger.data.local.entity.Account
+import com.swiftiecx.timeledger.data.local.entity.PeriodicTransaction
 import com.swiftiecx.timeledger.ui.common.Category
 import com.swiftiecx.timeledger.ui.common.CategoryData // 动态分类数据源
 import com.swiftiecx.timeledger.ui.feature.transaction.component.AccountPickerDialog

@@ -31,10 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.Account
-import com.swiftiecx.timeledger.data.ExchangeRates
-import com.swiftiecx.timeledger.data.RecordType
-import com.swiftiecx.timeledger.data.Expense
+import com.swiftiecx.timeledger.data.local.entity.Account
+import com.swiftiecx.timeledger.data.util.ExchangeRates
+import com.swiftiecx.timeledger.data.local.entity.RecordType
+import com.swiftiecx.timeledger.data.local.entity.Expense
 import com.swiftiecx.timeledger.ui.common.CategoryData
 import com.swiftiecx.timeledger.ui.common.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes

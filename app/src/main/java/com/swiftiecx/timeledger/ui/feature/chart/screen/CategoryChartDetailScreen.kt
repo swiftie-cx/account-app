@@ -18,7 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.ExchangeRates
+import com.swiftiecx.timeledger.data.util.ExchangeRates
 import com.swiftiecx.timeledger.ui.common.CategoryData
 import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.ui.navigation.Routes

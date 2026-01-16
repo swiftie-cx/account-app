@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.ExchangeRates
-import com.swiftiecx.timeledger.data.RecordType
+import com.swiftiecx.timeledger.data.util.ExchangeRates
+import com.swiftiecx.timeledger.data.local.entity.RecordType
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.common.YearMonthPicker
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel

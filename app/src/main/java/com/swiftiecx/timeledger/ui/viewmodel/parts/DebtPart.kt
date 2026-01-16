@@ -2,10 +2,10 @@ package com.swiftiecx.timeledger.ui.viewmodel.parts
 
 import android.app.Application
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.DebtRecord
-import com.swiftiecx.timeledger.data.Expense
-import com.swiftiecx.timeledger.data.ExpenseRepository
-import com.swiftiecx.timeledger.data.RecordType
+import com.swiftiecx.timeledger.data.local.entity.DebtRecord
+import com.swiftiecx.timeledger.data.local.entity.Expense
+import com.swiftiecx.timeledger.data.repository.ExpenseRepository
+import com.swiftiecx.timeledger.data.local.entity.RecordType
 import com.swiftiecx.timeledger.ui.viewmodel.model.PersonDebtSummaryInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

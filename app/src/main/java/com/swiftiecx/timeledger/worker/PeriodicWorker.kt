@@ -3,8 +3,8 @@ package com.swiftiecx.timeledger.worker
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.swiftiecx.timeledger.data.AppDatabase
-import com.swiftiecx.timeledger.data.ExpenseRepository
+import com.swiftiecx.timeledger.data.local.db.AppDatabase
+import com.swiftiecx.timeledger.data.repository.ExpenseRepository
 
 class PeriodicWorker(
     context: Context,

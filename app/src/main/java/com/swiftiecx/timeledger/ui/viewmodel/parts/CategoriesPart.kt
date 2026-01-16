@@ -1,7 +1,7 @@
 package com.swiftiecx.timeledger.ui.viewmodel.parts
 
 import android.content.Context
-import com.swiftiecx.timeledger.data.ExpenseRepository
+import com.swiftiecx.timeledger.data.repository.ExpenseRepository
 import com.swiftiecx.timeledger.ui.common.Category
 import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.data.model.CategoryType

@@ -26,8 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R // [新增]
-import com.swiftiecx.timeledger.data.Account
-import com.swiftiecx.timeledger.data.ExchangeRates
+import com.swiftiecx.timeledger.data.local.entity.Account
+import com.swiftiecx.timeledger.data.util.ExchangeRates
 import com.swiftiecx.timeledger.ui.common.IconMapper
 import com.swiftiecx.timeledger.ui.navigation.Routes
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel

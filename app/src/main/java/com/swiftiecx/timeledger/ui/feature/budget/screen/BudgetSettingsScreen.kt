@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.Budget
+import com.swiftiecx.timeledger.data.local.entity.Budget
 import com.swiftiecx.timeledger.ui.common.CategoryData
 import com.swiftiecx.timeledger.ui.common.NumericKeyboard
 import com.swiftiecx.timeledger.ui.feature.transaction.component.evaluateExpression

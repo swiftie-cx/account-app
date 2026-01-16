@@ -1,7 +1,7 @@
 package com.swiftiecx.timeledger.ui.viewmodel.parts
 
-import com.swiftiecx.timeledger.data.Expense
-import com.swiftiecx.timeledger.data.RecordType
+import com.swiftiecx.timeledger.data.local.entity.Expense
+import com.swiftiecx.timeledger.data.local.entity.RecordType
 import com.swiftiecx.timeledger.ui.viewmodel.model.ExpenseTypeFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*

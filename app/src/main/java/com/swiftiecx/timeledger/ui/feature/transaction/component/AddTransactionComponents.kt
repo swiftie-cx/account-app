@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R
-import com.swiftiecx.timeledger.data.Account
+import com.swiftiecx.timeledger.data.local.entity.Account
 import com.swiftiecx.timeledger.ui.common.Category
 import com.swiftiecx.timeledger.ui.common.IconMapper
 import com.swiftiecx.timeledger.ui.common.MainCategory

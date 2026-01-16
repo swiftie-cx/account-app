@@ -1,6 +1,6 @@
 package com.swiftiecx.timeledger.ui.viewmodel.parts
 
-import com.swiftiecx.timeledger.data.ExpenseRepository
+import com.swiftiecx.timeledger.data.repository.ExpenseRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

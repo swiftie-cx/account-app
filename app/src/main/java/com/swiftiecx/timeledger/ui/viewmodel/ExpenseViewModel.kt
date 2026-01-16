@@ -5,13 +5,13 @@ import android.content.Context
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.swiftiecx.timeledger.data.Account
-import com.swiftiecx.timeledger.data.Budget
-import com.swiftiecx.timeledger.data.ExchangeRates
-import com.swiftiecx.timeledger.data.Expense
-import com.swiftiecx.timeledger.data.PeriodicTransaction
+import com.swiftiecx.timeledger.data.local.entity.Account
+import com.swiftiecx.timeledger.data.local.entity.Budget
+import com.swiftiecx.timeledger.data.util.ExchangeRates
+import com.swiftiecx.timeledger.data.local.entity.Expense
+import com.swiftiecx.timeledger.data.local.entity.PeriodicTransaction
 import com.swiftiecx.timeledger.data.repository.SyncStrategy
-import com.swiftiecx.timeledger.data.DebtRecord
+import com.swiftiecx.timeledger.data.local.entity.DebtRecord
 import com.swiftiecx.timeledger.ui.common.Category
 import com.swiftiecx.timeledger.ui.common.MainCategory
 import com.swiftiecx.timeledger.ui.feature.chart.util.ChartMode
@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
-import com.swiftiecx.timeledger.data.ExpenseRepository
+import com.swiftiecx.timeledger.data.repository.ExpenseRepository
 
 class ExpenseViewModel(
     private val repository: ExpenseRepository,

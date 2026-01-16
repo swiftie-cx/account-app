@@ -29,8 +29,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.swiftiecx.timeledger.R // [新增]
-import com.swiftiecx.timeledger.data.Account
-import com.swiftiecx.timeledger.data.DebtRecord
+import com.swiftiecx.timeledger.data.local.entity.Account
+import com.swiftiecx.timeledger.data.local.entity.DebtRecord
 import com.swiftiecx.timeledger.ui.common.IconMapper
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
 import java.text.SimpleDateFormat

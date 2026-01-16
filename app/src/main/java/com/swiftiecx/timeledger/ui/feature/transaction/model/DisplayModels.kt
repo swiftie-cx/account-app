@@ -1,6 +1,6 @@
 package com.swiftiecx.timeledger.ui.feature.transaction.model
 
-import com.swiftiecx.timeledger.data.Account
+import com.swiftiecx.timeledger.data.local.entity.Account
 import java.util.Date
 
 /**

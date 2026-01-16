@@ -18,8 +18,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.swiftiecx.timeledger.data.AppDatabase
-import com.swiftiecx.timeledger.data.ExpenseRepository
+import com.swiftiecx.timeledger.data.local.db.AppDatabase
+import com.swiftiecx.timeledger.data.repository.ExpenseRepository
 import com.swiftiecx.timeledger.ui.feature.main.MainScreen
 import com.swiftiecx.timeledger.ui.localization.LocalizedApp
 import com.swiftiecx.timeledger.ui.viewmodel.ExpenseViewModel
